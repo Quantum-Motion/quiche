@@ -1,0 +1,38 @@
+BasedOnStyle: LLVM
+
+UseTab: Never
+IndentWidth: 4
+ContinuationIndentWidth: 4
+
+ColumnLimit: 120
+
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AlignAfterOpenBracket: Align
+AlwaysBreakTemplateDeclarations: Yes
+
+PenaltyBreakBeforeFirstCallParameter: 100
+
+FixNamespaceComments: true
+ReflowComments: true
+
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<(catch2|H5Cpp)'
+    Priority: 4
+
+  - Regex: '^<quest'
+    Priority: 5
+
+  # QUICHE project headers
+  - Regex: '^"quiche/'
+    Priority: 6
+
+  # C headers
+  - Regex: '^<.*\.h>$'
+    Priority: 1
+
+  # C++ headers
+  - Regex: '^<.*>$'
+    Priority: 2

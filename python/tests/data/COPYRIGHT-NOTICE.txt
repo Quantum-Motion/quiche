@@ -1,0 +1,10 @@
+The `H2.hdf5` file in this directory is part of the Hamlib dataset, available at
+`https://portal.nersc.gov/cfs/m888/dcamps/hamlib/`. We do not claim copyright ownership
+of this file. All rights remain with the respective owners.
+
+For more information about Hamlib see ref. [1].
+
+References:
+[1] N. P. Sawaya et al., 'HamLib: A library of Hamiltonians for benchmarking quantum
+    algorithms and hardware', Quantum, vol. 8, p. 1559, Dec. 2024, doi:
+    10.22331/q-2024-12-11-1559.
