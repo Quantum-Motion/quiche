@@ -17,3 +17,21 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.0.1] - 2026-06-30
+
+### Added
+
+Initialised repository
+
