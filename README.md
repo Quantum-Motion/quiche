@@ -66,3 +66,7 @@ For further information about how you can contribute to QUICHE see the [contribu
 
 The QUICHE toolkit was developed as part of the [QUICHE project](https://gtr.ukri.org/projects?ref=10150101), with funding from Innovate UK.  
 Copyright 2026 Quantum Motion Technologies Ltd. Licensed under the Apache License, Version 2.0.
+
+## Funding
+
+This software is supported by Innovate UK and Germany's ZIM via the [QUantum-Integrated CHEmistry (QUICHE)](https://gtr.ukri.org/projects?ref=10150101) project.
