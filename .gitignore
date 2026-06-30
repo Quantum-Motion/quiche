@@ -1,0 +1,18 @@
+# Python
+__pycache__
+.ipynb_checkpoints
+.venv
+*.egg-info
+
+# C++
+compile_commands.json
+.cache
+build
+
+# Libs
+*.so
+*.dylib
+*.dll
+
+# Other
+.DS_Store
