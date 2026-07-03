@@ -196,7 +196,11 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
     """Class that welds the Qualtran to the QUICHE bloq."""
 
     @classmethod
-    def from_hamiltonian(cls, h: PauliSum, phase_bitsize: int) -> Self:
+    def from_hamiltonian(cls,
+                         h: PauliSum,
+                         phase_bitsize: int,
+                         n_data_qubits: None | int = None
+                        ) -> Self:
         """Process the input arguments and return an LCU block encoding."""
         #############
         # VALIDATION
@@ -206,17 +210,23 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
             error_msg = "Choose phase_bitsize at least 2."
             raise ValueError(error_msg)
 
+        # If number of qubits is not specified during constructor, derive it from the
+        # Hamiltonian. This is to allow for cases where block encodings with different
+        # h.n_qubits should be concatenated.
+        if n_data_qubits is None:
+            n_data_qubits = h.n_qubits
+
         #############
         # COMPUTE BLOQ
         #############
-        terms = [u.to_cirq(h.n_qubits) for u in h.terms]
+        terms = [u.to_cirq(n_data_qubits) for u in h.terms]
         nterms = h.n_terms
         lam = h.lam
         coeffs = np.array(h.coefficients, dtype=complex)
 
         # Add the identity term in the Hamiltonian, if needed
         if h.identity_coefficient != 0.:
-            terms.append(DensePauliString.eye(h.n_qubits))
+            terms.append(DensePauliString.eye(n_data_qubits))
             nterms += 1
             lam += abs(h.identity_coefficient)
             coeffs = np.append(coeffs, [h.identity_coefficient])
@@ -224,19 +234,19 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
         prep_coeffs = np.sqrt(np.array(coeffs, dtype=complex) / lam)
 
         # find the number of select qubits
-        select_nqubits = ceil(log2(nterms))
+        select_nqubits = max(ceil(log2(nterms)), 1)
 
         # pad coefficients if necessary
         if log2(nterms) % 1 > 0:
             nadd = int(2**select_nqubits - nterms)
-            id_string = DensePauliString.eye(h.n_qubits)
+            id_string = DensePauliString.eye(n_data_qubits)
             terms += [id_string] * nadd
             prep_coeffs = np.append(prep_coeffs, np.zeros(nadd, dtype=np.float64))
 
         # create SELECT and PREP operators
         select = SelectPauliLCUWrapper(
             selection_bitsize=select_nqubits + phase_bitsize,
-            target_bitsize=h.n_qubits,
+            target_bitsize=n_data_qubits,
             select_unitaries=terms,
         )
 
@@ -251,6 +261,42 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
         )
 
         return cls(prepare=prepare, select=select)
+
+    @cached_property
+    def signature(self) -> Signature:
+        # Base class has register 'selection', which would lead to a duplicate when
+        # wrapping an instance inside ApplyLthBloq. Instead, we use 'ancilla' for this
+        # register and 'system' for the data qubits in analogy with the signature of
+        # LinearCombination.
+        return Signature.build_from_dtypes(
+            ctrl=QAny(1) if self.control_val else QAny(0),
+            ancilla=QAny(self.ancilla_bitsize),
+            system=QAny(self.system_bitsize),
+        )
+
+    def get_ctrl_system(self, ctrl_spec: 'CtrlSpec') -> tuple['Bloq', 'AddControlledT']:
+        from qualtran.bloqs.mcmt.specialized_ctrl import get_ctrl_system_1bit_cv_from_bloqs
+
+        return get_ctrl_system_1bit_cv_from_bloqs(
+            self,
+            ctrl_spec,
+            current_ctrl_bit=1 if self.control_val else None,
+            bloq_with_ctrl=evolve(self, control_val=1),
+            ctrl_reg_name="ctrl",
+        )
+
+    def build_composite_bloq(
+        self,
+        bb: BloqBuilder,
+        **soqs: SoquetT,
+    ) -> dict[str, SoquetT]:
+        # Call the super bloq decomposition (from LCUBlockEncoding) to accomodate for
+        # the different naming of the registers.
+        if self.control_val:
+            soqs = super().build_composite_bloq(bb=bb, target=soqs["system"], selection=soqs["ancilla"], ctrl=soqs["ctrl"])
+            return { "ancilla": soqs["selection"], "system": soqs["target"],"ctrl": soqs["ctrl"]}
+        soqs = super().build_composite_bloq(bb=bb, target=soqs["system"], selection=soqs["ancilla"])
+        return {"ancilla": soqs["selection"], "system": soqs["target"]}
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for LCUBlockEncodingWrapper."""
