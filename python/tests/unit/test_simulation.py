@@ -118,12 +118,12 @@ class TestLCUBlockEncodingWrapper:
         assert len(sig) == 2
 
         reg = sig[0]
-        assert reg.name == "selection"
+        assert reg.name == "ancilla"
         assert reg.dtype == QAny(self.select_nqubits + self.phase_bitsize)
         assert reg.side == Side.THRU
 
         reg = sig[1]
-        assert reg.name == "target"
+        assert reg.name == "system"
         assert reg.dtype == QAny(self.h.n_qubits)
         assert reg.side == Side.THRU
 
