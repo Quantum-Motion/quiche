@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -26,12 +27,13 @@ if TYPE_CHECKING:
 
     from quiche.core.paulis import PauliSum, PauliWord
 
-from math import ceil, log2, pi
+from math import ceil, log2, pi, sqrt
 from random import choices, getstate, seed, setstate
 from typing import Self
 
 import attrs
 import numpy as np
+from attrs import evolve
 from cirq import DensePauliString
 from qualtran import (
     AddControlledT,
@@ -60,7 +62,9 @@ from qualtran.bloqs.chemistry.trotter.trotterized_unitary import (
     TrotterizedUnitary,
 )
 from qualtran.bloqs.mcmt import And
+from qualtran.bloqs.multiplexers.apply_lth_bloq import ApplyLthBloq
 from qualtran.bloqs.multiplexers.select_pauli_lcu import SelectPauliLCU
+from qualtran.bloqs.reflections.reflection_using_prepare import ReflectionUsingPrepare
 from qualtran.bloqs.state_preparation.state_preparation_via_rotation import (
     StatePreparationViaRotations,
 )
@@ -130,6 +134,295 @@ def _make_generic_add_controlled(cbloq: Bloq) -> Callable:
 
 
 @attrs.frozen
+class SOSSABlockEncoding(Bloq):
+    """
+    Routine for constructing the block encoding of the SOSSA representation.
+
+    If the Hamiltonian can be written as
+
+        H + beta * I = sum_{j=0}^{B-1} A_j† A_j,
+
+    implements the block encoding
+
+        BE[2 H_SOSSA† H_SOSSA / lambda - 1]
+                = BE[H_SOSSA/sqrt(lambda)]† REF_a BE[H_SOSSA/sqrt(lambda)]
+
+    described in Lemma 4 in King et al., Phys. Rev. Lett. 136, 110601.
+
+    BE[H_SOSSA/sqrt(lambda)] is implemented in SOSSASqrtBlockEncoding. The reflection
+    operator REF_a only acts on the selection qubits of the inner block encodings, and
+    it is a reflection about the identity.
+
+    Properties
+    ----------
+    inner_block_encodings : tuple[LCUBlockEncodingWrapper, ...]
+        Block encodings BE[A_j / a_j]
+    inner_normalisation_constants : tuple[float, ...]
+        Normalisation of the inner block encodings a_j
+    outer_phase_bitsize : int
+        Phase bitsize for the PREPARE operator
+    num_inner_be_ancillas : int
+        Number of ancillas of the inner block encodings BE[A_j / a_j]
+    num_data : int
+        Number of data qubits
+
+    """
+
+    inner_block_encodings: tuple[LCUBlockEncodingWrapper, ...]  # Be[Aj / aj]
+    inner_normalisation_constants: tuple[float, ...]  # aj
+
+    outer_phase_bitsize: int
+
+    num_inner_be_ancillas: int  # register a, includes phase bit register as well
+    num_data: int  # number of system qubits
+
+    @property
+    def signature(self) -> Signature:
+        """Define input and output registers of the bloq."""
+        return Signature.build(
+            outer_be_ancillas=self.num_outer_be_ancillas,
+            inner_be_ancillas=self.num_inner_be_ancillas,
+            data=self.num_data,
+        )
+
+    @property
+    def num_outer_be_ancillas(self) -> int:
+        """Return number of outer block encoding ancillas."""
+        return self.outer_phase_bitsize + self.outer_select_nqubits
+
+    @property
+    def num_inner_phase_ancillas(self) -> int:
+        """Number of ancillas for representing phase in the inner block encoding."""
+        # All the inner block encodings have the same register, so it does not matter
+        # which one we use.
+        return self.inner_block_encodings[0].prepare.phase_bitsize
+
+    @property
+    def num_inner_select_ancillas(self) -> int:
+        """Number of ancillas for select operation in the inner block encoding."""
+        return self.num_inner_be_ancillas - self.num_inner_phase_ancillas
+
+    @property
+    def outer_select_nqubits(self) -> int:
+        """Calculate number of select qubits for outer block encoding."""
+        return ceil(log2(len(self.inner_block_encodings)))
+
+    @cached_property
+    def squareroot_operator(self) -> SOSSASqrtBlockEncoding:
+        """Return the SOSSA square root operator."""
+        return SOSSASqrtBlockEncoding(
+            self.inner_block_encodings,
+            self.inner_normalisation_constants,
+            self.outer_phase_bitsize,
+            self.num_inner_be_ancillas,
+            self.num_data,
+        )
+
+    @property
+    def reflection(self) -> ReflectionUsingPrepare:
+        """A reflection around the zero state on the inner ancilla qubits."""
+        return ReflectionUsingPrepare.reflection_around_zero(
+                bitsizes=(self.num_inner_select_ancillas,),
+            )
+
+    def build_composite_bloq(
+        self, bb: BloqBuilder, **soqs: SoquetT
+    ) -> dict[str, SoquetT]:
+        """Build bloq decomposition for SOSSABlockEncoding."""
+        outer_be = soqs["outer_be_ancillas"]
+        inner_be = soqs["inner_be_ancillas"]
+        data = soqs["data"]
+
+        root = self.squareroot_operator
+
+        # add square root block encoding
+        outer_be, inner_be, data = bb.add(
+            root,
+            outer_be_ancillas=outer_be,
+            inner_be_ancillas=inner_be,
+            data=data,
+        )
+
+        # To prepare for the reflection, split up the inner ancillas. The reflection
+        # only acts on the qubits involved in the unary operation and not the ones used
+        # for preparing the phases.
+        inner_be = bb.split(inner_be)
+        inner_be_phase = inner_be[:self.num_inner_phase_ancillas]
+        inner_be_select = bb.join(inner_be[self.num_inner_phase_ancillas:])
+
+        # Add reflection around the zero state in the inner ancillas
+        inner_be_select = bb.add(self.reflection, reg0_=inner_be_select)
+
+        # join registers again
+        inner_be_select = bb.split(inner_be_select)
+        to_join = list(inner_be_phase) + list(inner_be_select)
+        inner_be = bb.join(to_join)
+
+        # add adjoint square root block encoding
+        outer_be, inner_be, data = bb.add(
+            root.adjoint(),
+            outer_be_ancillas=outer_be,
+            inner_be_ancillas=inner_be,
+            data=data,
+        )
+
+        return {
+            "outer_be_ancillas": outer_be,
+            "inner_be_ancillas": inner_be,
+            "data": data,
+        }
+
+    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
+        """Build call graph for SOSSABlockEncoding."""
+        return {
+            self.squareroot_operator : 1,
+            self.squareroot_operator.adjoint() : 1,
+            self.reflection : 1
+        }
+
+@attrs.frozen
+class SOSSASqrtBlockEncoding(Bloq):
+    """
+    Prepare the block encoding of the square root operator within the SOSSA formalism.
+
+    If the Hamiltonian can be written as
+
+        H + beta * I = sum_{j=0}^{B-1} A_j† A_j,
+
+    then implements the square root operator as described in Lemma 3 in
+    King et al., Phys. Rev. Lett. 136, 110601, with
+
+        BE[H_SOSSA/sqrt(lambda)] = SELECT x PREPARE
+
+    where the SELECT and PREPARE operations are
+
+            PREPARE |0>_b = 1/sqrt(lambda) sum_{j=0}^{B-1} a_j |j>_b
+
+            SELECT = sum_{j=0}^{B-1} |j>_b <j|_b x BE[A_j / a_j]
+
+    Properties
+    ----------
+    inner_block_encodings : tuple[LCUBlockEncodingWrapper, ...]
+        Block encodings BE[A_j / a_j]
+    inner_normalisation_constants : tuple[float, ...]
+        Normalisation of the inner block encodings a_j
+    outer_phase_bitsize : int
+        Phase bitsize for the PREPARE operator
+    num_inner_be_ancillas : int
+        Number of ancillas of the inner block encodings BE[A_j / a_j]
+    num_data : int
+        Number of data qubits
+
+    """
+
+    # TODO: so far assumes all inner block encodings have the same number of ancillas
+
+    inner_block_encodings: tuple[LCUBlockEncodingWrapper, ...]  # Be[Aj / aj]
+    inner_normalisation_constants: tuple[float, ...]  # aj
+
+    outer_phase_bitsize: int
+
+    num_inner_be_ancillas: int  # register a, includes phase bit register as well
+    num_data: int  # number of system qubits
+
+    @property
+    def signature(self) -> Signature:
+        """Define input and output registers of the bloq."""
+        return Signature.build(
+            outer_be_ancillas=self.num_outer_be_ancillas,
+            inner_be_ancillas=self.num_inner_be_ancillas,
+            data=self.num_data,
+        )
+
+    @property
+    def num_outer_be_ancillas(self) -> int:
+        """Return number of outer block encoding ancillas."""
+        return self.outer_phase_bitsize + self.outer_select_nqubits
+
+    @property
+    def outer_select_nqubits(self) -> int:
+        """Calculate number of select qubits for outer block encoding."""
+        return ceil(log2(len(self.inner_block_encodings)))
+
+    @cached_property
+    def lamda(self) -> float:
+        """Return the block normalisation factor lambda."""
+        lamda = 0.
+        for aj in self.inner_normalisation_constants:
+            lamda += aj**2
+        return lamda
+
+    @property
+    def prepare(self) -> PrepareFromStatePrep:
+        """Create the PREPARE operator for the outer block encoding."""
+        coefficients = [
+            aj / sqrt(self.lamda) for aj in self.inner_normalisation_constants
+        ]
+        # pad the coefficients if necessary
+        nterms = len(coefficients)
+        if log2(nterms) % 1 > 0:
+            nadd = int(2**self.outer_select_nqubits - nterms)
+            coefficients = np.append(coefficients, np.zeros(nadd, dtype=np.float64))
+
+        prepare_op = StatePreparationViaRotations(
+            state_coefficients=coefficients,
+            phase_bitsize=self.outer_phase_bitsize,
+            control_bitsize=0,
+        )
+        return PrepareFromStatePrep(
+            stateprep=prepare_op,
+            phase_bitsize=self.outer_phase_bitsize,
+            select_nqubits=self.outer_select_nqubits,
+        )
+
+    @property
+    def select(self) -> ApplyLthBloq:
+        """Create the SELECT operator for the outer block encoding."""
+        return ApplyLthBloq(ops=self.inner_block_encodings)
+
+    def build_composite_bloq(
+        self, bb: BloqBuilder, **soqs: SoquetT
+    ) -> dict[str, SoquetT]:
+        """Build bloq decomposition for SOSSASqrtBlockEncoding."""
+        outer_be = soqs["outer_be_ancillas"]
+        inner_be = soqs["inner_be_ancillas"]
+        data = soqs["data"]
+
+        # Prepare on the outer ancilla ('b' register)
+        outer_be = bb.add(self.prepare, selection=outer_be)
+
+        # Split outer_be into qubits used for bit-wise phase approximation and for
+        # unary iteration. The select operator only uses the unary iteration qubits.
+        outer_be = bb.split(outer_be)
+        outer_be_phase = outer_be[:self.outer_phase_bitsize]
+        outer_be_select = bb.join(outer_be[self.outer_phase_bitsize:])
+
+        # Apply the SELECT operator on the new selection qubits. It inherits the system
+        # and ancilla register from self.inner_block_encodings.
+        outer_be_select, inner_be, data = bb.add(
+            self.select, selection=outer_be_select, ancilla=inner_be, system=data
+        )
+
+        # The outgoing register must have the same sizes as the incoming, so join the
+        # qubits for the outer block encoding back up.
+        outer_be_select = bb.split(outer_be_select)
+        to_join = list(outer_be_phase) + list(outer_be_select)
+        outer_be = bb.join(to_join)
+
+        return {
+            "outer_be_ancillas": outer_be,
+            "inner_be_ancillas": inner_be,
+            "data": data,
+        }
+
+    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
+        """Build the call graph for SOSSASqrtBlockEncoding."""
+        return {
+            self.select : 1,
+            self.prepare : 1
+        }
+
+@attrs.frozen
 class SelectPauliLCUWrapper(SelectPauliLCU):
     """Wrapper for SelectPauliLCU for resource counting."""
 
@@ -196,7 +489,11 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
     """Class that welds the Qualtran to the QUICHE bloq."""
 
     @classmethod
-    def from_hamiltonian(cls, h: PauliSum, phase_bitsize: int) -> Self:
+    def from_hamiltonian(cls,
+                         h: PauliSum,
+                         phase_bitsize: int,
+                         n_data_qubits: None | int = None
+                        ) -> Self:
         """Process the input arguments and return an LCU block encoding."""
         #############
         # VALIDATION
@@ -206,17 +503,23 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
             error_msg = "Choose phase_bitsize at least 2."
             raise ValueError(error_msg)
 
+        # If number of qubits is not specified during constructor, derive it from the
+        # Hamiltonian. This is to allow for cases where block encodings with different
+        # h.n_qubits should be concatenated.
+        if n_data_qubits is None:
+            n_data_qubits = h.n_qubits
+
         #############
         # COMPUTE BLOQ
         #############
-        terms = [u.to_cirq(h.n_qubits) for u in h.terms]
+        terms = [u.to_cirq(n_data_qubits) for u in h.terms]
         nterms = h.n_terms
         lam = h.lam
         coeffs = np.array(h.coefficients, dtype=complex)
 
         # Add the identity term in the Hamiltonian, if needed
         if h.identity_coefficient != 0.:
-            terms.append(DensePauliString.eye(h.n_qubits))
+            terms.append(DensePauliString.eye(n_data_qubits))
             nterms += 1
             lam += abs(h.identity_coefficient)
             coeffs = np.append(coeffs, [h.identity_coefficient])
@@ -224,19 +527,19 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
         prep_coeffs = np.sqrt(np.array(coeffs, dtype=complex) / lam)
 
         # find the number of select qubits
-        select_nqubits = ceil(log2(nterms))
+        select_nqubits = max(ceil(log2(nterms)), 1)
 
         # pad coefficients if necessary
         if log2(nterms) % 1 > 0:
             nadd = int(2**select_nqubits - nterms)
-            id_string = DensePauliString.eye(h.n_qubits)
+            id_string = DensePauliString.eye(n_data_qubits)
             terms += [id_string] * nadd
             prep_coeffs = np.append(prep_coeffs, np.zeros(nadd, dtype=np.float64))
 
         # create SELECT and PREP operators
         select = SelectPauliLCUWrapper(
             selection_bitsize=select_nqubits + phase_bitsize,
-            target_bitsize=h.n_qubits,
+            target_bitsize=n_data_qubits,
             select_unitaries=terms,
         )
 
@@ -251,6 +554,42 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
         )
 
         return cls(prepare=prepare, select=select)
+
+    @cached_property
+    def signature(self) -> Signature:
+        # Base class has register 'selection', which would lead to a duplicate when
+        # wrapping an instance inside ApplyLthBloq. Instead, we use 'ancilla' for this
+        # register and 'system' for the data qubits in analogy with the signature of
+        # LinearCombination.
+        return Signature.build_from_dtypes(
+            ctrl=QAny(1) if self.control_val else QAny(0),
+            ancilla=QAny(self.ancilla_bitsize),
+            system=QAny(self.system_bitsize),
+        )
+
+    def get_ctrl_system(self, ctrl_spec: 'CtrlSpec') -> tuple['Bloq', 'AddControlledT']:
+        from qualtran.bloqs.mcmt.specialized_ctrl import get_ctrl_system_1bit_cv_from_bloqs
+
+        return get_ctrl_system_1bit_cv_from_bloqs(
+            self,
+            ctrl_spec,
+            current_ctrl_bit=1 if self.control_val else None,
+            bloq_with_ctrl=evolve(self, control_val=1),
+            ctrl_reg_name="ctrl",
+        )
+
+    def build_composite_bloq(
+        self,
+        bb: BloqBuilder,
+        **soqs: SoquetT,
+    ) -> dict[str, SoquetT]:
+        # Call the super bloq decomposition (from LCUBlockEncoding) to accomodate for
+        # the different naming of the registers.
+        if self.control_val:
+            soqs = super().build_composite_bloq(bb=bb, target=soqs["system"], selection=soqs["ancilla"], ctrl=soqs["ctrl"])
+            return { "ancilla": soqs["selection"], "system": soqs["target"],"ctrl": soqs["ctrl"]}
+        soqs = super().build_composite_bloq(bb=bb, target=soqs["system"], selection=soqs["ancilla"])
+        return {"ancilla": soqs["selection"], "system": soqs["target"]}
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for LCUBlockEncodingWrapper."""

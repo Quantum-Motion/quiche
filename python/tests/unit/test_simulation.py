@@ -38,6 +38,8 @@ from quiche.resources.bloqs import (
     LCUBlockEncodingWrapper,
     PauliWordRotation,
     SelectPauliLCUWrapper,
+    SOSSABlockEncoding,
+    SOSSASqrtBlockEncoding,
     Trotterisation,
 )
 
@@ -102,6 +104,138 @@ class TestSelectPauliLCUWrapper:
     def test_bloq_counts(self, bloq: Bloq):
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
+class TestSOSSABlockEncoding:
+    """Tests for SOSSABlockEncoding."""
+
+    # Define a set of example inner block encodings - choose I + P_j where P_j are the
+    # PauliWords in H2 molecule. This is spectral amplification, a special SOSSA case.
+    # One we add the SDP to find other SOS decompositions we can test with those. Set
+    # phase bitsizes to 2 for now.
+    h = _load_h2()
+    budget = _default_budget()
+
+    inner_block_encodings = []
+    inner_normalisation_constants = []
+    num_inner_be_ancillas = 0
+
+    n_qubits = h.n_qubits
+
+    for term, coefficient in zip(h.terms, h.coefficients, strict=True):
+        # Build new sum I + P_j for each P_j in h, and the corresponding block encoding
+        a_j = PauliSum(
+            coefficients=[coefficient], terms=[term], identity_coefficient = 1.
+        )
+        phase_bitsize = 2
+        be_j = LCUBlockEncodingWrapper.from_hamiltonian(
+            a_j,
+            phase_bitsize,
+            n_data_qubits = n_qubits
+        )
+
+        # add block encoding to the list
+        inner_block_encodings.append(be_j)
+        inner_normalisation_constants.append(abs(coefficient) + 1.)
+
+        num_inner_be_ancillas = max(num_inner_be_ancillas, be_j.select.selection_bitsize)
+
+    # Cast lists to tuples. This is needed for the bloq count verification: dicts cannot
+    # take lists as keys since they are mutable, tuples are not.
+    inner_block_encodings = tuple(inner_block_encodings)
+    inner_normalisation_constants = tuple(inner_normalisation_constants)
+
+    outer_phase_bitsize = 2
+    sossa = SOSSABlockEncoding(
+        inner_block_encodings,
+        inner_normalisation_constants,
+        outer_phase_bitsize,
+        num_inner_be_ancillas,
+        n_qubits
+    )
+
+    def test_signature(self):
+        """Check the bloq signature."""
+        sig = self.sossa.signature
+
+        assert len(sig) == 3
+
+        reg = sig[0]
+        assert reg.name == "outer_be_ancillas"
+
+        reg = sig[1]
+        assert reg.name == "inner_be_ancillas"
+
+        reg = sig[2]
+        assert reg.name == "data"
+
+    def test_bloq_counts(self):
+        assert_equivalent_bloq_counts(self.sossa, generalizer=[ignore_split_join])
+
+
+class TestSOSSASqrtBlockEncoding:
+    """Tests for SOSSASqrtblockEncoding."""
+
+    # Define a set of example inner block encodings - choose I + P_j where P_j are the
+    # PauliWords in H2 molecule. This is spectral amplification, a special SOSSA case.
+    # One we add the SDP to find other SOS decompositions we can test with those. Set
+    # phase bitsizes to 2 for now.
+    h = _load_h2()
+    budget = _default_budget()
+
+    inner_block_encodings = []
+    inner_normalisation_constants = []
+    num_inner_be_ancillas = 0
+
+    n_qubits = h.n_qubits
+
+    for term, coefficient in zip(h.terms, h.coefficients, strict=True):
+        # Build new sum I + P_j for each P_j in h, and the corresponding block encoding
+        a_j = PauliSum(
+            coefficients=[coefficient], terms=[term], identity_coefficient = 1.
+        )
+        phase_bitsize = 2
+        be_j = LCUBlockEncodingWrapper.from_hamiltonian(
+            a_j,
+            phase_bitsize,
+            n_data_qubits = n_qubits
+        )
+
+        # add block encoding to the list
+        inner_block_encodings.append(be_j)
+        inner_normalisation_constants.append(abs(coefficient) + 1.)
+
+        num_inner_be_ancillas = max(num_inner_be_ancillas, be_j.select.selection_bitsize)
+
+    # Cast lists to tuples. This is needed for the bloq count verification: dicts cannot
+    # take lists as keys since they are mutable, tuples are not.
+    inner_block_encodings = tuple(inner_block_encodings)
+    inner_normalisation_constants = tuple(inner_normalisation_constants)
+
+    outer_phase_bitsize = 2
+    sossasqrt = SOSSASqrtBlockEncoding(
+        inner_block_encodings,
+        inner_normalisation_constants,
+        outer_phase_bitsize,
+        num_inner_be_ancillas,
+        n_qubits
+    )
+
+    def test_signature(self):
+        """Check the bloq signature."""
+        sig = self.sossasqrt.signature
+
+        assert len(sig) == 3
+
+        reg = sig[0]
+        assert reg.name == "outer_be_ancillas"
+
+        reg = sig[1]
+        assert reg.name == "inner_be_ancillas"
+
+        reg = sig[2]
+        assert reg.name == "data"
+
+    def test_bloq_counts(self):
+        assert_equivalent_bloq_counts(self.sossasqrt, generalizer=[ignore_split_join])
 
 class TestLCUBlockEncodingWrapper:
     """Tests for LCUBlockEncodingWrapper."""
@@ -118,12 +252,12 @@ class TestLCUBlockEncodingWrapper:
         assert len(sig) == 2
 
         reg = sig[0]
-        assert reg.name == "selection"
+        assert reg.name == "ancilla"
         assert reg.dtype == QAny(self.select_nqubits + self.phase_bitsize)
         assert reg.side == Side.THRU
 
         reg = sig[1]
-        assert reg.name == "target"
+        assert reg.name == "system"
         assert reg.dtype == QAny(self.h.n_qubits)
         assert reg.side == Side.THRU
 

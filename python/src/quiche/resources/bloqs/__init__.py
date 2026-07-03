@@ -27,6 +27,8 @@ from .simulation import (
     LCUBlockEncodingWrapper,
     PauliWordRotation,
     SelectPauliLCUWrapper,
+    SOSSABlockEncoding,
+    SOSSASqrtBlockEncoding,
     Trotterisation,
 )
 from .state_prep import BitstringStatePrep, IdentityStatePrep, PrepareFromStatePrep
@@ -42,6 +44,8 @@ __all__ = [
     "PauliWordRotation",
     "PrepareFromStatePrep",
     "QubitisationLadder",
+    "SOSSABlockEncoding",
+    "SOSSASqrtBlockEncoding",
     "SelectPauliLCUWrapper",
     "TextbookQPE",
     "TrotterLadder",
