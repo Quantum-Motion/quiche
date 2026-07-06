@@ -33,6 +33,7 @@ from scipy.linalg import expm
 
 from quiche.core import Errors, Pauli, PauliSum, PauliWord
 from quiche.hamlib import get_dataset, parse_hamiltonian
+from quiche.resources import logical_qubit_resources
 from quiche.resources.bloqs import (
     QDRIFT,
     LCUBlockEncodingWrapper,
@@ -102,6 +103,11 @@ class TestSelectPauliLCUWrapper:
     def test_bloq_counts(self, bloq: Bloq):
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
+    @pytest.mark.parametrize("bloq", [select, select.controlled()])
+    def test_qubit_counts(self, bloq: Bloq):
+        manual_counts = logical_qubit_resources(bloq)
+        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
+        assert manual_counts == decomp_counts
 
 class TestLCUBlockEncodingWrapper:
     """Tests for LCUBlockEncodingWrapper."""
@@ -180,6 +186,12 @@ class TestLCUBlockEncodingWrapper:
     def test_bloq_counts(self, bloq: Bloq):
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
+    @pytest.mark.parametrize("bloq", [blockencoding, blockencoding.controlled()])
+    def test_qubit_counts(self, bloq: Bloq):
+        manual_counts = logical_qubit_resources(bloq)
+        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
+        assert manual_counts == decomp_counts
+
 
 class TestPauliWordRotation:
     n_qubits = 7
@@ -217,6 +229,11 @@ class TestPauliWordRotation:
     def test_bloq_counts(self, bloq: Bloq):
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
+    @pytest.mark.parametrize("bloq", [rot, rot.controlled()])
+    def test_qubit_counts(self, bloq: Bloq):
+        manual_counts = logical_qubit_resources(bloq)
+        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
+        assert manual_counts == decomp_counts
 
 class TestQDRIFT:
     h = _load_h2()
@@ -240,6 +257,12 @@ class TestQDRIFT:
     @pytest.mark.parametrize("bloq", [qdrift, qdrift.controlled()])
     def test_bloq_counts(self, bloq: Bloq):
         assert _compare_manual_decomp_counts_trotter(bloq)
+
+    @pytest.mark.parametrize("bloq", [qdrift, qdrift.controlled()])
+    def test_qubit_counts(self, bloq: Bloq):
+        manual_counts = logical_qubit_resources(bloq)
+        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
+        assert manual_counts == decomp_counts
 
 
 class TestTrotterisation:
@@ -505,3 +528,17 @@ class TestTrotterisation:
     )
     def test_bloq_counts(self, bloq: Bloq):
         assert _compare_manual_decomp_counts_trotter(bloq)
+
+    @pytest.mark.parametrize(
+        "bloq",
+        [
+            trotter_order2,
+            trotter_order2.controlled(),
+            trotter_order4,
+            trotter_order4.controlled(),
+        ],
+    )
+    def test_qubit_counts(self, bloq: Bloq):
+        manual_counts = logical_qubit_resources(bloq)
+        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
+        assert manual_counts == decomp_counts
