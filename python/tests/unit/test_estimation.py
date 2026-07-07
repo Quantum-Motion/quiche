@@ -234,7 +234,7 @@ class TestTextbookQPE:
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
         assert manual_counts == decomp_counts
 
-    def test_qubit_count_qubitisation(self):
+    def test_qubit_counts_qubitisation(self):
         walk, select_nqubits, phase_bitsize = _make_qubitisation_walk(
             self.h, self.budget
         )
