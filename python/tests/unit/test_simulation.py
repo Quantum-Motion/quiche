@@ -109,6 +109,7 @@ class TestSelectPauliLCUWrapper:
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
         assert manual_counts == decomp_counts
 
+
 class TestLCUBlockEncodingWrapper:
     """Tests for LCUBlockEncodingWrapper."""
 
@@ -146,9 +147,8 @@ class TestLCUBlockEncodingWrapper:
         # There are a total of self.h.n_terms + 1 non-zero coefficients because the
         # identity coefficient is non-zero. Test that these are indeed non-zero and all
         # others are zero.
-        np.testing.assert_equal(prep_coeffs[:self.h.n_terms+1] != 0, True)
-        np.testing.assert_allclose(prep_coeffs[self.h.n_terms+1:], 0.)
-
+        np.testing.assert_equal(prep_coeffs[: self.h.n_terms + 1] != 0, True)
+        np.testing.assert_allclose(prep_coeffs[self.h.n_terms + 1 :], 0.0)
 
     def test_selectunitaries(self):
         # Checks that the right unitaries and coefficients will be applied in the select
@@ -161,8 +161,8 @@ class TestLCUBlockEncodingWrapper:
         # Truncate to the non-zero terms. All truncated coefficients are zero, which is
         # tested separately in test_zerocoefficients. Truncate after self.h.n_terms+1 in
         # order to count the identity contribution.
-        true_unitaries = true_unitaries[:self.h.n_terms+1]
-        true_prep_coeffs = true_prep_coeffs[:self.h.n_terms+1]
+        true_unitaries = true_unitaries[: self.h.n_terms + 1]
+        true_prep_coeffs = true_prep_coeffs[: self.h.n_terms + 1]
 
         # Set the target unitaries and coefficients
         target_unitaries = [u.to_cirq(self.h.n_qubits) for u in self.h.terms] + [
@@ -174,13 +174,14 @@ class TestLCUBlockEncodingWrapper:
 
         # Assert the unitaries
         for ii in range(len(target_unitaries)):
-            err_msg = (f"Unitaries at index {ii} do not agree: "
-                       f"{true_unitaries[ii]} vs {target_unitaries[ii]}.")
+            err_msg = (
+                f"Unitaries at index {ii} do not agree: "
+                f"{true_unitaries[ii]} vs {target_unitaries[ii]}."
+            )
             assert true_unitaries[ii] == target_unitaries[ii], err_msg
 
         # Assert the coefficients
         np.testing.assert_allclose(lam * true_prep_coeffs**2, target_coefficients)
-
 
     @pytest.mark.parametrize("bloq", [blockencoding, blockencoding.controlled()])
     def test_bloq_counts(self, bloq: Bloq):
@@ -234,6 +235,7 @@ class TestPauliWordRotation:
         manual_counts = logical_qubit_resources(bloq)
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
         assert manual_counts == decomp_counts
+
 
 class TestQDRIFT:
     h = _load_h2()

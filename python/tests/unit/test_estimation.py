@@ -153,7 +153,6 @@ class TestIterativeQPE:
             (qdrift, 3, "a", "Measurement mode must be either 're' or 'im'"),
         ],
     )
-
     def test_invalid_inputs(self, simulation: Bloq, k: int, mode: str, err_msg: str):
         with pytest.raises(ValueError, match=err_msg):
             IterativeQPE(simulation, k, mode)

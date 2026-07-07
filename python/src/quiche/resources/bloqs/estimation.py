@@ -280,6 +280,7 @@ class KitaevQPE(Bloq):
             bloq_counts[SGate(is_adjoint=True)] = 1
         return bloq_counts
 
+
 @attrs.frozen
 class IterativeQPE(Bloq):
     """
