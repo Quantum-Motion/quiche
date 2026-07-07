@@ -21,6 +21,7 @@ from qualtran.testing import (
     assert_equivalent_bloq_counts,
 )
 
+from quiche.resources import logical_qubit_resources
 from quiche.resources.bloqs import (
     BitstringStatePrep,
     IdentityStatePrep,
@@ -46,6 +47,11 @@ class TestBitstringStatePrep:
     def test_bloq_counts(self):
         assert_equivalent_bloq_counts(self.bloq, generalizer=[ignore_split_join])
 
+    def test_qubit_counts(self):
+        manual_counts = logical_qubit_resources(self.bloq)
+        decomp_counts = logical_qubit_resources(self.bloq.decompose_bloq())
+        assert manual_counts == decomp_counts
+
 
 class TestIdentityStatePrep:
     """Tests for identity state prep."""
@@ -60,3 +66,8 @@ class TestIdentityStatePrep:
 
     def test_bloq_counts(self):
         assert_equivalent_bloq_counts(self.bloq, generalizer=[ignore_split_join])
+
+    def test_qubit_counts(self):
+        manual_counts = logical_qubit_resources(self.bloq)
+        decomp_counts = logical_qubit_resources(self.bloq.decompose_bloq())
+        assert manual_counts == decomp_counts
