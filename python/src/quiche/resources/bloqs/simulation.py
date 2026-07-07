@@ -162,7 +162,7 @@ class SelectPauliLCUWrapper(SelectPauliLCU):
         # relatively explicit.
         nterms = len(self.select_unitaries)
         bloq_counts = {
-            And(cv1 = 1, cv2 = 0): nterms - 2,
+            And(cv1=1, cv2=0): nterms - 2,
             And().adjoint(): nterms - 2,
             CNOT(): nterms - 2,
             XGate(): 2,
@@ -178,14 +178,14 @@ class SelectPauliLCUWrapper(SelectPauliLCU):
 
         # Add relevant bloqs if SelectPauliLCU is controlled.
         if self.control_val is not None:
-            bloq_counts[And(cv1 = 1, cv2 = 0)] += 1
+            bloq_counts[And(cv1=1, cv2=0)] += 1
             bloq_counts[And().adjoint()] += 1
             bloq_counts[CNOT()] += 1
             bloq_counts.pop(XGate())
 
         # Remove empty bloqs.
         if nterms == 2 and self.control_val is None:
-            bloq_counts.pop(And(cv1 = 1, cv2 = 0))
+            bloq_counts.pop(And(cv1=1, cv2=0))
             bloq_counts.pop(And().adjoint())
             bloq_counts.pop(CNOT())
         return bloq_counts
@@ -215,7 +215,7 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
         coeffs = np.array(h.coefficients, dtype=complex)
 
         # Add the identity term in the Hamiltonian, if needed
-        if h.identity_coefficient != 0.:
+        if h.identity_coefficient != 0.0:
             terms.append(DensePauliString.eye(h.n_qubits))
             nterms += 1
             lam += abs(h.identity_coefficient)

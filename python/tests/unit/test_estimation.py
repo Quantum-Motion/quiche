@@ -30,6 +30,7 @@ from qualtran.testing import (
 
 from quiche.core import Errors, PauliSum
 from quiche.hamlib import get_dataset, parse_hamiltonian
+from quiche.resources import logical_qubit_resources
 from quiche.resources.bloqs import (
     QDRIFT,
     IterativeQPE,
@@ -101,6 +102,14 @@ class TestNaiveQPE:
         bloq = NaiveQPE(simulation, mode)
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
+    @pytest.mark.parametrize("simulation", [qdrift, trotter_order2, trotter_order4])
+    @pytest.mark.parametrize("mode", ["re", "im"])
+    def test_qubit_counts(self, simulation: Bloq, mode: str):
+        bloq = NaiveQPE(simulation, mode)
+        manual_counts = logical_qubit_resources(bloq)
+        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
+        assert manual_counts == decomp_counts
+
 
 class TestKitaevQPE:
     """Test KitaevQPE class."""
@@ -117,6 +126,15 @@ class TestKitaevQPE:
     def test_bloq_counts(self, simulation: Bloq, k: int, mode: str):
         bloq = KitaevQPE(simulation, k, mode)
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
+
+    @pytest.mark.parametrize("k", list(range(4)))
+    @pytest.mark.parametrize("simulation", [qdrift, trotter_order2, trotter_order4])
+    @pytest.mark.parametrize("mode", ["re", "im"])
+    def test_qubit_counts(self, simulation: Bloq, k: int, mode: str):
+        bloq = KitaevQPE(simulation, k, mode)
+        manual_counts = logical_qubit_resources(bloq)
+        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
+        assert manual_counts == decomp_counts
 
 
 class TestIterativeQPE:
@@ -135,7 +153,6 @@ class TestIterativeQPE:
             (qdrift, 3, "a", "Measurement mode must be either 're' or 'im'"),
         ],
     )
-
     def test_invalid_inputs(self, simulation: Bloq, k: int, mode: str, err_msg: str):
         with pytest.raises(ValueError, match=err_msg):
             IterativeQPE(simulation, k, mode)
@@ -146,6 +163,15 @@ class TestIterativeQPE:
     def test_bloq_counts(self, simulation: Bloq, k: int, mode: str):
         bloq = IterativeQPE(simulation, k, mode)
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
+
+    @pytest.mark.parametrize("k", list(range(4)))
+    @pytest.mark.parametrize("simulation", [qdrift, trotter_order2, trotter_order4])
+    @pytest.mark.parametrize("mode", ["re", "im"])
+    def test_qubit_counts(self, simulation: Bloq, k: int, mode: str):
+        bloq = IterativeQPE(simulation, k, mode)
+        manual_counts = logical_qubit_resources(bloq)
+        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
+        assert manual_counts == decomp_counts
 
 
 class TestTextbookQPE:
@@ -193,3 +219,41 @@ class TestTextbookQPE:
         )
 
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
+
+    @pytest.mark.parametrize(("simulation"), [qdrift, trotter_order2, trotter_order4])
+    def test_qubit_counts_trotter(self, simulation: Trotterisation | QDRIFT):
+
+        def ladder(index: int) -> TrotterLadder:
+            return TrotterLadder(
+                index, simulation, self.h.n_qubits, self.n_estimation_qubits
+            )
+
+        bloq = TextbookQPE(ladder, self.h.n_qubits, self.n_estimation_qubits, 0)
+        manual_counts = logical_qubit_resources(bloq)
+        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
+        assert manual_counts == decomp_counts
+
+    def test_qubit_counts_qubitisation(self):
+        walk, select_nqubits, phase_bitsize = _make_qubitisation_walk(
+            self.h, self.budget
+        )
+
+        def qubitisationladder(index: int) -> QubitisationLadder:
+            return QubitisationLadder(
+                index,
+                walk,
+                self.h.n_qubits,
+                self.n_estimation_qubits,
+                select_nqubits + phase_bitsize,
+            )
+
+        bloq = TextbookQPE(
+            qubitisationladder,
+            self.h.n_qubits,
+            self.n_estimation_qubits,
+            select_nqubits + phase_bitsize,
+        )
+
+        manual_counts = logical_qubit_resources(bloq)
+        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
+        assert manual_counts == decomp_counts

@@ -23,6 +23,7 @@ from quiche.bindings.quiche_bindings import (
 
 # ruff: noqa: N802
 
+
 def initHartreeFockStateBK(
     qureg: Qureg,
     num_electrons: int,
