@@ -32,7 +32,7 @@ from qualtran import (
     SoquetT,
 )
 from qualtran.bloqs.basic_gates import Hadamard, Power, Rz, SGate
-from qualtran.bloqs.bookkeeping import Allocate, Free
+from qualtran.bloqs.bookkeeping import Allocate, Free, Partition
 from qualtran.bloqs.phase_estimation import RectangularWindowState
 from qualtran.bloqs.qft import QFTTextBook
 from qualtran.bloqs.qubitization.qubitization_walk_operator import (
@@ -637,8 +637,15 @@ class QubitisationLadder(Bloq):
         """Implement bloq decomposition into sub-bloqs."""
         target = soqs["data"]
         qpe_ancillas = soqs["qpe_ancillas"]
-        selection = soqs["other_ancillas"]
+        be_ancillas = soqs["other_ancillas"]
         qpe_ancilla_qubits = bb.split(qpe_ancillas)
+
+        be = self.walk.block_encoding
+        regs = (Register("selection", QAny(be.select.selection_bitsize)),
+                Register("phase_bitsize", QAny(be.prepare.stateprep.phase_bitsize)),)
+        partition = Partition(n=self.num_selection_ancillas, regs=regs)
+        selection, phase_bitsize = bb.add(partition, x=be_ancillas)
+
 
         reflect_controlled = self.walk.reflect.controlled(ctrl_spec=CtrlSpec(cvs=0))
         walk_controlled = self.walk.controlled()
@@ -653,11 +660,12 @@ class QubitisationLadder(Bloq):
                 selection=selection,
             )
 
-            qpe_ancilla_qubits[0], selection, target = bb.add(
+            qpe_ancilla_qubits[0], selection, target, phase_bitsize = bb.add(
                 walk_controlled,
                 ctrl=qpe_ancilla_qubits[0],
                 selection=selection,
                 target=target,
+                phase_bitsize=phase_bitsize,
             )
 
         else:
@@ -667,10 +675,11 @@ class QubitisationLadder(Bloq):
                 selection=selection,
             )
 
-            selection, target = bb.add(
+            selection, target, phase_bitsize = bb.add(
                 Power(self.walk, 2 ** (self.index - 1)),
                 selection=selection,
                 target=target,
+                phase_bitsize=phase_bitsize,
             )
 
             qpe_ancilla_qubits[self.index], selection = bb.add(
@@ -679,10 +688,14 @@ class QubitisationLadder(Bloq):
                 selection=selection,
             )
 
+        be_ancillas = bb.add(
+            partition.adjoint(), selection=selection, phase_bitsize=phase_bitsize
+        )
+
         return {
             "data": target,
             "qpe_ancillas": bb.join(qpe_ancilla_qubits),
-            "other_ancillas": selection,
+            "other_ancillas": be_ancillas,
         }
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
