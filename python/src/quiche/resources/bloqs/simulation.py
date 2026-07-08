@@ -235,7 +235,7 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
 
         # create SELECT and PREP operators
         select = SelectPauliLCUWrapper(
-            selection_bitsize=select_nqubits + phase_bitsize,
+            selection_bitsize=select_nqubits,
             target_bitsize=h.n_qubits,
             select_unitaries=terms,
         )
