@@ -94,7 +94,7 @@ class TestSelectPauliLCUWrapper:
     for term in h.terms:
         terms.append(term.to_cirq(h.n_qubits))
     select = SelectPauliLCUWrapper(
-        selection_bitsize=select_nqubits + phase_bitsize,
+        selection_bitsize=select_nqubits,
         target_bitsize=h.n_qubits,
         select_unitaries=terms,
     )
@@ -122,14 +122,19 @@ class TestLCUBlockEncodingWrapper:
     def test_signature(self):
         """Check bloq signature."""
         sig = self.blockencoding.signature
-        assert len(sig) == 2
+        assert len(sig) == 3
 
         reg = sig[0]
         assert reg.name == "selection"
-        assert reg.dtype == QAny(self.select_nqubits + self.phase_bitsize)
+        assert reg.dtype == QAny(self.select_nqubits)
         assert reg.side == Side.THRU
 
         reg = sig[1]
+        assert reg.name == "phase_bitsize"
+        assert reg.dtype == QAny(self.phase_bitsize)
+        assert reg.side == Side.THRU
+
+        reg = sig[2]
         assert reg.name == "target"
         assert reg.dtype == QAny(self.h.n_qubits)
         assert reg.side == Side.THRU
