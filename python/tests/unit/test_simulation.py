@@ -143,7 +143,7 @@ class TestSOSSABlockEncoding:
         inner_block_encodings.append(be_j)
         inner_normalisation_constants.append(abs(coefficient) + 1.)
 
-        num_inner_be_ancillas = max(num_inner_be_ancillas, be_j.select.selection_bitsize)
+        num_inner_be_ancillas = max(num_inner_be_ancillas, be_j.select.selection_bitsize + be_j.prepare.stateprep.phase_bitsize)
 
     # Cast lists to tuples. This is needed for the bloq count verification: dicts cannot
     # take lists as keys since they are mutable, tuples are not.
@@ -210,7 +210,7 @@ class TestSOSSASqrtBlockEncoding:
         inner_block_encodings.append(be_j)
         inner_normalisation_constants.append(abs(coefficient) + 1.)
 
-        num_inner_be_ancillas = max(num_inner_be_ancillas, be_j.select.selection_bitsize)
+        num_inner_be_ancillas = max(num_inner_be_ancillas, be_j.select.selection_bitsize + be_j.prepare.stateprep.phase_bitsize)
 
     # Cast lists to tuples. This is needed for the bloq count verification: dicts cannot
     # take lists as keys since they are mutable, tuples are not.
