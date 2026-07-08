@@ -139,7 +139,12 @@ class PrepareFromStatePrep(PrepareOracle):
     @property
     def selection_registers(self) -> tuple[Register, ...]:
         """Get selection (index) register."""
-        return (Register("selection", QAny(self.phase_bitsize + self.select_nqubits)),)
+        return (Register("selection", QAny(self.select_nqubits)),)
+
+    @property
+    def junk_registers(self) -> tuple[Register, ...]:
+        """Denote the phase bitsize register as junk register."""
+        return (Register("phase_bitsize", QAny(self.phase_bitsize)),)
 
     # We must implement the required abstract method to expose the concrete circuit
     def build_prepare_circuit(self) -> Bloq:
@@ -151,25 +156,15 @@ class PrepareFromStatePrep(PrepareOracle):
         bb: BloqBuilder,
         **soqs: SoquetT,
     ) -> dict[str, SoquetT]:
-        """
-        Implement decomposition into sub-bloqs using state prep bloq decompositon.
+        """Implement decomposition into sub-bloqs using state prep bloq decompositon."""
+        target_state = soqs["selection"]
+        phase_gradient = soqs["phase_bitsize"]
 
-        Because the state prep unitary uses registers 'target_state' and
-        'phase_gradient', the register 'selection' needs to be split up in the process.
-        """
-        # split the selection register into the state prep register
-        xs = bb.split(soqs["selection"])
-        target_state = bb.join(xs[: self.select_nqubits])
-        phase_gradient = bb.join(xs[self.select_nqubits :])
-
-        target_state, phase_gradient = bb.add(
+        system, phase_gradient = bb.add(
             self.stateprep, target_state=target_state, phase_gradient=phase_gradient
         )
 
-        xs = np.concatenate([bb.split(target_state), bb.split(phase_gradient)])
-        result = bb.join(xs)
-
-        return {"selection": result}
+        return {"selection": system, "phase_bitsize" : phase_gradient}
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for PrepareFromStatePrep."""
