@@ -32,7 +32,6 @@ from qualtran.testing import (
 from scipy.linalg import expm
 
 from quiche.core import Errors, Pauli, PauliSum, PauliWord
-from quiche.hamlib import get_dataset, parse_hamiltonian
 from quiche.resources import logical_qubit_resources
 from quiche.resources.bloqs import (
     QDRIFT,
@@ -41,25 +40,6 @@ from quiche.resources.bloqs import (
     SelectPauliLCUWrapper,
     Trotterisation,
 )
-
-
-def _load_h2() -> PauliSum:
-    """Load the H2 Hamiltonian from tests/data/H2.hdf5."""
-    filename = "tests/data/H2.hdf5"
-    dataset = "ham_JW-4"  # choose smallest size to keep tests fast
-    raw_data = get_dataset(filename, dataset)
-    return parse_hamiltonian(raw_data)
-
-
-def _default_budget() -> Errors:
-    tot_error = 0.16
-    return Errors(
-        estimation=tot_error / 3.0,
-        simulation=1.0,
-        rotations=tot_error / 3.0,
-        state_prep=tot_error / 3.0,
-        overlap=1,
-    )
 
 
 def _flatten_trotterizedunitary(bloq_counts: dict) -> dict:
@@ -86,25 +66,26 @@ def _compare_manual_decomp_counts_trotter(bloq: Bloq) -> bool:
 class TestSelectPauliLCUWrapper:
     """Tests for PauliLCUWrapper."""
 
-    h = _load_h2()
-    budget = _default_budget()
-    select_nqubits = ceil(log2(h.n_terms))
-    phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
-    terms = []
-    for term in h.terms:
-        terms.append(term.to_cirq(h.n_qubits))
-    select = SelectPauliLCUWrapper(
-        selection_bitsize=select_nqubits + phase_bitsize,
-        target_bitsize=h.n_qubits,
-        select_unitaries=terms,
-    )
+    @pytest.fixture(autouse=True)
+    def _setup(self, h2: PauliSum, budget: Errors) -> None:
+        select_nqubits = ceil(log2(h2.n_terms))
+        phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
+        terms = [term.to_cirq(h2.n_qubits) for term in h2.terms]
 
-    @pytest.mark.parametrize("bloq", [select, select.controlled()])
-    def test_bloq_counts(self, bloq: Bloq):
+        self.select = SelectPauliLCUWrapper(
+            selection_bitsize=select_nqubits + phase_bitsize,
+            target_bitsize=h2.n_qubits,
+            select_unitaries=terms,
+        )
+
+    @pytest.mark.parametrize("controlled", [False, True])
+    def test_bloq_counts(self, controlled: bool):
+        bloq = self.select.controlled() if controlled else self.select
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
-    @pytest.mark.parametrize("bloq", [select, select.controlled()])
-    def test_qubit_counts(self, bloq: Bloq):
+    @pytest.mark.parametrize("controlled", [False, True])
+    def test_qubit_counts(self, controlled: bool):
+        bloq = self.select.controlled() if controlled else self.select
         manual_counts = logical_qubit_resources(bloq)
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
         assert manual_counts == decomp_counts
@@ -113,11 +94,16 @@ class TestSelectPauliLCUWrapper:
 class TestLCUBlockEncodingWrapper:
     """Tests for LCUBlockEncodingWrapper."""
 
-    h = _load_h2()
-    budget = _default_budget()
-    select_nqubits = ceil(log2(h.n_terms))
-    phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
-    blockencoding = LCUBlockEncodingWrapper.from_hamiltonian(h, phase_bitsize)
+    @pytest.fixture(autouse=True)
+    def _setup(self, h2: PauliSum, budget: Errors) -> None:
+        self.h = h2
+        self.select_nqubits = ceil(log2(h2.n_terms))
+        self.phase_bitsize = max(
+            ceil(log2(2.0 * self.select_nqubits / budget.state_prep)), 2
+        )
+        self.blockencoding = LCUBlockEncodingWrapper.from_hamiltonian(
+            self.h, self.phase_bitsize
+        )
 
     def test_signature(self):
         """Check bloq signature."""
@@ -183,23 +169,27 @@ class TestLCUBlockEncodingWrapper:
         # Assert the coefficients
         np.testing.assert_allclose(lam * true_prep_coeffs**2, target_coefficients)
 
-    @pytest.mark.parametrize("bloq", [blockencoding, blockencoding.controlled()])
-    def test_bloq_counts(self, bloq: Bloq):
+    @pytest.mark.parametrize("controlled", [False, True])
+    def test_bloq_counts(self, controlled: bool):
+        bloq = self.blockencoding.controlled() if controlled else self.blockencoding
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
-    @pytest.mark.parametrize("bloq", [blockencoding, blockencoding.controlled()])
-    def test_qubit_counts(self, bloq: Bloq):
+    @pytest.mark.parametrize("controlled", [False, True])
+    def test_qubit_counts(self, controlled: bool):
+        bloq = self.blockencoding.controlled() if controlled else self.blockencoding
         manual_counts = logical_qubit_resources(bloq)
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
         assert manual_counts == decomp_counts
 
 
 class TestPauliWordRotation:
-    n_qubits = 7
-    qubits = (0, 2, 5)
-    phase = 0.4
-    word = PauliWord(terms=(Pauli.Y, Pauli.Z, Pauli.X), qubits=qubits)
-    rot = PauliWordRotation(word, phase, n_qubits)
+    @pytest.fixture(autouse=True)
+    def _setup(self) -> None:
+        self.qubits = (0, 2, 5)
+        self.n_qubits = 7
+        self.phase = 0.4
+        self.word = PauliWord(terms=(Pauli.Y, Pauli.Z, Pauli.X), qubits=self.qubits)
+        self.rot = PauliWordRotation(self.word, self.phase, self.n_qubits)
 
     def test_signature(self):
         sig = self.rot.signature
@@ -226,23 +216,27 @@ class TestPauliWordRotation:
         u_target = expm(-1j * h * self.phase / 2)
         np.testing.assert_allclose(u, u_target)
 
-    @pytest.mark.parametrize("bloq", [rot, rot.controlled()])
-    def test_bloq_counts(self, bloq: Bloq):
+    @pytest.mark.parametrize("controlled", [False, True])
+    def test_bloq_counts(self, controlled: bool):
+        bloq = self.rot.controlled() if controlled else self.rot
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
-    @pytest.mark.parametrize("bloq", [rot, rot.controlled()])
-    def test_qubit_counts(self, bloq: Bloq):
+    @pytest.mark.parametrize("controlled", [False, True])
+    def test_qubit_counts(self, controlled: bool):
+        bloq = self.rot.controlled() if controlled else self.rot
         manual_counts = logical_qubit_resources(bloq)
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
         assert manual_counts == decomp_counts
 
 
 class TestQDRIFT:
-    h = _load_h2()
-    t = 5
-    n_terms = 20
-    seed = 1024
-    qdrift = QDRIFT(h, t, n_terms, seed)
+    @pytest.fixture(autouse=True)
+    def _setup(self, h2: PauliSum) -> None:
+        self.h = h2
+        self.t = 5
+        self.n_terms = 20
+        self.seed = 1024
+        self.qdrift = QDRIFT(self.h, self.t, self.n_terms, self.seed)
 
     def test_invalid_negative_nsteps(self):
         n_terms = -10
@@ -256,24 +250,27 @@ class TestQDRIFT:
         with pytest.raises(ValueError, match="Choose positive evolution time"):
             QDRIFT(self.h, t, n_terms, self.seed)
 
-    @pytest.mark.parametrize("bloq", [qdrift, qdrift.controlled()])
-    def test_bloq_counts(self, bloq: Bloq):
+    @pytest.mark.parametrize("controlled", [False, True])
+    def test_bloq_counts(self, controlled: bool):
+        bloq = self.qdrift.controlled() if controlled else self.qdrift
         assert _compare_manual_decomp_counts_trotter(bloq)
 
-    @pytest.mark.parametrize("bloq", [qdrift, qdrift.controlled()])
-    def test_qubit_counts(self, bloq: Bloq):
+    @pytest.mark.parametrize("controlled", [False, True])
+    def test_qubit_counts(self, controlled: bool):
+        bloq = self.qdrift.controlled() if controlled else self.qdrift
         manual_counts = logical_qubit_resources(bloq)
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
         assert manual_counts == decomp_counts
 
 
 class TestTrotterisation:
-    h = _load_h2()
-    budget = _default_budget()
-    t = 5
-    n_steps = 10
-    trotter_order2 = Trotterisation(h, t, n_steps, order=2)
-    trotter_order4 = Trotterisation(h, t, n_steps, order=4)
+    @pytest.fixture(autouse=True)
+    def _setup(self, h2: PauliSum) -> None:
+        self.h = h2
+        self.t = 5
+        self.n_steps = 10
+        self.trotter_order2 = Trotterisation(self.h, self.t, self.n_steps, order=2)
+        self.trotter_order4 = Trotterisation(self.h, self.t, self.n_steps, order=4)
 
     @pytest.mark.parametrize("n_steps", [-10, 0])
     def test_invalid_nsteps(self, n_steps: int):
@@ -519,28 +516,18 @@ class TestTrotterisation:
 
         np.testing.assert_allclose(u, u_target, atol=1e-15)
 
-    @pytest.mark.parametrize(
-        "bloq",
-        [
-            trotter_order2,
-            trotter_order2.controlled(),
-            trotter_order4,
-            trotter_order4.controlled(),
-        ],
-    )
-    def test_bloq_counts(self, bloq: Bloq):
+    @pytest.mark.parametrize("sim_attr", ["trotter_order2", "trotter_order4"])
+    @pytest.mark.parametrize("controlled", [False, True])
+    def test_bloq_counts(self, sim_attr: str, controlled: bool):
+        simulation = getattr(self, sim_attr)
+        bloq = simulation.controlled() if controlled else simulation
         assert _compare_manual_decomp_counts_trotter(bloq)
 
-    @pytest.mark.parametrize(
-        "bloq",
-        [
-            trotter_order2,
-            trotter_order2.controlled(),
-            trotter_order4,
-            trotter_order4.controlled(),
-        ],
-    )
-    def test_qubit_counts(self, bloq: Bloq):
+    @pytest.mark.parametrize("sim_attr", ["trotter_order2", "trotter_order4"])
+    @pytest.mark.parametrize("controlled", [False, True])
+    def test_qubit_counts(self, sim_attr: str, controlled: bool):
+        simulation = getattr(self, sim_attr)
+        bloq = simulation.controlled() if controlled else simulation
         manual_counts = logical_qubit_resources(bloq)
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
         assert manual_counts == decomp_counts
