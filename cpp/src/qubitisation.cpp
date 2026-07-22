@@ -116,27 +116,27 @@ void applyMultiStateControlledReflection(Qureg qureg, const std::vector<int> &co
 
     validateQubitsUnique(targets);
 
-    int numQubits = targets.size();
-
     std::vector<int> combinedControls(targets.begin(), targets.end());
     combinedControls.insert(combinedControls.end(), controls.begin(), controls.end());
 
-    std::vector<int> combinedStates(numQubits, 0);
+    std::vector<int> combinedStates(targets.size(), 0);
     combinedStates.insert(combinedStates.end(), states.begin(), states.end());
 
-    // |c><c| - defined by controls, states
-    // |0...0><0...0| - defined by qubitisationAncillas
+    // Aim: controlled reflection R =  I + 2 P_c (P_0 - I)
+    // P_c = |states><states| - defined by controls, states
+    // P_0 = |0...0><0...0| - defined by targets
+    // I.e. when the controls are satisfied reflect about |0...0> (+1 on the zero target state,
+    // -1 on every other target state); otherwise act as the identity.
 
-    // R′ = I − 2 (|c><c| ⊗ |0...0><0...0|)
+    // R′ = I − 2 P_c P_0
     applyMultiQubitStatePhaseFlip(qureg, combinedControls, combinedStates);
 
     if (controls.empty()) {
-        // In this case R′ = I − 2 |0...0><0...0|, so just need to apply -1 global phase
-        // to get the desired R = 2 |0...0><0...0| - I
+        // No controls, so P_c = I and just need to apply -1 global phase to get R = 2 P_0 - I
         applyRotateZ(qureg, targets[0], 2 * const_PI);
     } else {
-        // Apply phase flip on control subspace, i.e. (I - 2 |c><c|  ⊗ I)
-        // Overall yields R = I + |c><c| ⊗ (2 |0...0><0...0| - 2I)
+        // Flip the sign of the whole control subspace, I - 2 P_c
+        // Overall yielding (I - 2 P_c)(I - 2 P_c P_0) = I - 2 P_c + 2 P_c P_0 = I + 2 P_c (P_0 - I) = R.
         applyMultiQubitStatePhaseFlip(qureg, controls, states);
     }
 }
