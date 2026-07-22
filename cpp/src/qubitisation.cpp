@@ -92,7 +92,7 @@ void applyMultiStateControlledSelect(Qureg qureg, const std::vector<int> &contro
         // Handle negative PauliStrSum coefficients
         // Although we could handle complex coefficients too we follow the usual approach and enforce Hermitian LCU
         double phaseAngle = std::arg(sum.coeffs[i]);
-        applyMultiStateControlledPhaseShift(qureg, combinedControls, combinedStates, phaseAngle);
+        applyMultiQubitStatePhaseShift(qureg, combinedControls, combinedStates, phaseAngle);
     }
 }
 
@@ -128,7 +128,7 @@ void applyMultiStateControlledReflection(Qureg qureg, const std::vector<int> &co
     // |0...0><0...0| - defined by qubitisationAncillas
 
     // R′ = I − 2 (|c><c| ⊗ |0...0><0...0|)
-    applyMultiStateControlledQubitPhaseFlip(qureg, combinedControls, combinedStates);
+    applyMultiQubitStatePhaseFlip(qureg, combinedControls, combinedStates);
 
     if (controls.empty()) {
         // In this case R′ = I − 2 |0...0><0...0|, so just need to apply -1 global phase
@@ -137,7 +137,7 @@ void applyMultiStateControlledReflection(Qureg qureg, const std::vector<int> &co
     } else {
         // Apply phase flip on control subspace, i.e. (I - 2 |c><c|  ⊗ I)
         // Overall yields R = I + |c><c| ⊗ (2 |0...0><0...0| - 2I)
-        applyMultiStateControlledQubitPhaseFlip(qureg, controls, states);
+        applyMultiQubitStatePhaseFlip(qureg, controls, states);
     }
 }
 
