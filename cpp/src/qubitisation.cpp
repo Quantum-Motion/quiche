@@ -79,20 +79,20 @@ void applyMultiStateControlledSelect(Qureg qureg, const std::vector<int> &contro
 
     int numQubits = indexQubits.size();
 
-    std::vector<int> combinedControls = indexQubits;
-    combinedControls.insert(combinedControls.end(), controls.begin(), controls.end());
+    std::vector<int> combinedQubits = indexQubits;
+    combinedQubits.insert(combinedQubits.end(), controls.begin(), controls.end());
 
     std::vector<int> combinedStates(numQubits);
     combinedStates.insert(combinedStates.end(), states.begin(), states.end());
 
     for (int i = 0; i < sum.numTerms; i++) {
         getBitsFromInteger(combinedStates.data(), i, numQubits);
-        applyMultiStateControlledPauliStr(qureg, combinedControls, combinedStates, sum.strings[i]);
+        applyMultiStateControlledPauliStr(qureg, combinedQubits, combinedStates, sum.strings[i]);
 
         // Handle negative PauliStrSum coefficients
         // Although we could handle complex coefficients too we follow the usual approach and enforce Hermitian LCU
         double phaseAngle = std::arg(sum.coeffs[i]);
-        applyMultiQubitStatePhaseShift(qureg, combinedControls, combinedStates, phaseAngle);
+        applyMultiQubitStatePhaseShift(qureg, combinedQubits, combinedStates, phaseAngle);
     }
 }
 
@@ -116,8 +116,8 @@ void applyMultiStateControlledReflection(Qureg qureg, const std::vector<int> &co
 
     validateQubitsUnique(targets);
 
-    std::vector<int> combinedControls(targets.begin(), targets.end());
-    combinedControls.insert(combinedControls.end(), controls.begin(), controls.end());
+    std::vector<int> combinedQubits(targets.begin(), targets.end());
+    combinedQubits.insert(combinedQubits.end(), controls.begin(), controls.end());
 
     std::vector<int> combinedStates(targets.size(), 0);
     combinedStates.insert(combinedStates.end(), states.begin(), states.end());
@@ -129,7 +129,7 @@ void applyMultiStateControlledReflection(Qureg qureg, const std::vector<int> &co
     // -1 on every other target state); otherwise act as the identity.
 
     // R′ = I − 2 P_c P_0
-    applyMultiQubitStatePhaseFlip(qureg, combinedControls, combinedStates);
+    applyMultiQubitStatePhaseFlip(qureg, combinedQubits, combinedStates);
 
     if (controls.empty()) {
         // No controls, so P_c = I and just need to apply -1 global phase to get R = 2 P_0 - I
@@ -181,8 +181,8 @@ void applyMultiStateControlledCoeffsPrep(Qureg qureg, const std::vector<int> &co
     for (int i = 0; i < numQubits; i++) {
         int j = inverse ? numQubits - i - 1 : i;
 
-        std::vector<int> combinedControls(targets.end() - j, targets.end());
-        combinedControls.insert(combinedControls.end(), controls.begin(), controls.end());
+        std::vector<int> combinedQubits(targets.end() - j, targets.end());
+        combinedQubits.insert(combinedQubits.end(), controls.begin(), controls.end());
 
         std::vector<int> combinedStates(j);
         combinedStates.insert(combinedStates.end(), states.begin(), states.end());
@@ -204,7 +204,7 @@ void applyMultiStateControlledCoeffsPrep(Qureg qureg, const std::vector<int> &co
             if (denom > 0.0) {
                 double angle = (inverse ? -1 : 1) * 2.0 * std::acos(std::sqrt(leftSum / denom));
                 getBitsFromInteger(combinedStates.data(), k, j);
-                applyMultiStateControlledRotateY(qureg, combinedControls, combinedStates, target, angle);
+                applyMultiStateControlledRotateY(qureg, combinedQubits, combinedStates, target, angle);
             }
         }
     }
