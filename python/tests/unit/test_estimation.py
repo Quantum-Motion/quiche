@@ -97,7 +97,10 @@ def _get_num_estimation_qubits(budget: Errors) -> int:
     ],
     ids=["qdrift", "trotter_order2", "trotter_order4"],
 )
-def simulation(request, h2: PauliSum, budget: Errors) -> QDRIFT | Trotterisation:
+def simulation(
+    request: pytest.FixtureRequest, h2: PauliSum, budget: Errors
+) -> QDRIFT | Trotterisation:
+    """Test fixture generating Trotter and QDRIFT simulations."""
     return request.param(h2, budget)
 
 
@@ -146,8 +149,9 @@ class TestIterativeQPE:
         ],
     )
     def test_invalid_inputs(
-        self, simulation: QDRIFT | Trotterisation, k: int, mode: str, err_msg: str
+        self, h2: PauliSum, budget: Errors, k: int, mode: str, err_msg: str
     ):
+        simulation = _make_qdrift(h2, budget)
         with pytest.raises(ValueError, match=err_msg):
             IterativeQPE(simulation, k, mode)
 

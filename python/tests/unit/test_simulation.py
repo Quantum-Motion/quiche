@@ -69,12 +69,12 @@ class TestSelectPauliLCUWrapper:
         )
 
     @pytest.mark.parametrize("controlled", [False, True])
-    def test_bloq_counts(self, select: SelectPauliLCUWrapper, controlled: bool):
+    def test_bloq_counts(self, select: SelectPauliLCUWrapper, *, controlled: bool):
         bloq = select.controlled() if controlled else select
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
     @pytest.mark.parametrize("controlled", [False, True])
-    def test_qubit_counts(self, select: SelectPauliLCUWrapper, controlled: bool):
+    def test_qubit_counts(self, select: SelectPauliLCUWrapper, *, controlled: bool):
         bloq = select.controlled() if controlled else select
         manual_counts = logical_qubit_resources(bloq)
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
@@ -84,7 +84,7 @@ class TestSelectPauliLCUWrapper:
 class TestLCUBlockEncodingWrapper:
     """Tests for LCUBlockEncodingWrapper."""
 
-    @pytest.fixture(autouse=True)
+    @pytest.fixture
     def blockencoding(self, h2: PauliSum, budget: Errors) -> LCUBlockEncodingWrapper:
         select_nqubits = ceil(log2(h2.n_terms))
         phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
@@ -124,7 +124,7 @@ class TestLCUBlockEncodingWrapper:
         # There are a total of self.h.n_terms + 1 non-zero coefficients because the
         # identity coefficient is non-zero. Test that these are indeed non-zero and all
         # others are zero.
-        np.testing.assert_equal(prep_coeffs[: h2.n_terms + 1] != 0, True)
+        np.testing.assert_equal(prep_coeffs[: h2.n_terms + 1] != 0, desired=True)
         np.testing.assert_allclose(prep_coeffs[h2.n_terms + 1 :], 0.0)
 
     def test_selectunitaries(
@@ -163,14 +163,14 @@ class TestLCUBlockEncodingWrapper:
 
     @pytest.mark.parametrize("controlled", [False, True])
     def test_bloq_counts(
-        self, blockencoding: LCUBlockEncodingWrapper, controlled: bool
+        self, blockencoding: LCUBlockEncodingWrapper, *, controlled: bool
     ):
         bloq = blockencoding.controlled() if controlled else blockencoding
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
     @pytest.mark.parametrize("controlled", [False, True])
     def test_qubit_counts(
-        self, blockencoding: LCUBlockEncodingWrapper, controlled: bool
+        self, blockencoding: LCUBlockEncodingWrapper, *, controlled: bool
     ):
         bloq = blockencoding.controlled() if controlled else blockencoding
         manual_counts = logical_qubit_resources(bloq)
@@ -215,12 +215,12 @@ class TestPauliWordRotation:
         np.testing.assert_allclose(u, u_target)
 
     @pytest.mark.parametrize("controlled", [False, True])
-    def test_bloq_counts(self, rotation: PauliWordRotation, controlled: bool):
+    def test_bloq_counts(self, rotation: PauliWordRotation, *, controlled: bool):
         bloq = rotation.controlled() if controlled else rotation
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
     @pytest.mark.parametrize("controlled", [False, True])
-    def test_qubit_counts(self, rotation: PauliWordRotation, controlled: bool):
+    def test_qubit_counts(self, rotation: PauliWordRotation, *, controlled: bool):
         bloq = rotation.controlled() if controlled else rotation
         manual_counts = logical_qubit_resources(bloq)
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
@@ -232,7 +232,7 @@ class TestQDRIFT:
     def qdrift(self, h2: PauliSum) -> QDRIFT:
         return QDRIFT(h2, t=5, n_terms=20, seed=1024)
 
-    def test_invalid_negative_nsteps(self, h2: PauliSum):
+    def test_invalid_negative_nterms(self, h2: PauliSum):
         with pytest.raises(ValueError, match="Choose positive n_terms"):
             QDRIFT(h2, t=5, n_terms=-10)
 
@@ -241,7 +241,7 @@ class TestQDRIFT:
             QDRIFT(h2, t=-5, n_terms=4)
 
     @pytest.mark.parametrize("controlled", [False, True])
-    def test_bloq_counts(self, qdrift: QDRIFT, controlled: bool):
+    def test_bloq_counts(self, qdrift: QDRIFT, *, controlled: bool):
         bloq = qdrift.controlled() if controlled else qdrift
         manual_counts = bloq.bloq_counts(generalizer=[ignore_split_join])
         decomp_counts = bloq.decompose_bloq().bloq_counts(
@@ -251,7 +251,7 @@ class TestQDRIFT:
         assert manual_counts == decomp_unpack
 
     @pytest.mark.parametrize("controlled", [False, True])
-    def test_qubit_counts(self, qdrift: QDRIFT, controlled: bool):
+    def test_qubit_counts(self, qdrift: QDRIFT, *, controlled: bool):
         bloq = qdrift.controlled() if controlled else qdrift
         manual_counts = logical_qubit_resources(bloq)
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
@@ -260,7 +260,7 @@ class TestQDRIFT:
 
 class TestTrotterisation:
     @pytest.fixture
-    def trotter(self, h2: PauliSum, request) -> Trotterisation:
+    def trotter(self, h2: PauliSum, request: pytest.FixtureRequest) -> Trotterisation:
         return Trotterisation(h2, t=5, n_steps=10, order=request.param)
 
     @pytest.mark.parametrize("n_steps", [-10, 0])
@@ -505,7 +505,7 @@ class TestTrotterisation:
 
     @pytest.mark.parametrize("trotter", [2, 4], indirect=True)
     @pytest.mark.parametrize("controlled", [False, True])
-    def test_bloq_counts(self, trotter: Trotterisation, controlled: bool):
+    def test_bloq_counts(self, trotter: Trotterisation, *, controlled: bool):
         bloq = trotter.controlled() if controlled else trotter
         manual_counts = bloq.bloq_counts(generalizer=[ignore_split_join])
         decomp_counts = bloq.decompose_bloq().bloq_counts(
@@ -516,7 +516,7 @@ class TestTrotterisation:
 
     @pytest.mark.parametrize("trotter", [2, 4], indirect=True)
     @pytest.mark.parametrize("controlled", [False, True])
-    def test_qubit_counts(self, trotter: Trotterisation, controlled: bool):
+    def test_qubit_counts(self, trotter: Trotterisation, *, controlled: bool):
         bloq = trotter.controlled() if controlled else trotter
         manual_counts = logical_qubit_resources(bloq)
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())

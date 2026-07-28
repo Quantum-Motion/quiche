@@ -1,3 +1,5 @@
+"""Common pytest fixtures and setup for test suite."""
+
 from pathlib import Path
 
 import pytest
