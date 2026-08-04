@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.24)
 
 project(QuicheProject
     VERSION 0.0.1
@@ -24,17 +24,16 @@ message("
     ==================
     ")
 
-find_package(QuEST QUIET)
-if(NOT QuEST_FOUND)
-    message(STATUS "QuEST not found, fetching from GitHub.")
-    FetchContent_Declare(
-        QuEST
-        GIT_REPOSITORY https://github.com/QuEST-Kit/QuEST
-        GIT_TAG v4.2.0
-        GIT_PROGRESS TRUE
-    )
-    FetchContent_MakeAvailable(QuEST)
-endif()
+# NOTE: quiche requires private QuEST headers from quest/src/core/. These are only
+# exposed via the build interface and are not installed, so QuEST must come from
+# FetchContent -- do not add FIND_PACKAGE_ARGS here.
+FetchContent_Declare(
+    QuEST
+    URL https://github.com/QuEST-Kit/QuEST/archive/refs/tags/v4.2.0.tar.gz
+    URL_HASH SHA256=2c812a7ec4d727e0947ffd0daf05452963c3f1c10e428c8bc30c35164921fcba
+    OVERRIDE_FIND_PACKAGE
+)
+FetchContent_MakeAvailable(QuEST)
 
 # --------------------------------------------------------------------------------
 

@@ -1,15 +1,14 @@
-find_package(Catch2 3 QUIET)
-if(NOT Catch2_FOUND)
-    message(STATUS "Catch2 not found, fetching from GitHub.")
-    FetchContent_Declare(
-        Catch2
-        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG v3.13.0
-        GIT_PROGRESS TRUE
-    )
-    FetchContent_MakeAvailable(Catch2)
-    list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
-endif ()
+FetchContent_Declare(
+    Catch2
+    URL https://github.com/catchorg/Catch2/archive/refs/tags/v3.13.0.tar.gz
+    URL_HASH SHA256=650795f6501af514f806e78c554729847b98db6935e69076f36bb03ed2e985ef
+    FIND_PACKAGE_ARGS 3.13
+)
+FetchContent_MakeAvailable(Catch2)
+
+if(catch2_SOURCE_DIR)
+    list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
+endif()
 
 # --------------------------------------------------------------------------------
 

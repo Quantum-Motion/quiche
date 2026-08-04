@@ -1,16 +1,14 @@
 find_package(Python 3.12 COMPONENTS Interpreter Development.Module REQUIRED)
 
-find_package(nanobind QUIET)
-if(NOT nanobind_FOUND)
-    message(STATUS "Nanobind not found, fetching from GitHub.")
-    FetchContent_Declare(
-        nanobind
-        GIT_REPOSITORY https://github.com/wjakob/nanobind
-        GIT_TAG v2.10.0
-        GIT_PROGRESS TRUE
-    )
-    FetchContent_MakeAvailable(nanobind)
-endif()
+# Use git source to preserve necessary submodules
+FetchContent_Declare(
+    nanobind
+    GIT_REPOSITORY https://github.com/wjakob/nanobind
+    GIT_TAG 11087dd7707c80ef85802c661ad459ace5bef671    # v2.10.0
+    GIT_PROGRESS TRUE
+    FIND_PACKAGE_ARGS 2.10
+)
+FetchContent_MakeAvailable(nanobind)
 
 # --------------------------------------------------------------------------------
 
