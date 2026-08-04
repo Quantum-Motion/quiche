@@ -14,7 +14,7 @@ endif ()
 # --------------------------------------------------------------------------------
 
 add_executable(tests main.cpp)
-target_link_libraries(tests PRIVATE quiche Catch2::Catch2)
+target_link_libraries(tests PRIVATE quiche::quiche Catch2::Catch2)
 
 add_subdirectory(unit)
 add_subdirectory(integration)
