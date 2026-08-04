@@ -5,7 +5,7 @@
 ### Installing
 For development, we use the [`uv`](https://docs.astral.sh/uv/) package manager. To install the Python package with development dependencies in editable mode
 ```bash
-cd QUICHE/python
+cd quiche
 uv sync --group dev
 ```
 
@@ -17,7 +17,7 @@ uv sync --reinstall-package=quiche
 ### Testing
 To execute the Python test suite use [`pytest`](https://github.com/pytest-dev/pytest)
 ```bash
-cd QUICHE/python
+cd quiche
 pytest
 ```
 

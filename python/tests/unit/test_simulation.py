@@ -44,8 +44,8 @@ from quiche.resources.bloqs import (
 
 
 def _load_h2() -> PauliSum:
-    """Load the H2 Hamiltonian from tests/data/H2.hdf5."""
-    filename = "tests/data/H2.hdf5"
+    """Load the H2 Hamiltonian from python/tests/data/H2.hdf5."""
+    filename = "python/tests/data/H2.hdf5"
     dataset = "ham_JW-4"  # choose smallest size to keep tests fast
     raw_data = get_dataset(filename, dataset)
     return parse_hamiltonian(raw_data)

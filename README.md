@@ -18,14 +18,14 @@ QUICHE (QUantum Integrated CHEmistry) is a toolkit for studying quantum computin
 
 > QUICHE's simulation backend relies on [QuEST](https://github.com/QuEST-Kit/QuEST), [nanobind](https://github.com/wjakob/nanobind) (for Python bindings), [HDF5](https://github.com/HDFGroup/hdf5) (for Hamlib features) and [Catch2](https://github.com/catchorg/Catch2) (for testing). The latter three can be toggled using the `QUICHE_BUILD_BINDINGS`, `QUICHE_BUILD_HAMLIB`, and `QUICHE_BUILD_TESTS` flags respectively (see below for usage). If a required dependency is not available during the build process it will be downloaded and installed using CMake's `FetchContent`.
 
-Begin by cloning the and navigating to the QUICHE repo
+Begin by cloning and navigating to the QUICHE repo
 ```bash
 git clone https://github.com/Quantum-Motion/quiche.git
 ```
 
 Then install the Python package, including the simulator bindings
 ```bash
-cd QUICHE/python
+cd quiche
 python -m venv .venv
 source .venv/bin/activate
 pip install .
@@ -38,7 +38,7 @@ import quiche
 
 Alternatively to build only the C++ simulator backend along with the examples, for instance, simply execute
 ```bash
-cd QUICHE
+cd quiche
 cmake -B build -D QUICHE_BUILD_EXAMPLES=ON
 cmake --build build
 ```
