@@ -25,12 +25,11 @@ set(RPATH_BINDINGS "${RPATH_ORIGIN}/libs")
 
 nanobind_add_module(
     bindings
+    NOMINSIZE
+    STABLE_ABI
     bindings.cpp
     quiche.cpp
     quest.cpp
-    NOMINSIZE
-    NB_SHARED
-    STABLE_ABI
 )
 
 target_link_libraries(bindings PRIVATE quiche)
@@ -39,7 +38,7 @@ set_target_properties(bindings PROPERTIES INSTALL_RPATH "${RPATH_BINDINGS}")
 # Note: The Python build backend will set CMAKE_INSTALL_PREFIX to the temporary wheel
 # staging directory. Therefore, these paths should be set relative to the site-packages
 # root.
-install(TARGETS nanobind QuEST quiche LIBRARY DESTINATION quiche/libs)
+install(TARGETS QuEST quiche LIBRARY DESTINATION quiche/libs)
 install(TARGETS bindings LIBRARY DESTINATION quiche)
 
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../python/src/quiche")
