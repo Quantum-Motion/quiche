@@ -12,14 +12,11 @@ FetchContent_MakeAvailable(nanobind)
 
 # --------------------------------------------------------------------------------
 
-set(BUILD_RPATH_USE_ORIGIN ON)
 if(APPLE)
     set(RPATH_ORIGIN "@loader_path")
 else()
     set(RPATH_ORIGIN "$ORIGIN")
 endif()
-
-set(RPATH_BINDINGS "${RPATH_ORIGIN}/libs")
 
 # --------------------------------------------------------------------------------
 
@@ -33,12 +30,17 @@ nanobind_add_module(
 )
 
 target_link_libraries(bindings PRIVATE quiche)
-set_target_properties(bindings PROPERTIES INSTALL_RPATH "${RPATH_BINDINGS}")
+
+set_target_properties(bindings PROPERTIES INSTALL_RPATH "${RPATH_ORIGIN}/libs")
+set_target_properties(quiche QuEST PROPERTIES INSTALL_RPATH "${RPATH_ORIGIN}")
 
 # Note: The Python build backend will set CMAKE_INSTALL_PREFIX to the temporary wheel
 # staging directory. Therefore, these paths should be set relative to the site-packages
 # root.
-install(TARGETS QuEST quiche LIBRARY DESTINATION quiche/libs)
+install(TARGETS QuEST quiche
+    LIBRARY DESTINATION quiche/libs
+    RUNTIME DESTINATION quiche/libs
+)
 install(TARGETS bindings LIBRARY DESTINATION quiche)
 
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../python/src/quiche")
