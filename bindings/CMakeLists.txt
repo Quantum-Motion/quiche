@@ -1,4 +1,4 @@
-find_package(Python 3.12 COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(Python 3.12 COMPONENTS Interpreter Development.Module Development.SABIModule REQUIRED)
 
 # Use git source to preserve necessary submodules
 FetchContent_Declare(
