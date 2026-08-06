@@ -14,6 +14,8 @@ target_include_directories(quiche PUBLIC ${PROJECT_SOURCE_DIR}/cpp/include)
 target_compile_features(quiche PUBLIC cxx_std_17)
 target_link_libraries(quiche PUBLIC QuEST::QuEST)
 
+set_target_properties(quiche PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 # --------------------------------------------------------------------------------
 
 option(QUICHE_BUILD_HAMLIB "Build the Hamlib parsing tools." OFF)

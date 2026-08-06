@@ -38,8 +38,8 @@ set_target_properties(quiche QuEST PROPERTIES INSTALL_RPATH "${RPATH_ORIGIN}")
 # staging directory. Therefore, these paths should be set relative to the site-packages
 # root.
 install(TARGETS QuEST quiche
-    LIBRARY DESTINATION quiche/libs
-    RUNTIME DESTINATION quiche/libs
+    LIBRARY DESTINATION quiche/libs    # .so / .dylib, located via INSTALL_RPATH
+    RUNTIME DESTINATION quiche         # .dll: no RPATH on Windows, must sit beside bindings
 )
 install(TARGETS bindings LIBRARY DESTINATION quiche)
 
