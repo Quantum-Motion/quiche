@@ -16,6 +16,9 @@
 
 #include "quiche/qpe.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 #include <quest/src/core/constants.hpp>
 
 #include "quiche/qdrift.hpp"

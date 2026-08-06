@@ -23,6 +23,8 @@
 #ifndef MAPPINGS_HPP
 #define MAPPINGS_HPP
 
+#include <vector>
+
 #include <quest.h>
 
 namespace mappings {

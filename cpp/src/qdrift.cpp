@@ -16,6 +16,9 @@
 
 #include "quiche/qdrift.hpp"
 
+#include <algorithm>
+#include <numeric>
+#include <random>
 #include <stdexcept>
 
 namespace {

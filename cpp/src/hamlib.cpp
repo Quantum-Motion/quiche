@@ -17,6 +17,7 @@
 #include "quiche/hamlib.hpp"
 
 #include <regex>
+#include <stdexcept>
 
 namespace hamlib {
 
@@ -72,7 +73,7 @@ std::pair<std::string, std::vector<int>> parseStringToPaulisAndTargets(const std
 double getRealCoeff(const std::string &str) {
     std::string realString = str;
 
-    size_t pos = str.find('+');
+    auto pos = str.find('+');
     if (pos != std::string::npos) {
         realString = realString.substr(0, pos);
     }
@@ -116,7 +117,7 @@ PauliStrSum getHamiltonian(const std::string &filePath, const std::string &key) 
     std::vector<PauliStr> strings(numTerms);
     std::vector<qcomp> coeffsCast(numTerms);
 
-    for (size_t i = 0; i < numTerms; i++) {
+    for (qindex i = 0; i < numTerms; i++) {
         strings[i] = getPauliStr(paulis[i], targets[i]);
         coeffsCast[i] = qcomp(coeffs[i], 0);
     }

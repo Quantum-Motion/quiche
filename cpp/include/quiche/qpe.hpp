@@ -47,8 +47,7 @@ double getPhaseKitaevQDRIFT(Qureg qureg, PauliStrSum hamiltonian, int ancilla, i
 
 double getPhaseNaiveTrotter(Qureg qureg, PauliStrSum hamiltonian, int ancilla, int order, int reps, double t);
 
-double getPhaseNaiveQDRIFT(Qureg qureg, PauliStrSum hamiltonian, int ancilla, int reps, double t,
-                           std::mt19937_64 &rng);
+double getPhaseNaiveQDRIFT(Qureg qureg, PauliStrSum hamiltonian, int ancilla, int reps, double t, std::mt19937_64 &rng);
 
 double getPhaseIterativeTrotter(Qureg qureg, PauliStrSum hamiltonian, int ancilla, int order, int reps, double t,
                                 int numBits);

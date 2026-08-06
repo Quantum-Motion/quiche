@@ -24,6 +24,8 @@
 #define HAMLIB_HPP
 
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 #include <H5Cpp.h>

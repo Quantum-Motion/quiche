@@ -23,6 +23,7 @@
 #ifndef QUEST_PATCHES_HPP
 #define QUEST_PATCHES_HPP
 
+#include <utility>
 #include <vector>
 
 #include <quest.h>

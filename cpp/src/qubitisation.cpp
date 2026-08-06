@@ -16,7 +16,11 @@
 
 #include "quiche/qubitisation.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <complex>
 #include <numeric>
+#include <stdexcept>
 
 #include <quest/src/core/bitwise.hpp>
 #include <quest/src/core/constants.hpp>

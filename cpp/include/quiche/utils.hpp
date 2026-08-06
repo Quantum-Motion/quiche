@@ -24,6 +24,7 @@
 #define UTILS_HPP
 
 #include <sstream>
+#include <string>
 #include <vector>
 
 template <typename T>

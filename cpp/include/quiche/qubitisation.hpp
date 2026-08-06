@@ -23,6 +23,8 @@
 #ifndef QUBITISATION_HPP
 #define QUBITISATION_HPP
 
+#include <vector>
+
 #include <quest.h>
 
 namespace qubitisation {
