@@ -117,7 +117,7 @@ PauliStrSum cloneWithoutIdentity(PauliStrSum sum) {
     return createPauliStrSum(filteredStrings, filteredCoeffs);
 }
 
-void applyMultiStateControlledPhaseShift(Qureg qureg, int *targets, int *states, int numTargets, qreal angle) {
+void applyMultiQubitStatePhaseShift(Qureg qureg, int *targets, int *states, int numTargets, qreal angle) {
     validate_quregFields(qureg, __func__);
     validate_targets(qureg, targets, numTargets, __func__);
     validate_controlStates(states, numTargets, __func__);
@@ -133,11 +133,11 @@ void applyMultiStateControlledPhaseShift(Qureg qureg, int *targets, int *states,
     applyMultiStateControlledDiagMatr1(qureg, ctrlQubits, ctrlStates, numControls, targets[0], matr);
 }
 
-void applyMultiStateControlledPhaseShift(Qureg qureg, std::vector<int> targets, std::vector<int> states, qreal angle) {
-    applyMultiStateControlledPhaseShift(qureg, targets.data(), states.data(), targets.size(), angle);
+void applyMultiQubitStatePhaseShift(Qureg qureg, std::vector<int> targets, std::vector<int> states, qreal angle) {
+    applyMultiQubitStatePhaseShift(qureg, targets.data(), states.data(), targets.size(), angle);
 }
 
-void applyMultiStateControlledQubitPhaseFlip(Qureg qureg, int *targets, int *states, int numTargets) {
+void applyMultiQubitStatePhaseFlip(Qureg qureg, int *targets, int *states, int numTargets) {
     validate_quregFields(qureg, __func__);
     validate_targets(qureg, targets, numTargets, __func__);
     validate_controlStates(states, numTargets, __func__);
@@ -152,8 +152,8 @@ void applyMultiStateControlledQubitPhaseFlip(Qureg qureg, int *targets, int *sta
     applyMultiStateControlledDiagMatr1(qureg, ctrlQubits, ctrlStates, numControls, targets[0], matr);
 }
 
-void applyMultiStateControlledQubitPhaseFlip(Qureg qureg, std::vector<int> targets, std::vector<int> states) {
-    applyMultiStateControlledQubitPhaseFlip(qureg, targets.data(), states.data(), targets.size());
+void applyMultiQubitStatePhaseFlip(Qureg qureg, std::vector<int> targets, std::vector<int> states) {
+    applyMultiQubitStatePhaseFlip(qureg, targets.data(), states.data(), targets.size());
 }
 
 void initClassicalState(Qureg qureg, std::vector<int> state) {

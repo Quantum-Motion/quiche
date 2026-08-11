@@ -39,13 +39,13 @@ qcomp getIdentityCoeff(PauliStrSum sum);
 
 PauliStrSum cloneWithoutIdentity(PauliStrSum sum);
 
-void applyMultiStateControlledPhaseShift(Qureg qureg, int *targets, int *states, int numTargets, qreal angle);
+void applyMultiQubitStatePhaseShift(Qureg qureg, int *targets, int *states, int numTargets, qreal angle);
 
-void applyMultiStateControlledPhaseShift(Qureg qureg, std::vector<int> targets, std::vector<int> states, qreal angle);
+void applyMultiQubitStatePhaseShift(Qureg qureg, std::vector<int> targets, std::vector<int> states, qreal angle);
 
-void applyMultiStateControlledQubitPhaseFlip(Qureg qureg, int *targets, int *states, int numTargets);
+void applyMultiQubitStatePhaseFlip(Qureg qureg, int *targets, int *states, int numTargets);
 
-void applyMultiStateControlledQubitPhaseFlip(Qureg qureg, std::vector<int> targets, std::vector<int> states);
+void applyMultiQubitStatePhaseFlip(Qureg qureg, std::vector<int> targets, std::vector<int> states);
 
 void initClassicalState(Qureg qureg, std::vector<int> state);
 
