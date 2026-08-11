@@ -121,7 +121,7 @@ class TestLCUBlockEncodingWrapper:
         prep_coeffs = blockencoding.prepare.stateprep.state_coefficients
         # The block encoding pads the coefficients to a power of two. All coefficients
         # beyond the ones needed for the Hamiltonian should be zero and have no effect.
-        # There are a total of self.h.n_terms + 1 non-zero coefficients because the
+        # There are a total of self.h2.n_terms + 1 non-zero coefficients because the
         # identity coefficient is non-zero. Test that these are indeed non-zero and all
         # others are zero.
         np.testing.assert_equal(prep_coeffs[: h2.n_terms + 1] != 0, desired=True)
@@ -137,8 +137,8 @@ class TestLCUBlockEncodingWrapper:
             blockencoding.prepare.stateprep.state_coefficients, dtype=complex
         )
         # Truncate to the non-zero terms. All truncated coefficients are zero, which is
-        # tested separately in test_zerocoefficients. Truncate after self.h.n_terms+1 in
-        # order to count the identity contribution.
+        # tested separately in test_zerocoefficients. Truncate after self.h2.n_terms+1
+        # in order to count the identity contribution.
         true_unitaries = true_unitaries[: h2.n_terms + 1]
         true_prep_coeffs = true_prep_coeffs[: h2.n_terms + 1]
 
