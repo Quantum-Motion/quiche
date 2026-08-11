@@ -8,6 +8,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ### Added
 
 ### Changed
+- Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
 
 ### Deprecated
 
