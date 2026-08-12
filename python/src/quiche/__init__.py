@@ -14,7 +14,9 @@
 
 """QUICHE - A library for QUantum Integrated CHEmistry."""
 
-from . import bindings, chemistry, core, dispatch, hamlib, resources, simulation
+import importlib
+from types import ModuleType
+from typing import TYPE_CHECKING
 
 __all__ = [
     "bindings",
@@ -25,3 +27,27 @@ __all__ = [
     "resources",
     "simulation",
 ]
+
+if TYPE_CHECKING:
+    from . import (
+        bindings,
+        chemistry,
+        core,
+        dispatch,
+        hamlib,
+        resources,
+        simulation,
+    )
+
+
+def __getattr__(name: str) -> ModuleType:
+    """Import submodules on first access."""
+    if name in __all__:
+        return importlib.import_module(f".{name}", __name__)
+
+    err_msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(err_msg)
+
+
+def __dir__() -> list[str]:
+    return list(__all__)
