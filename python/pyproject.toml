@@ -46,6 +46,9 @@ cmake.source-dir = "../"
 wheel.packages = ["src/quiche"]
 wheel.py-api = "cp312"
 
+[tool.uv]
+compile-bytecode = true
+
 [tool.ruff]
 exclude = ["*.pyi"]    # Ignore auto-generated stubs
 lint.select = ["ALL"]
