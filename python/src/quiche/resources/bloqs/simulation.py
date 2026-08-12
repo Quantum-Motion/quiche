@@ -158,15 +158,19 @@ class SelectPauliLCUWrapper(SelectPauliLCU):
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for SelectPauliLCU."""
-        # Some of the logic in here could be streamlined, but for now leaving it
-        # relatively explicit.
-        nterms = len(self.select_unitaries)
-        bloq_counts = {
-            And(cv1=1, cv2=0): nterms - 2,
-            And().adjoint(): nterms - 2,
-            CNOT(): nterms - 2,
-            XGate(): 2,
-        }
+        n_terms = len(self.select_unitaries)
+        n_and = n_terms - 1 if self.control_val is not None else n_terms - 2
+
+        bloq_counts = {}
+
+        if n_and:
+            bloq_counts[And(cv1=1, cv2=0)] = n_and
+            bloq_counts[And().adjoint()] = n_and
+            bloq_counts[CNOT()] = n_and
+
+        if self.control_val is None:
+            bloq_counts[XGate()] = 2
+
         for term in self.select_unitaries:
             # Extract the gate corresponding to the relevant Pauli term and transform
             # from cirq to qualtran object.
@@ -176,18 +180,6 @@ class SelectPauliLCUWrapper(SelectPauliLCU):
             # a new key or add to an existing count.
             bloq_counts[bloq] = bloq_counts.get(bloq, 0) + 1
 
-        # Add relevant bloqs if SelectPauliLCU is controlled.
-        if self.control_val is not None:
-            bloq_counts[And(cv1=1, cv2=0)] += 1
-            bloq_counts[And().adjoint()] += 1
-            bloq_counts[CNOT()] += 1
-            bloq_counts.pop(XGate())
-
-        # Remove empty bloqs.
-        if nterms == 2 and self.control_val is None:
-            bloq_counts.pop(And(cv1=1, cv2=0))
-            bloq_counts.pop(And().adjoint())
-            bloq_counts.pop(CNOT())
         return bloq_counts
 
 
@@ -333,13 +325,23 @@ class PauliWordRotation(Bloq):
         """Build call graph for PauliWorldRotation."""
         n_x = np.sum([term == Pauli.X for term in self.word.terms])
         n_y = np.sum([term == Pauli.Y for term in self.word.terms])
-        return {
-            CNOT(): 2 * (len(self.word.terms) - 1),
-            SGate(is_adjoint=True): n_y,
-            SGate(): n_y,
-            Hadamard(): 2 * (n_x + n_y),
+        n_cnot = 2 * (len(self.word.terms) - 1)
+
+        bloq_counts = {
             Rz(self.angle): 1,
         }
+
+        if n_cnot:
+            bloq_counts[CNOT()] = n_cnot
+
+        if n_y:
+            bloq_counts[SGate(is_adjoint=True)] = n_y
+            bloq_counts[SGate()] = n_y
+
+        if n_y or n_x:
+            bloq_counts[Hadamard()] = 2 * (n_x + n_y)
+
+        return bloq_counts
 
 
 @attrs.frozen
@@ -416,13 +418,23 @@ class CTRLPauliWordRotation(Bloq):
         """Build call graph for CTRLPauliWorldRotation."""
         n_x = np.sum([term == Pauli.X for term in self.word.terms])
         n_y = np.sum([term == Pauli.Y for term in self.word.terms])
-        return {
-            CNOT(): 2 * (len(self.word.terms) - 1),
-            SGate(is_adjoint=True): n_y,
-            SGate(): n_y,
-            Hadamard(): 2 * (n_x + n_y),
+        n_cnot = 2 * (len(self.word.terms) - 1)
+
+        bloq_counts = {
             CRz(self.angle): 1,
         }
+
+        if n_cnot:
+            bloq_counts[CNOT()] = n_cnot
+
+        if n_y:
+            bloq_counts[SGate(is_adjoint=True)] = n_y
+            bloq_counts[SGate()] = n_y
+
+        if n_y or n_x:
+            bloq_counts[Hadamard()] = 2 * (n_x + n_y)
+
+        return bloq_counts
 
 
 @attrs.frozen
@@ -432,7 +444,7 @@ class QDRIFT(Bloq):
     h: PauliSum
     t: float
     n_terms: int
-    seed: None | int | float | str | bytes | bytearray = None
+    seed: int | float | str | bytes | bytearray | None = None
 
     def __attrs_post_init__(self) -> Self:
         """Validate attributes."""

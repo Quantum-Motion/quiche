@@ -15,6 +15,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ### Removed
 
 ### Fixed
+- Removed zero-count sub-bloqs from call graphs.
 
 ### Security
 
