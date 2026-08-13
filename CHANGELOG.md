@@ -10,7 +10,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
-- Raised minimum build requirements to CMake 3.24, scikit-build-core 1.0, and nanobind 2.10.
+- Raised minimum build requirements to CMake 3.26, scikit-build-core 1.0, and nanobind 2.10.
 - Pinned fetched C++ dependencies (QuEST, HDF5, Catch2, nanobind) using checksummed release archives where applicable.
 - Exposed namespaced C++ library target `quiche::quiche`.
 - Moved `pyproject.toml` to the repository root.
