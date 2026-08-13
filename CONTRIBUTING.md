@@ -39,7 +39,7 @@ For development, simply follow the usual installation steps for the C++ backend.
 ### Testing
 The [`Catch2`](https://github.com/catchorg/Catch2) test suite can be enabled using the CMake build flag `QUICHE_BUILD_TESTS`.
 ```
-cd QUICHE
+cd quiche
 cmake -B build -D QUICHE_BUILD_TESTS=ON
 cmake --build build
 ```
