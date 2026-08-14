@@ -87,10 +87,10 @@ class PauliWord(BaseModel):
         """
         Get the string representation of a PauliWord for a given register size.
 
-        Endianness must be explicitly set with the `big_endian` arg.
+        Endianness must be explicitly set with the ``big_endian`` arg::
 
-        Big endian:    |psi> = |q_0, q_1, q_2, ..., q_n>
-        Little endian: |psi> = |q_n, ..., q_2, q_1, q_0>
+            Big endian:    |psi> = |q_0, q_1, q_2, ..., q_n>
+            Little endian: |psi> = |q_n, ..., q_2, q_1, q_0>
         """
         if length is None:
             length = self.greatest_qubit + 1

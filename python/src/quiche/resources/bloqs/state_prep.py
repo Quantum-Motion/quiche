@@ -123,13 +123,17 @@ class PrepareFromStatePrep(PrepareOracle):
     r"""
     PREP routine for a given phase-gradient state preparation bloq.
 
-    Implements the action PREP |0> = \sum_{j=1}^L c_j |j>
+    Implements the action ``PREP |0> = \sum_{j=1}^L c_j |j>``.
 
     Properties
-    stateprep: State preparation bloq
-    phase_bitsize: Number of qubits used for phase gradient
-    select_nqubits: Number of qubits on which to prepare the PREP state.
-                    Note that L must be equal to 2**select_nqubits.
+    ----------
+    stateprep : StatePreparationViaRotations
+        State preparation bloq.
+    phase_bitsize : int
+        Number of qubits used for phase gradient.
+    select_nqubits : int
+        Number of qubits on which to prepare the PREP state. Note that L must be equal
+        to ``2**select_nqubits``.
     """
 
     stateprep: StatePreparationViaRotations
