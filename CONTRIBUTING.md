@@ -53,6 +53,25 @@ Then execute the tests using
 You can use the provided `.clang-tidy` and `.clang-format` as general references to guide code style and static analysis.
 They are not strictly enforced, and deviations are acceptable where appropriate.
 
+## Documentation
+
+The documentation lives in `docs` and is built with [`sphinx`](https://www.sphinx-doc.org/) using [MyST](https://myst-parser.readthedocs.io/) markdown. To install the documentation dependencies and build the site
+```bash
+cd QUICHE/python
+uv sync --group docs --no-install-project
+source .venv/bin/activate
+cd ../docs
+make html
+```
+
+The `--no-install-project` flag skips compiling the C++ backend: the docs are built against the sources in `python/src` and the compiled bindings are mocked if they cannot be imported. The rendered site is written to `docs/_build/html`, and `make clean` removes it.
+
+A few things worth knowing when editing the docs:
+- The Python API pages under `docs/api` use `automodule`, so docstrings are the source of truth. Adding a new module means adding one `automodule` entry.
+- Docstrings follow the [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html) format. The non-standard `Properties` and `Resources` sections used by the bloqs are mapped onto numpydoc sections in `docs/conf.py`.
+- Notebooks in `python/examples` are copied into the docs at build time and rendered from their stored outputs — they are never executed by the docs build, so commit notebooks with the outputs you want published.
+- The `docs` workflow builds the documentation with warnings treated as errors and deploys it to GitHub Pages on every push to `main`. Pull requests build the docs without deploying them.
+
 ## Styleguide
 
 ### Commit messages

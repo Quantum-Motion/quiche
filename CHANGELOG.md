@@ -7,7 +7,10 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Sphinx documentation site under `docs`, built and deployed to GitHub Pages by the `docs` workflow.
+
 ### Changed
+
 - Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
 
 ### Deprecated

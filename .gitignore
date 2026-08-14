@@ -14,5 +14,9 @@ build
 *.dylib
 *.dll
 
+# Docs
+docs/_build
+docs/examples/notebooks
+
 # Other
 .DS_Store

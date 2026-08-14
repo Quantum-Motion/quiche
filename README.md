@@ -6,6 +6,11 @@ QUICHE (QUantum Integrated CHEmistry) is a toolkit for studying quantum computin
 > Breaking changes may occur without notice.
 
 
+## Documentation
+
+The QUICHE documentation is hosted at [quantum-motion.github.io/quiche](https://quantum-motion.github.io/quiche/), and includes a quickstart, an explanation of the core concepts and a full Python API reference. The sources live in [`docs`](https://github.com/Quantum-Motion/quiche/blob/main/docs) and can be built locally, see the [contributing guide](https://github.com/Quantum-Motion/quiche/blob/main/CONTRIBUTING.md).
+
+
 ## Features
 
 - Range of quantum phase estimation algorithms including various single- and multi-ancilla methods.
