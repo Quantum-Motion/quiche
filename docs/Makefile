@@ -11,7 +11,7 @@ help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean:
-	rm -rf "$(BUILDDIR)" examples/notebooks
+	rm -rf "$(BUILDDIR)"
 
 # Catch-all target: route all unknown targets to Sphinx.
 %: Makefile
