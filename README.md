@@ -23,27 +23,33 @@ The QUICHE documentation is hosted at [quantum-motion.github.io/quiche](https://
 
 > QUICHE's simulation backend relies on [QuEST](https://github.com/QuEST-Kit/QuEST), [nanobind](https://github.com/wjakob/nanobind) (for Python bindings), [HDF5](https://github.com/HDFGroup/hdf5) (for Hamlib features) and [Catch2](https://github.com/catchorg/Catch2) (for testing). The latter three can be toggled using the `QUICHE_BUILD_BINDINGS`, `QUICHE_BUILD_HAMLIB`, and `QUICHE_BUILD_TESTS` flags respectively (see below for usage). If a required dependency is not available during the build process it will be downloaded and installed using CMake's `FetchContent`.
 
-Begin by cloning the and navigating to the QUICHE repo
+Requires Python 3.12 or newer, and a C++ compiler and [CMake](https://cmake.org/) to build the simulation backend.
+
+Begin by cloning and navigating to the QUICHE repo
 ```bash
 git clone https://github.com/Quantum-Motion/quiche.git
 ```
 
 Then install the Python package, including the simulator bindings
 ```bash
-cd QUICHE/python
+cd quiche/python
 python -m venv .venv
 source .venv/bin/activate
 pip install .
 ```
 
-Then just import the package from Python
+Installing the package compiles the C++ backend and the bindings, so the first install takes a few minutes. Once it finishes, the package is importable:
 ```python3
 import quiche
 ```
 
+For an editable, development install see the [contributing guide](https://github.com/Quantum-Motion/quiche/blob/main/CONTRIBUTING.md).
+
+## C++ backend only
+
 Alternatively to build only the C++ simulator backend along with the examples, for instance, simply execute
 ```bash
-cd QUICHE
+cd quiche
 cmake -B build -D QUICHE_BUILD_EXAMPLES=ON
 cmake --build build
 ```
@@ -53,7 +59,7 @@ Then execute an example (e.g. the Textbook QPE example)
 ./build/cpp/examples/qpe-textbook
 ```
 
-The other C++ configuration flags, can be similarly toggled `ON` and `OFF`. For additional configuration flags available for the QuEST simulation see also the [QuEST docs](https://quest-kit.github.io/QuEST/).
+The other C++ configuration flags can be similarly toggled `ON` and `OFF` — see [C++ backend](https://github.com/Quantum-Motion/quiche/blob/main/docs/cpp.md) for the full list. For additional configuration flags available for the QuEST simulation see also the [QuEST docs](https://quest-kit.github.io/QuEST/).
 
 
 ## Usage
