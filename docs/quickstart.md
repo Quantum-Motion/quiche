@@ -63,8 +63,6 @@ error = Errors(
 )
 ```
 
-See [Error budgets](concepts.md#error-budgets) for what each term controls.
-
 ## 3. Specify the calculation
 
 The initial state is a Hartree-Fock state, which QUICHE maps into the qubit basis using
@@ -147,8 +145,7 @@ show_bloq(bloq.flatten_once())
 The same specification can instead be turned into a
 {py:class}`~quiche.simulation.routine.SimulationRoutine` and executed by QuEST. Not every
 algorithm and simulation method is wired up in both backends yet, so this example
-switches to Kitaev QPE with Trotterisation (see the
-[support matrix](concepts.md#supported-combinations)):
+switches to Kitaev QPE with Trotterisation:
 
 ```python
 from math import pi
@@ -195,6 +192,5 @@ energy = cos(phase * 2 * pi) * paulis.lam + paulis.identity_coefficient
 
 ## Next steps
 
-- [Concepts](concepts.md) — the pieces of a specification and how the backends differ.
 - [Examples](examples/index.md) — the same workflow as a runnable notebook.
 - [API reference](api/index.rst) — everything the package exposes.

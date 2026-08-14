@@ -62,13 +62,6 @@ How to install QUICHE, including the C++ simulator bindings.
 Go from a Hamiltonian to a resource estimate and a simulated phase in a few lines.
 :::
 
-:::{grid-item-card} {octicon}`book` Concepts
-:link: concepts
-:link-type: doc
-
-How specifications, error budgets and the two backends fit together.
-:::
-
 :::{grid-item-card} {octicon}`code` API reference
 :link: api/index
 :link-type: doc
@@ -101,15 +94,7 @@ for background on its aims.
 
 installation
 quickstart
-concepts
 examples/index
-```
-
-```{toctree}
-:hidden:
-:caption: Backends
-
-cpp
 ```
 
 ```{toctree}

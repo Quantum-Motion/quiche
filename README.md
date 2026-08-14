@@ -59,7 +59,7 @@ Then execute an example (e.g. the Textbook QPE example)
 ./build/cpp/examples/qpe-textbook
 ```
 
-The other C++ configuration flags can be similarly toggled `ON` and `OFF` — see [C++ backend](https://github.com/Quantum-Motion/quiche/blob/main/docs/cpp.md) for the full list. For additional configuration flags available for the QuEST simulation see also the [QuEST docs](https://quest-kit.github.io/QuEST/).
+The other C++ configuration flags can be similarly toggled `ON` and `OFF`. For additional configuration flags available for the QuEST simulation see also the [QuEST docs](https://quest-kit.github.io/QuEST/).
 
 
 ## Usage
