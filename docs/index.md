@@ -94,7 +94,6 @@ for background on its aims.
 
 installation
 quickstart
-examples/index
 ```
 
 ```{toctree}

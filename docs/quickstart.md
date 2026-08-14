@@ -192,5 +192,4 @@ energy = cos(phase * 2 * pi) * paulis.lam + paulis.identity_coefficient
 
 ## Next steps
 
-- [Examples](examples/index.md) — the same workflow as a runnable notebook.
 - [API reference](api/index.rst) — everything the package exposes.

@@ -14,20 +14,13 @@
 
 """Sphinx configuration for the QUICHE documentation."""
 
-import shutil
 import sys
 import tomllib
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from sphinx.application import Sphinx
 
 DOCS_DIR = Path(__file__).parent.resolve()
 REPO_ROOT = DOCS_DIR.parent
 PACKAGE_SRC = REPO_ROOT / "python" / "src"
-EXAMPLES_SRC = REPO_ROOT / "python" / "examples"
-EXAMPLES_DST = DOCS_DIR / "examples" / "notebooks"
 
 # Document the in-tree package, so that the docs can be built without installing it.
 sys.path.insert(0, str(PACKAGE_SRC))
@@ -87,14 +80,10 @@ napoleon_custom_sections = [
     ("Resources", "notes_style"),
 ]
 
-# -- MyST / notebooks --------------------------------------------------------
+# -- MyST ----------------------------------------------------------------------
 
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath"]
 myst_heading_anchors = 3
-
-# Notebooks are rendered from their stored outputs. Executing them requires the
-# compiled simulation backend, so it is not done at docs build time.
-nb_execution_mode = "off"
 
 # -- Intersphinx -------------------------------------------------------------
 
@@ -134,21 +123,3 @@ html_theme_options = {
         },
     ],
 }
-
-
-def _sync_examples() -> None:
-    """Copy the example notebooks into the docs source tree."""
-    if EXAMPLES_DST.exists():
-        shutil.rmtree(EXAMPLES_DST)
-
-    shutil.copytree(
-        EXAMPLES_SRC,
-        EXAMPLES_DST,
-        # Data files are not needed: notebooks are rendered, not executed.
-        ignore=shutil.ignore_patterns("*.hdf5", ".ipynb_checkpoints"),
-    )
-
-
-def setup(app: "Sphinx") -> None:
-    """Register the docs build hooks."""
-    app.connect("builder-inited", lambda _: _sync_examples())

@@ -16,7 +16,6 @@ build
 
 # Docs
 docs/_build
-docs/examples/notebooks
 
 # Other
 .DS_Store
