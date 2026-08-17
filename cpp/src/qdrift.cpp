@@ -16,6 +16,8 @@
 
 #include "quiche/qdrift.hpp"
 
+#include <algorithm>
+#include <numeric>
 #include <stdexcept>
 
 namespace {

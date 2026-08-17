@@ -18,6 +18,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <numeric>
+
 #include <quest.h>
 #include <quest/src/core/constants.hpp>
 #include <quest/src/core/paulilogic.hpp>

@@ -16,6 +16,8 @@
 
 #include "quiche/mappings.hpp"
 
+#include <algorithm>
+#include <numeric>
 #include <stdexcept>
 
 #include <quest/src/core/bitwise.hpp>

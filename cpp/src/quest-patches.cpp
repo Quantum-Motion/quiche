@@ -39,6 +39,8 @@
 
 #include "quiche/quest-patches.hpp"
 
+#include <algorithm>
+
 #include <quest/src/core/bitwise.hpp>
 #include <quest/src/core/constants.hpp>
 #include <quest/src/core/paulilogic.hpp>
