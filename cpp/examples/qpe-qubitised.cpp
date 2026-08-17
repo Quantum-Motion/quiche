@@ -91,7 +91,7 @@ int main() {
 
     double phase = qpe::getPhaseTextbookQubitised(qureg, hamiltonian, qpeAncillas, qubitisationAncillas);
     auto lambda = qdrift::getPauliStrSumNorm(hamiltonian);
-    double energy = std::cos(phase * 2 * const_PI) * lambda + idCoeff.real();
+    double energy = qpe::getEnergyFromQubitisationPhase(phase, lambda, idCoeff.real());
 
     std::cout << "Phase: " << phase << '\n' << "Energy: " << energy << '\n';
 
