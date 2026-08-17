@@ -1,0 +1,48 @@
+name: Python tests
+
+# Run the Python test suite on every pull request and on every push to main
+# (i.e. once a PR is merged). Combined with a branch protection rule on
+# `main` that requires the `Python tests` check to pass, this blocks merges
+# whose tests fail.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Python tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install system build dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build build-essential
+
+      # QUICHE's Python package builds a native (nanobind/CMake) extension,
+      # which fetches QuEST and nanobind from GitHub. Cache the CMake build
+      # directory so unchanged CMakeLists don't refetch/rebuild from scratch.
+      - name: Cache CMake build directory
+        uses: actions/cache@v6
+        with:
+          path: build
+          key: ${{ runner.os }}-cmake-build-${{ hashFiles('CMakeLists.txt', 'cpp/**/CMakeLists.txt', 'bindings/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-build-
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install quiche with dev dependencies
+        working-directory: python
+        run: uv sync --group dev
+
+      - name: Run pytest
+        working-directory: python
+        run: uv run pytest
