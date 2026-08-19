@@ -9,6 +9,9 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
+- Changed `quiche` submodule imports to lazy imports.
+- Deferred `cirq` import in `quiche.core` to `PauliWord.to_cirq()`.
+- Enabled bytecode compilation for `uv` installs.
 
 ### Deprecated
 
