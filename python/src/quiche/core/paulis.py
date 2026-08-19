@@ -22,13 +22,11 @@ from math import isclose
 from typing import TYPE_CHECKING, Self
 
 import numpy as np
-from numpy.typing import (
-    NDArray,  # noqa: TC002 # must be outside TYPE_CHECKING block for pydantic
-)
 from pydantic import BaseModel, ConfigDict, computed_field, model_validator
 
 if TYPE_CHECKING:
     from cirq import DensePauliString
+    from numpy.typing import NDArray
 
 from quiche.bindings.quest_bindings import PauliStr, PauliStrSum
 
