@@ -47,6 +47,9 @@ cmake.define = { QUICHE_BUILD_BINDINGS="ON" }
 wheel.packages = ["python/src/quiche"]
 wheel.py-api = "cp312"
 
+[tool.uv]
+compile-bytecode = true
+
 [tool.ruff]
 src = ["python", "python/src"]
 extend-exclude = ["*.pyi"]    # Ignore auto-generated stubs

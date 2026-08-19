@@ -14,15 +14,19 @@
 
 """Quantum primitives and data structures."""
 
+from __future__ import annotations
+
 from enum import StrEnum
 from functools import cached_property
 from math import isclose
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 import numpy as np
-from cirq import DensePauliString
-from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, computed_field, model_validator
+
+if TYPE_CHECKING:
+    from cirq import DensePauliString
+    from numpy.typing import NDArray
 
 from quiche.bindings.quest_bindings import PauliStr, PauliStrSum
 
@@ -110,6 +114,9 @@ class PauliWord(BaseModel):
 
     def to_cirq(self, length: int) -> DensePauliString:
         """Get dense cirq representation of a PauliWord."""
+        # Lazily import cirq only used here
+        from cirq import DensePauliString  # noqa: PLC0415
+
         string = self.to_str(length, big_endian=True)  # validates length
         return DensePauliString(string)
 
