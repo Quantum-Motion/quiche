@@ -20,6 +20,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Removed the `QUICHE_BUILD_HAMLIB` build flag and the HDF5 dependency for the C++ backend.
 
 ### Fixed
+- Removed zero-count sub-bloqs from call graphs.
+- Fixed `QDRIFT` incorrectly ignoring a `0` seed.
 
 ### Security
 

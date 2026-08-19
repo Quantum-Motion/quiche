@@ -105,10 +105,12 @@ class BitstringStatePrep(Bloq):
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph."""
-        return {
-            Allocate(QAny(self.num_qubits)): 1,
-            XGate(): sum(self.bitstring),
-        }
+        bloq_counts = {Allocate(QAny(self.num_qubits)): 1}
+
+        if n_x := sum(self.bitstring):
+            bloq_counts[XGate()] = n_x
+
+        return bloq_counts
 
     def my_static_costs(self, cost_key: "CostKey") -> int:
         """Return hard-coded qubit counts."""
