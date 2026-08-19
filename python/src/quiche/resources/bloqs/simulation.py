@@ -138,8 +138,8 @@ class SelectPauliLCUWrapper(SelectPauliLCU):
     def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount):
-            nterms = len(self.select_unitaries)
-            n_select_qubits = ceil(log2(nterms))
+            n_terms = len(self.select_unitaries)
+            n_select_qubits = ceil(log2(n_terms))
             # The controlled version of SelectPauliLCUWrapper is obtained by setting the
             # attribute control_val.
             if self.control_val is None:
@@ -163,7 +163,7 @@ class SelectPauliLCUWrapper(SelectPauliLCU):
 
         bloq_counts = {}
 
-        if n_and:
+        if n_and > 0:
             bloq_counts[And(cv1=1, cv2=0)] = n_and
             bloq_counts[And().adjoint()] = n_and
             bloq_counts[CNOT()] = n_and
@@ -323,22 +323,22 @@ class PauliWordRotation(Bloq):
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for PauliWorldRotation."""
-        n_x = np.sum([term == Pauli.X for term in self.word.terms])
-        n_y = np.sum([term == Pauli.Y for term in self.word.terms])
+        n_x = sum(term == Pauli.X for term in self.word.terms)
+        n_y = sum(term == Pauli.Y for term in self.word.terms)
         n_cnot = 2 * (len(self.word.terms) - 1)
 
         bloq_counts = {
             Rz(self.angle): 1,
         }
 
-        if n_cnot:
+        if n_cnot > 0:
             bloq_counts[CNOT()] = n_cnot
 
         if n_y:
             bloq_counts[SGate(is_adjoint=True)] = n_y
             bloq_counts[SGate()] = n_y
 
-        if n_y or n_x:
+        if n_x + n_y:
             bloq_counts[Hadamard()] = 2 * (n_x + n_y)
 
         return bloq_counts
@@ -416,22 +416,22 @@ class CTRLPauliWordRotation(Bloq):
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for CTRLPauliWorldRotation."""
-        n_x = np.sum([term == Pauli.X for term in self.word.terms])
-        n_y = np.sum([term == Pauli.Y for term in self.word.terms])
+        n_x = sum(term == Pauli.X for term in self.word.terms)
+        n_y = sum(term == Pauli.Y for term in self.word.terms)
         n_cnot = 2 * (len(self.word.terms) - 1)
 
         bloq_counts = {
             CRz(self.angle): 1,
         }
 
-        if n_cnot:
+        if n_cnot > 0:
             bloq_counts[CNOT()] = n_cnot
 
         if n_y:
             bloq_counts[SGate(is_adjoint=True)] = n_y
             bloq_counts[SGate()] = n_y
 
-        if n_y or n_x:
+        if n_x + n_y:
             bloq_counts[Hadamard()] = 2 * (n_x + n_y)
 
         return bloq_counts
@@ -502,7 +502,7 @@ class QDRIFT(Bloq):
     def sample_term_indices(self) -> tuple[int, ...]:
         """Generate random sequence for Hamiltonian sampling."""
         rng_state = getstate()
-        if self.seed:
+        if self.seed is not None:
             seed(self.seed)
         c = choices(range(self.h.n_terms), self.positive_coefficients, k=self.n_terms)  # noqa: S311
         setstate(rng_state)
