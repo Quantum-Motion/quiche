@@ -5,7 +5,3 @@ target_sources(
     qpe.cpp
     qubitisation.cpp
 )
-
-if(QUICHE_BUILD_HAMLIB)
-    target_sources(tests PRIVATE hamlib.cpp)
-endif()

@@ -13,6 +13,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ### Deprecated
 
 ### Removed
+- Removed the C++ Hamlib module (keeping just the Python one), along with the corresponding example and unit tests.
+- Removed the `QUICHE_BUILD_HAMLIB` build flag and the HDF5 dependency for the C++ backend.
 
 ### Fixed
 
