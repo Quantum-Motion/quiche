@@ -20,8 +20,7 @@
  * @author Vasco Ferreira
  */
 
-#ifndef QUEST_PATCHES_HPP
-#define QUEST_PATCHES_HPP
+#pragma once
 
 #include <utility>
 #include <vector>
@@ -48,5 +47,3 @@ void applyMultiQubitStatePhaseFlip(Qureg qureg, int *targets, int *states, int n
 void applyMultiQubitStatePhaseFlip(Qureg qureg, std::vector<int> targets, std::vector<int> states);
 
 void initClassicalState(Qureg qureg, std::vector<int> state);
-
-#endif // QUEST_PATCHES_HPP

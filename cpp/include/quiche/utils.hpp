@@ -20,8 +20,7 @@
  * @author Vasco Ferreira
  */
 
-#ifndef UTILS_HPP
-#define UTILS_HPP
+#pragma once
 
 #include <sstream>
 #include <string>
@@ -47,5 +46,3 @@ std::string formatVector(const std::vector<T> &vec) {
     str += "]";
     return str;
 }
-
-#endif // UTILS_HPP

@@ -20,8 +20,7 @@
  * @author Vasco Ferreira
  */
 
-#ifndef QPE_HPP
-#define QPE_HPP
+#pragma once
 
 #include <random>
 #include <vector>
@@ -59,5 +58,3 @@ double getPhaseTextbookQubitisedOptimised(Qureg qureg, PauliStrSum hamiltonian, 
                                           const std::vector<int> &qubitisationAncillas);
 
 } // namespace qpe
-
-#endif // QPE_HPP
