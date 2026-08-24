@@ -30,8 +30,8 @@ from qualtran.testing import (
 from scipy.linalg import expm
 
 from quiche.core import Errors, Pauli, PauliSum, PauliWord
-from quiche.resources import logical_qubit_resources
-from quiche.resources.bloqs import (
+from quiche.qualtran import logical_qubit_resources
+from quiche.qualtran.bloqs import (
     QDRIFT,
     LCUBlockEncodingWrapper,
     PauliWordRotation,

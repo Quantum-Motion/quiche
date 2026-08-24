@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Logic for the QuEST simulation backend of QUICHE."""
+"""Logic for the Qualtran resource-estimation backend of QUICHE."""
 
-from .routine import SimulationRoutine
+from . import bloqs
+from .logical import logical_gate_resources, logical_qubit_resources
 
-__all__ = ["SimulationRoutine"]
+__all__ = [
+    "bloqs",
+    "logical_gate_resources",
+    "logical_qubit_resources",
+]

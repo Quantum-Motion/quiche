@@ -46,20 +46,20 @@ from quiche.dispatch.budget.simulation import (
     get_qubitisation_ancillas,
     get_trotter_params,
 )
-from quiche.resources.bloqs import (
+from quiche.qualtran.bloqs import (
     QDRIFT,
     BitstringStatePrep,
     IdentityStatePrep,
     LCUBlockEncodingWrapper,
     Trotterisation,
 )
-from quiche.resources.bloqs.estimation import (
+from quiche.qualtran.bloqs.estimation import (
     QubitisationLadder,
     TextbookQPE,
     TrotterLadder,
 )
-from quiche.simulation import SimulationRoutine
-from quiche.simulation.estimation import (
+from quiche.quest import QuestRoutine
+from quiche.quest.estimation import (
     getPhaseKitaevQDRIFT,
     getPhaseKitaevTrotter,
     getPhaseTextbookQDRIFT,
@@ -140,7 +140,7 @@ class QPESpec:
             self.num_data + self.num_qpe_ancillas + self.num_simulation_ancillas
         )
 
-    def _get_stateprep_bloq(self) -> Bloq:
+    def _get_stateprep_qualtran(self) -> Bloq:
         """Pattern matching and construction for state preparation Bloq."""
         match self.state_prep:
             case None:
@@ -159,7 +159,7 @@ class QPESpec:
 
         return state_prep_bloq
 
-    def _get_simulation_bloq_factory(self) -> Callable[[int], Bloq]:
+    def _get_simulation_qualtran_factory(self) -> Callable[[int], Bloq]:
         """Pattern matching and construction for simulation factories."""
         match self.simulation:
             case Simulation.QDRIFT:
@@ -208,7 +208,7 @@ class QPESpec:
 
         return simulation_bloq_factory
 
-    def _get_estimation_bloq(self) -> Bloq:
+    def _get_estimation_qualtran(self) -> Bloq:
         """Pattern matching and construction for QPE Bloq."""
         match self.algorithm:
             case PhaseEstimation.Iterative:
@@ -225,7 +225,7 @@ class QPESpec:
 
             case PhaseEstimation.Textbook:
                 estimation_bloq = TextbookQPE(
-                    simulation_factory=self._get_simulation_bloq_factory(),
+                    simulation_factory=self._get_simulation_qualtran_factory(),
                     num_data=self.num_data,
                     num_qpe_ancillas=self.num_qpe_ancillas,
                     num_other_ancillas=self.num_simulation_ancillas,
@@ -233,11 +233,11 @@ class QPESpec:
 
         return estimation_bloq
 
-    def get_composite_bloq(self) -> CompositeBloq:
-        """Estimate resources for the calculation using the qualtran backend."""
+    def to_qualtran(self) -> CompositeBloq:
+        """Estimate resources for the calculation using the Qualtran backend."""
         bb = BloqBuilder()
-        data = bb.add(self._get_stateprep_bloq())
-        data = bb.add(self._get_estimation_bloq(), data=data)
+        data = bb.add(self._get_stateprep_qualtran())
+        data = bb.add(self._get_estimation_qualtran(), data=data)
         bb.free(data)
         return bb.finalize()
 
@@ -348,9 +348,9 @@ class QPESpec:
 
         return sim
 
-    def to_quest(self) -> SimulationRoutine:
+    def to_quest(self) -> QuestRoutine:
         """Generate a QuEST simulation implementing the specified calculation."""
-        routine = SimulationRoutine()
+        routine = QuestRoutine()
         routine.append(self._get_stateprep_quest())
         routine.append(self._get_estimation_quest())
         return routine

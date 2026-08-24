@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""State preparation methods for the simulation backend."""
+"""State preparation methods for the QuEST backend."""
 
 from quiche.bindings.quest_bindings import Qureg
 from quiche.bindings.quiche_bindings import (

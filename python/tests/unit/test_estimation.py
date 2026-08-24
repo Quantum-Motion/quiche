@@ -26,8 +26,8 @@ from qualtran.testing import (
 )
 
 from quiche.core import Errors, PauliSum
-from quiche.resources import logical_qubit_resources
-from quiche.resources.bloqs import (
+from quiche.qualtran import logical_qubit_resources
+from quiche.qualtran.bloqs import (
     QDRIFT,
     IterativeQPE,
     KitaevQPE,

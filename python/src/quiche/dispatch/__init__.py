@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Methods and structures for dispatching to the resource and simulation backends."""
+"""Methods and structures for dispatching to the Qualtran and QuEST backends."""
 
 from .qpespec import QPESpec
 

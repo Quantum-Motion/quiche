@@ -22,11 +22,11 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class SimulationRoutine:
+class QuestRoutine:
     """Sequence of callables acting on a Qureg for QuEST simulations."""
 
     def __init__(self) -> None:
-        """SimulationRoutine constructor."""
+        """QuestRoutine constructor."""
         self.ops: list[Callable] = []
 
     def evaluate(self, qureg: Qureg) -> list:
@@ -43,8 +43,8 @@ class SimulationRoutine:
 
     def extend(self, other: object) -> None:
         """Add another simulation routine to this routine."""
-        if isinstance(other, SimulationRoutine):
+        if isinstance(other, QuestRoutine):
             self.ops.extend(other.ops)
         else:
-            msg = f"Expected 'SimulationRoutine' object, got '{type(other)}'."
+            msg = f"Expected 'QuestRoutine' object, got '{type(other)}'."
             raise TypeError(msg)
