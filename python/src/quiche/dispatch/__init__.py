@@ -15,5 +15,6 @@
 """Methods and structures for dispatching to the Qualtran and QuEST backends."""
 
 from .qpespec import QPESpec
+from .statespec import HartreeFockSpec, StateSpec
 
-__all__ = ["QPESpec"]
+__all__ = ["HartreeFockSpec", "QPESpec", "StateSpec"]

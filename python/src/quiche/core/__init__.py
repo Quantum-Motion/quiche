@@ -28,5 +28,4 @@ __all__ = [
     "PauliWord",
     "PhaseEstimation",
     "Simulation",
-    "StatePrep",
 ]
