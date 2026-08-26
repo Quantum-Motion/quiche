@@ -15,12 +15,10 @@
 """Core data structures for quantum primites, routines and errors."""
 
 from .algorithms import Mapping, PhaseEstimation, Simulation
-from .electronic import ElectronicHamiltonian
 from .errors import Errors
 from .paulis import Pauli, PauliSum, PauliWord
 
 __all__ = [
-    "ElectronicHamiltonian",
     "Errors",
     "Mapping",
     "Pauli",

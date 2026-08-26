@@ -24,8 +24,8 @@ from qualtran.bloqs.qubitization.qubitization_walk_operator import (
 )
 
 from quiche.core import (
-    ElectronicHamiltonian,
     Errors,
+    PauliSum,
     PhaseEstimation,
     Simulation,
 )
@@ -63,7 +63,8 @@ from quiche.quest.estimation import (
 class QPESpec(Spec):
     """Specification for the QPE algorithm circuit, not including state preparation."""
 
-    hamiltonian: ElectronicHamiltonian
+    hamiltonian: PauliSum
+    n_qubits: int
     algorithm: PhaseEstimation
     simulation: Simulation
     error_budget: Errors
@@ -89,27 +90,27 @@ class QPESpec(Spec):
         match self.simulation:
             case Simulation.QDRIFT:
                 self.time, self.reps = get_qdrift_params(
-                    self.hamiltonian.paulis,
+                    self.hamiltonian,
                     self.error_budget,
                 )
 
             case Simulation.Qubitised:
                 self.num_index_ancillas, self.num_phase_ancillas = (
                     get_qubitisation_ancillas(
-                        self.hamiltonian.paulis, self.error_budget
+                        self.hamiltonian, self.error_budget
                     )
                 )
 
             case Simulation.Trotter:
                 self.time, self.order, self.reps = get_trotter_params(
-                    self.hamiltonian.paulis,
+                    self.hamiltonian,
                     self.error_budget,
                 )
 
         # Returns None if missing
         self.seed = self.extras.get("seed")
 
-        self.num_data = self.hamiltonian.paulis.n_qubits
+        self.num_data = self.n_qubits
         self.num_simulation_ancillas = self.num_index_ancillas + self.num_phase_ancillas
         self.num_qubits = (
             self.num_data + self.num_qpe_ancillas + self.num_simulation_ancillas
@@ -120,7 +121,7 @@ class QPESpec(Spec):
         match self.simulation:
             case Simulation.QDRIFT:
                 bloq = QDRIFT(
-                    h=self.hamiltonian.paulis,
+                    h=self.hamiltonian,
                     t=self.time,
                     n_terms=self.reps,
                     seed=self.seed,
@@ -135,7 +136,7 @@ class QPESpec(Spec):
 
             case Simulation.Qubitised:
                 blockencoding = LCUBlockEncodingWrapper.from_hamiltonian(
-                    self.hamiltonian.paulis, self.num_phase_ancillas
+                    self.hamiltonian, self.num_phase_ancillas
                 )
                 walk_op = QubitizationWalkOperator(blockencoding)
 
@@ -149,7 +150,7 @@ class QPESpec(Spec):
 
             case Simulation.Trotter:
                 bloq = Trotterisation(
-                    h=self.hamiltonian.paulis,
+                    h=self.hamiltonian,
                     t=self.time,
                     n_steps=self.reps,
                     order=self.order,
@@ -222,7 +223,7 @@ class QPESpec(Spec):
                     case Simulation.QDRIFT:
                         sim = partial(
                             getPhaseKitaevQDRIFT,
-                            hamiltonian=self.hamiltonian.paulis,
+                            hamiltonian=self.hamiltonian,
                             ancilla_index=qpe_ancillas[0],
                             reps=self.reps,
                             time=self.time,
@@ -237,7 +238,7 @@ class QPESpec(Spec):
                     case Simulation.Trotter:
                         sim = partial(
                             getPhaseKitaevTrotter,
-                            hamiltonian=self.hamiltonian.paulis,
+                            hamiltonian=self.hamiltonian,
                             ancilla_index=qpe_ancillas[0],
                             order=self.order,
                             reps=self.reps,
@@ -254,7 +255,7 @@ class QPESpec(Spec):
                     case Simulation.QDRIFT:
                         sim = partial(
                             getPhaseTextbookQDRIFT,
-                            hamiltonian=self.hamiltonian.paulis,
+                            hamiltonian=self.hamiltonian,
                             ancillas=qpe_ancillas,
                             reps=self.reps,
                             time=self.time,
@@ -264,7 +265,7 @@ class QPESpec(Spec):
                     case Simulation.Qubitised:
                         sim = partial(
                             getPhaseTextbookQubitised,
-                            hamiltonian=self.hamiltonian.paulis,
+                            hamiltonian=self.hamiltonian,
                             qpe_ancillas=qpe_ancillas,
                             qubitisation_ancillas=index_ancillas,
                         )
@@ -272,7 +273,7 @@ class QPESpec(Spec):
                     case Simulation.Trotter:
                         sim = partial(
                             getPhaseTextbookTrotter,
-                            hamiltonian=self.hamiltonian.paulis,
+                            hamiltonian=self.hamiltonian,
                             ancillas=qpe_ancillas,
                             order=self.order,
                             reps=self.reps,
