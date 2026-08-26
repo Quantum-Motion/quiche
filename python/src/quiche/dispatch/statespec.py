@@ -14,7 +14,6 @@
 
 """State-preparation specs implementing the common `Spec` interface."""
 
-from collections.abc import Callable
 from functools import partial
 
 import numpy as np
@@ -32,6 +31,7 @@ from quiche.chemistry import (
 from quiche.core import Mapping
 from quiche.dispatch.spec import Spec
 from quiche.qualtran.bloqs import BitstringStatePrep
+from quiche.quest import QuestRoutine
 
 
 @dataclass(frozen=True)
@@ -45,9 +45,11 @@ class HartreeFockSpec(Spec):
         """Build the Qualtran Bloq preparing the Hartree-Fock state."""
         return BitstringStatePrep(tuple(self._bitstring()))
 
-    def to_quest(self) -> Callable:
+    def to_quest(self) -> QuestRoutine:
         """Build the QuEST routine preparing the Hartree-Fock state."""
-        return partial(initClassicalState, state=self._bitstring())
+        routine = QuestRoutine()
+        routine.append(partial(initClassicalState, state=self._bitstring()))
+        return routine
 
     def _bitstring(self) -> NDArray[np.int_]:
         """Transform the occupation basis state to the qubit basis via `mapping`."""

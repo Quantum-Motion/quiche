@@ -15,9 +15,10 @@
 """Common interface for objects dispatching to the Qualtran and QuEST backends."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 
 from qualtran import Bloq
+
+from quiche.quest import QuestRoutine
 
 
 class Spec(ABC):
@@ -28,5 +29,5 @@ class Spec(ABC):
         """Build the Qualtran Bloq for this spec."""
 
     @abstractmethod
-    def to_quest(self) -> Callable:
+    def to_quest(self) -> QuestRoutine:
         """Build the QuEST routine for this spec."""
