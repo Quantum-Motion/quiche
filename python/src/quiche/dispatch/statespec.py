@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Structures to define and dispatch initial state preparation."""
+"""State-preparation specs implementing the common `Spec` interface."""
 
-from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import partial
 
@@ -31,44 +30,16 @@ from quiche.chemistry import (
     get_parity_state,
 )
 from quiche.core import Mapping
+from quiche.dispatch.spec import Spec
 from quiche.qualtran.bloqs import BitstringStatePrep
 
 
-class StateSpec(ABC):
-    """
-    Interface for objects describing how to prepare a circuit's initial state.
-
-    Concrete implementations must expose `num_qubits` as an `@property` (not a plain
-    dataclass field): a dataclass field without a default only becomes an instance
-    attribute set in `__init__`, which does not satisfy an abstract property and would
-    leave the class un-instantiable.
-    """
-
-    @property
-    @abstractmethod
-    def num_qubits(self) -> int:
-        """Number of qubits this spec prepares state for."""
-
-    @abstractmethod
-    def to_qualtran(self) -> Bloq:
-        """Build the Qualtran Bloq preparing this state."""
-
-    @abstractmethod
-    def to_quest(self) -> Callable:
-        """Build the QuEST routine preparing this state."""
-
-
 @dataclass(frozen=True)
-class HartreeFockSpec(StateSpec):
+class HartreeFockSpec(Spec):
     """State-preparation spec for a Hartree-Fock reference state."""
 
     state: HartreeFockState
     mapping: Mapping
-
-    @property
-    def num_qubits(self) -> int:
-        """Get number of qubits prepared by this spec."""
-        return self.state.num_spin_orbitals
 
     def to_qualtran(self) -> Bloq:
         """Build the Qualtran Bloq preparing the Hartree-Fock state."""

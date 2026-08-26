@@ -12,10 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Methods and structures for dispatching to the Qualtran and QuEST backends."""
+"""Common interface for objects dispatching to the Qualtran and QuEST backends."""
 
-from .qpespec import QPESpec
-from .spec import Spec
-from .statespec import HartreeFockSpec
+from abc import ABC, abstractmethod
+from collections.abc import Callable
 
-__all__ = ["HartreeFockSpec", "QPESpec", "Spec"]
+from qualtran import Bloq
+
+
+class Spec(ABC):
+    """Interface for objects that lower to a Qualtran Bloq or QuEST routine."""
+
+    @abstractmethod
+    def to_qualtran(self) -> Bloq:
+        """Build the Qualtran Bloq for this spec."""
+
+    @abstractmethod
+    def to_quest(self) -> Callable:
+        """Build the QuEST routine for this spec."""

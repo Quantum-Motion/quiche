@@ -38,6 +38,7 @@ from quiche.dispatch.budget.simulation import (
     get_qubitisation_ancillas,
     get_trotter_params,
 )
+from quiche.dispatch.spec import Spec
 from quiche.qualtran.bloqs import (
     QDRIFT,
     LCUBlockEncodingWrapper,
@@ -59,11 +60,8 @@ from quiche.quest.estimation import (
 
 
 @dataclass()
-class QPESpec:
-    """
-    Specification for the QPE algorithm circuit, not including state
-    preparation.
-    """
+class QPESpec(Spec):
+    """Specification for the QPE algorithm circuit, not including state preparation."""
 
     hamiltonian: ElectronicHamiltonian
     algorithm: PhaseEstimation
