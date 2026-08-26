@@ -18,22 +18,14 @@ from collections.abc import Callable
 from functools import partial
 
 from pydantic.dataclasses import Field, dataclass
-from qualtran import Bloq, BloqBuilder, CompositeBloq
+from qualtran import Bloq
 from qualtran.bloqs.qubitization.qubitization_walk_operator import (
     QubitizationWalkOperator,
 )
 
-from quiche.bindings.quiche_bindings import initClassicalState
-from quiche.chemistry import (
-    HartreeFockState,
-    get_bk_state,
-    get_jw_state,
-    get_parity_state,
-)
 from quiche.core import (
     ElectronicHamiltonian,
     Errors,
-    Mapping,
     PhaseEstimation,
     Simulation,
 )
@@ -48,8 +40,6 @@ from quiche.dispatch.budget.simulation import (
 )
 from quiche.qualtran.bloqs import (
     QDRIFT,
-    BitstringStatePrep,
-    IdentityStatePrep,
     LCUBlockEncodingWrapper,
     Trotterisation,
 )
@@ -70,10 +60,12 @@ from quiche.quest.estimation import (
 
 @dataclass()
 class QPESpec:
-    """QPE calculation specification for simulation and resource estimates."""
+    """
+    Specification for the QPE algorithm circuit, not including state
+    preparation.
+    """
 
     hamiltonian: ElectronicHamiltonian
-    state_prep: HartreeFockState | None
     algorithm: PhaseEstimation
     simulation: Simulation
     error_budget: Errors
@@ -81,21 +73,6 @@ class QPESpec:
 
     def __post_init__(self) -> None:
         """Calculate the circuit properties for the given QPE routine."""
-        if self.state_prep is not None and not isinstance(
-            self.state_prep, HartreeFockState
-        ):
-            err_msg = f"Invalid state preparation {self.state_prep}"
-            raise ValueError(err_msg)
-
-        if isinstance(self.state_prep, HartreeFockState) and (
-            (self.state_prep.num_spin_orbitals != self.hamiltonian.paulis.n_qubits)
-            or (self.state_prep.num_electrons != self.hamiltonian.electrons)
-        ):
-            error_msg = (
-                "Provided HartreeFockState is inconsistent with ElectronicHamiltonian."
-            )
-            raise ValueError(error_msg)
-
         match self.algorithm:
             case PhaseEstimation.Textbook:
                 self.num_qpe_ancillas = get_textbook_qpe_ancillas(self.error_budget)
@@ -139,25 +116,6 @@ class QPESpec:
         self.num_qubits = (
             self.num_data + self.num_qpe_ancillas + self.num_simulation_ancillas
         )
-
-    def _get_stateprep_qualtran(self) -> Bloq:
-        """Pattern matching and construction for state preparation Bloq."""
-        match self.state_prep:
-            case None:
-                state_prep_bloq = IdentityStatePrep(self.num_data)
-            case HartreeFockState():
-                mapping = self.hamiltonian.mapping
-                occupation = self.state_prep.occupation
-                match mapping:
-                    case Mapping.JordanWigner:
-                        bitstring = get_jw_state(occupation)
-                    case Mapping.BravyiKitaev:
-                        bitstring = get_bk_state(occupation)
-                    case Mapping.Parity:
-                        bitstring = get_parity_state(occupation)
-                state_prep_bloq = BitstringStatePrep(tuple(bitstring))
-
-        return state_prep_bloq
 
     def _get_simulation_qualtran_factory(self) -> Callable[[int], Bloq]:
         """Pattern matching and construction for simulation factories."""
@@ -233,37 +191,14 @@ class QPESpec:
 
         return estimation_bloq
 
-    def to_qualtran(self) -> CompositeBloq:
-        """Estimate resources for the calculation using the Qualtran backend."""
-        bb = BloqBuilder()
-        data = bb.add(self._get_stateprep_qualtran())
-        data = bb.add(self._get_estimation_qualtran(), data=data)
-        bb.free(data)
-        return bb.finalize()
+    def to_qualtran(self) -> Bloq:
+        """
+        Build the Qualtran Bloq implementing the QPE algorithm.
 
-    def _get_stateprep_quest(self) -> Callable:
-        match self.state_prep:
-            case None:
-
-                def noop(_: object) -> None:
-                    pass
-
-                init = noop
-
-            case HartreeFockState():
-                occupation = self.state_prep.occupation
-                mapping = self.hamiltonian.mapping
-
-                match mapping:
-                    case Mapping.JordanWigner:
-                        bitstring = get_jw_state(occupation)
-                    case Mapping.BravyiKitaev:
-                        bitstring = get_bk_state(occupation)
-                    case Mapping.Parity:
-                        bitstring = get_parity_state(occupation)
-
-                init = partial(initClassicalState, state=bitstring)
-        return init
+        The returned Bloq expects an externally-prepared state on its `data` register;
+        compose it with a state-preparation Bloq to get a runnable circuit.
+        """
+        return self._get_estimation_qualtran()
 
     def _get_estimation_quest(self) -> Callable:
         # Data register: [0, num_data]
@@ -349,8 +284,13 @@ class QPESpec:
         return sim
 
     def to_quest(self) -> QuestRoutine:
-        """Generate a QuEST simulation implementing the specified calculation."""
+        """
+        Generate the QuEST routine implementing the QPE algorithm.
+
+        The returned routine expects the Qureg to already be in an externally-prepared
+        initial state; compose it (e.g. via `QuestRoutine.extend`) with a state
+        preparation routine to get a runnable simulation.
+        """
         routine = QuestRoutine()
-        routine.append(self._get_stateprep_quest())
         routine.append(self._get_estimation_quest())
         return routine
