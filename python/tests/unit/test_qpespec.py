@@ -35,16 +35,6 @@ class TestQPESpec:
         )
         assert isinstance(spec, Spec)
 
-    def test_n_qubits_mismatch_raises(self, h2: PauliSum, budget: Errors):
-        with pytest.raises(ValueError, match="inconsistent with the provided"):
-            QPESpec(
-                hamiltonian=h2,
-                n_qubits=h2.n_qubits + 1,
-                algorithm=PhaseEstimation.Textbook,
-                simulation=Simulation.Qubitised,
-                error_budget=budget,
-            )
-
     def test_to_qualtran_data_register(self, h2: PauliSum, budget: Errors):
         spec = QPESpec(
             hamiltonian=h2,

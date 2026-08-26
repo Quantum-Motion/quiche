@@ -17,7 +17,7 @@
 from enum import StrEnum
 from functools import cached_property
 from math import isclose
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 import numpy as np
 from cirq import DensePauliString
@@ -25,6 +25,40 @@ from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, computed_field, model_validator
 
 from quiche.bindings.quest_bindings import PauliStr, PauliStrSum
+
+if TYPE_CHECKING:
+    # cudaq is a soft, optional dependency: only imported for real inside
+    # `PauliSum.from_cudaq`, never at module import time.
+    import cudaq
+
+
+def _real_coefficient(value: complex, *, tolerance: float = 1e-10) -> float:
+    """Coerce a Hamiltonian coefficient to float, rejecting complex values."""
+    coefficient = complex(value)
+    if abs(coefficient.imag) > tolerance:
+        error_msg = "Complex Hamiltonian coefficients are not supported."
+        raise ValueError(error_msg)
+    return float(coefficient.real)
+
+
+def _cudaq_term_extent(term: object) -> int:
+    """
+    Register extent a cudaq SpinOperatorTerm needs: largest targeted qubit + 1.
+
+    Not `qubit_count`: cudaq's `qubit_count` is the number of *distinct* targeted
+    indices, which undercounts whenever targets are off-zero or gapped. `max_degree`
+    may be a property or a method depending on cudaq version, and raises (rather
+    than returning a sentinel) for an identity term, which constrains no extent.
+    """
+    try:
+        max_degree = getattr(term, "max_degree", -1)
+        max_degree = max_degree() if callable(max_degree) else max_degree
+    except RuntimeError:
+        # An identity term acts on no degrees; cudaq raises (rather than
+        # returning a sentinel) on access, not on call - the getattr must be
+        # inside this try too.
+        return 0
+    return max_degree + 1 if max_degree >= 0 else 0
 
 
 class Pauli(StrEnum):
@@ -82,6 +116,21 @@ class PauliWord(BaseModel):
         """Get the string representation of a PauliWord, in big endian ordering."""
         length = self.greatest_qubit + 1
         return self.to_str(length, big_endian=True)
+
+    @classmethod
+    def from_str(cls, word: str, *, big_endian: bool) -> Self:
+        """
+        Build a PauliWord from a dense I/X/Y/Z string.
+
+        Endianness must be explicitly set with the `big_endian` arg, matching `to_str`.
+        Raises if `word` is entirely identity: a PauliWord cannot represent "no
+        Paulis" (see `check_nonzero_lengths`) — track an all-identity contribution
+        via `PauliSum.identity_coefficient` instead.
+        """
+        ops = word if big_endian else word[::-1]
+        terms = tuple(Pauli(op) for op in ops if op != "I")
+        qubits = tuple(i for i, op in enumerate(ops) if op != "I")
+        return cls(terms=terms, qubits=qubits)
 
     def to_str(self, length: int | None = None, *, big_endian: bool) -> str:
         """
@@ -204,6 +253,42 @@ class PauliSum(BaseModel):
                 msg += f"({qubit})"
             msg += "\n"
         return msg
+
+    @classmethod
+    def from_cudaq(cls, op: "cudaq.SpinOperator | cudaq.SpinOperatorTerm") -> Self:
+        """
+        Build a PauliSum from a CUDA-Q `SpinOperator` or `SpinOperatorTerm`.
+
+        Requires `cudaq` to be installed; imported lazily here so `cudaq` stays a
+        soft, optional dependency of quiche rather than a hard requirement.
+        """
+        import cudaq  # noqa: PLC0415
+
+        if isinstance(op, cudaq.SpinOperatorTerm):
+            op = cudaq.SpinOperator(op)
+
+        width = max((_cudaq_term_extent(term) for term in op), default=0)
+
+        identity_coefficient = 0.0
+        coefficients: list[float] = []
+        terms: list[PauliWord] = []
+
+        for term in op:
+            coefficient = _real_coefficient(term.evaluate_coefficient())
+            word = str(term.get_pauli_word(width))
+
+            if set(word) <= {"I"}:
+                identity_coefficient += coefficient
+                continue
+
+            coefficients.append(coefficient)
+            terms.append(PauliWord.from_str(word, big_endian=True))
+
+        return cls(
+            coefficients=tuple(coefficients),
+            terms=tuple(terms),
+            identity_coefficient=identity_coefficient,
+        )
 
     def to_quest(self) -> PauliStrSum:
         """

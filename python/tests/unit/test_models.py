@@ -83,6 +83,36 @@ class TestPauliWord:
         expected = np.kron(np.kron(np.kron(np.kron(X, X), ID), Y), ID)
         np.testing.assert_equal(actual, expected)
 
+    @pytest.mark.parametrize(
+        ("word", "big_endian", "expected_terms", "expected_qubits"),
+        [
+            ("XIYZ", True, (Pauli.X, Pauli.Y, Pauli.Z), (0, 2, 3)),
+            ("ZYIX", False, (Pauli.X, Pauli.Y, Pauli.Z), (0, 2, 3)),
+        ],
+    )
+    def test_from_str(
+        self,
+        word: str,
+        big_endian: bool,  # noqa: FBT001
+        expected_terms: tuple[Pauli, ...],
+        expected_qubits: tuple[int, ...],
+    ):
+        """Validate from_str against both endianness conventions."""
+        actual = PauliWord.from_str(word, big_endian=big_endian)
+        assert actual.terms == expected_terms
+        assert actual.qubits == expected_qubits
+
+    @pytest.mark.parametrize("big_endian", [True, False])
+    def test_from_str_round_trips_with_to_str(self, big_endian: bool):  # noqa: FBT001
+        word = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
+        string = word.to_str(4, big_endian=big_endian)
+        assert PauliWord.from_str(string, big_endian=big_endian) == word
+
+    def test_from_str_all_identity_raises(self):
+        error_msg = "The number of terms of the PauliWord must be nonzero"
+        with pytest.raises(ValueError, match=error_msg):
+            PauliWord.from_str("III", big_endian=True)
+
 
 class TestPauliSum:
     """Test PauliSum class."""
@@ -116,3 +146,44 @@ class TestPauliSum:
         )
 
         np.testing.assert_equal(actual, expected)
+
+
+class TestPauliSumFromCudaq:
+    """
+    Tests for PauliSum.from_cudaq against the real cudaq.SpinOperator.
+
+    Each test skips individually via `pytest.importorskip` if cudaq isn't
+    installed - cudaq is a soft, optional dependency of quiche, so this is
+    expected to skip until cudaq is set up in the environment running these.
+    """
+
+    def test_from_spin_operator(self):
+        cudaq = pytest.importorskip("cudaq")
+        spin = cudaq.spin
+        op = 0.5 * spin.z(0) - 0.3 * spin.x(0) * spin.x(1)
+
+        result = PauliSum.from_cudaq(op)
+
+        assert result.n_qubits == 2
+        assert result.n_terms == 2
+        assert result.identity_coefficient == 0.0
+
+    def test_from_spin_operator_with_identity(self):
+        cudaq = pytest.importorskip("cudaq")
+        spin = cudaq.spin
+        op = 1.2 * spin.i(0) + 0.5 * spin.z(0)
+
+        result = PauliSum.from_cudaq(op)
+
+        assert result.identity_coefficient == pytest.approx(1.2)
+        assert result.n_terms == 1
+
+    def test_from_spin_operator_term(self):
+        cudaq = pytest.importorskip("cudaq")
+        spin = cudaq.spin
+        term = spin.y(1)
+
+        result = PauliSum.from_cudaq(term)
+
+        assert result.n_terms == 1
+        assert result.terms[0].to_str(2, big_endian=True) == "IY"
