@@ -130,7 +130,7 @@ const std::vector<QPESystem> exactEigenstateSystems = {
 // All systems including H2 with approximate HF eigenstate
 const std::vector<QPESystem> allSystems = [] {
     std::vector<QPESystem> all = exactEigenstateSystems;
-    all.push_back({"H2", hydrogenMinimalJW, [](Qureg q) { initClassicalState(q, 3); }, -1.137, 0.05});
+    all.push_back({"H2", hydrogenMinimalJW, [](Qureg q) { initClassicalState(q, 3); }, -1.137, 0.02});
     return all;
 }();
 
@@ -154,7 +154,7 @@ TEST_CASE("Textbook Trotter QPE", "[qpe][textbook][trotter]") {
 
 TEST_CASE("Textbook QDRIFT QPE", "[qpe][textbook][qdrift]") {
     int numQPEAncillas = 8;
-    int reps = 300;
+    int reps = 1000;
     std::mt19937_64 rng(126234);
     bool allocateQubitisationAncillas = false;
 
@@ -217,7 +217,7 @@ TEST_CASE("Kitaev Trotter QPE", "[qpe][kitaev][trotter]") {
 }
 
 TEST_CASE("Kitaev QDRIFT QPE", "[qpe][kitaev][qdrift]") {
-    int reps = 300;
+    int reps = 1000;
     int rounds = 8;
     std::mt19937_64 rng(7483);
     int numQPEAncillas = 1;
@@ -252,7 +252,7 @@ TEST_CASE("Naive Trotter QPE", "[qpe][naive][trotter]") {
 }
 
 TEST_CASE("Naive QDRIFT QPE", "[qpe][naive][qdrift]") {
-    int reps = 300;
+    int reps = 1000;
     std::mt19937_64 rng(7483);
     int numQPEAncillas = 1;
     bool allocateQubitisationAncillas = false;
@@ -287,7 +287,7 @@ TEST_CASE("Iterative Trotter QPE", "[qpe][iterative][trotter]") {
 }
 
 TEST_CASE("Iterative QDRIFT QPE", "[qpe][iterative][qdrift]") {
-    int reps = 300;
+    int reps = 1000;
     int rounds = 8;
     std::mt19937_64 rng(7483);
     int numQPEAncillas = 1;
