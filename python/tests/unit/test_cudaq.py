@@ -31,6 +31,10 @@ from quiche.cudaq import CudaqKernel
 from quiche.cudaq.simulation import (
     qdrift_evolution,
     qdrift_kernel,
+    qubitised_controlled_kernel,
+    qubitised_encoding,
+    qubitised_kernel,
+    qubitised_walk,
     simulation_kernel,
     trotter_evolution,
     trotter_kernel,
@@ -83,6 +87,48 @@ def _exact(hamiltonian: PauliSum, time: float, ket: NDArray) -> NDArray[np.compl
 def _identity_phase(hamiltonian: PauliSum, time: float) -> complex:
     """Get exp(-i c_I t), the global phase tracked by `identity_coefficient`."""
     return complex(np.exp(-1j * hamiltonian.identity_coefficient * time))
+
+
+def _reference_pairs(hamiltonian: PauliSum, n_qubits: int) -> list[tuple[float, str]]:
+    """Get (coefficient, word) pairs in CUDA-Q's convention, for `_dense_matrix`."""
+    pairs = [
+        (c, term.to_str(n_qubits, big_endian=True))
+        for c, term in zip(hamiltonian.coefficients, hamiltonian.terms, strict=True)
+    ]
+    pairs.append((hamiltonian.identity_coefficient, "I" * n_qubits))
+    return pairs
+
+
+def _dense_matrix(
+    terms: list[tuple[float, str]], n_qubits: int
+) -> NDArray[np.complex128]:
+    """
+    Get the dense Pauli-sum matrix in CUDA-Q's own qubit order (qubit 0 = LSB).
+
+    A from-scratch port of `cudaq_algorithms`'s own `dense_references.dense_matrix`
+    test helper - not `PauliSum._to_matrix`, which uses the opposite convention.
+    Kept independent of quiche's production code as a genuine cross-check, used
+    only for the Qubitised tests below (block encoding and Walk operate directly
+    in CUDA-Q's basis, unlike the Trotter/QDRIFT kernels above which are bridged
+    back to quiche's basis via `_big_endian`).
+    """
+    dimension = 1 << n_qubits
+    matrix = np.zeros((dimension, dimension), dtype=np.complex128)
+    for coefficient, word in terms:
+        for column in range(dimension):
+            row = column
+            phase = complex(coefficient)
+            for qubit, label in enumerate(word):
+                bit = (column >> qubit) & 1
+                if label == "X":
+                    row ^= 1 << qubit
+                elif label == "Y":
+                    row ^= 1 << qubit
+                    phase *= 1.0j if bit == 0 else -1.0j
+                elif label == "Z":
+                    phase *= 1.0 if bit == 0 else -1.0
+            matrix[row, column] += phase
+    return matrix
 
 
 @pytest.fixture(scope="module")
@@ -195,6 +241,37 @@ class TestEvolutionTerms:
             trotter_kernel(GENERAL, TIME, reps=1, order=3)
 
 
+@pytest.mark.usefixtures("cudaq")
+class TestQubitisedEncoding:
+    """Host-side PauliLCU construction for the CUDA-Q backend."""
+
+    def test_alpha_includes_identity(self):
+        # Unlike Trotter, PauliLCU folds the identity coefficient into alpha
+        # rather than dropping it - there is no unrepresentable global phase
+        # here, so `qubitised_kernel` (unlike `trotter_kernel`/`qdrift_kernel`)
+        # needs no separate identity-phase correction.
+        encoding = qubitised_encoding(GENERAL)
+        assert encoding.alpha == pytest.approx(
+            GENERAL.lam + abs(GENERAL.identity_coefficient)
+        )
+
+    def test_num_ancilla(self):
+        # GENERAL has 3 non-identity terms plus a nonzero identity coefficient,
+        # so PauliLCU retains 4 terms: (4 - 1).bit_length() = 2.
+        #
+        # NOTE for whoever wires an ancilla budget to this backend:
+        # get_qubitisation_ancillas's num_index_ancillas = ceil(log2(n_terms))
+        # counts *non-identity* terms only, so it can under-count relative to
+        # what PauliLCU actually allocates whenever the identity coefficient is
+        # nonzero and n_terms is a power of 2 (e.g. 4 non-identity terms + a
+        # nonzero identity coefficient needs 3 ancillas here, not
+        # ceil(log2(4)) = 2) - verified directly against PauliLCU, not assumed.
+        assert qubitised_encoding(GENERAL).num_ancilla == 2
+
+    def test_register_width_is_pinned(self):
+        assert qubitised_encoding(NARROW, n_qubits=3).num_system == 3
+
+
 class TestSimulationKernels:
     """Real CUDA-Q output on qpp-cpu, checked against scipy expm."""
 
@@ -252,6 +329,100 @@ class TestSimulationKernels:
         # Dispatched before any cudaq import, so this runs without cudaq installed.
         with pytest.raises(NotImplementedError, match="Qubitised"):
             simulation_kernel(Simulation.Qubitised, GENERAL, TIME, reps=1)
+
+
+class TestQubitisedKernels:
+    """
+    Real CUDA-Q output on qpp-cpu, checked against dense references.
+
+    Every check here is exact (no approximation, no convergence tolerance to
+    reason about) - block encoding and qubitisation are exact constructions,
+    unlike Trotter/QDRIFT above. Works directly in CUDA-Q's own qubit order via
+    `_dense_matrix`/`_reference_pairs` and `cudaq_algorithms.sim_utils`, rather
+    than bridging through `_big_endian` - the system+ancilla register layout
+    makes that bridge more trouble than it's worth for these checks (see
+    `_dense_matrix`'s docstring).
+    """
+
+    @pytest.mark.usefixtures("cudaq")
+    def test_action_matches_dense_hamiltonian(self):
+        from cudaq_algorithms import sim_utils  # noqa: PLC0415
+
+        ket = np.array([0.6, 0.0, 0.0, 0.8], dtype=complex)
+        encoding = qubitised_encoding(GENERAL)
+
+        action = sim_utils.action(encoding, ket)
+
+        dense = _dense_matrix(_reference_pairs(GENERAL, 2), 2)
+        expected = (dense @ ket) / encoding.alpha
+        np.testing.assert_allclose(action, expected, atol=1e-9)
+
+    @pytest.mark.usefixtures("cudaq")
+    def test_moments_match_dense_chebyshev(self):
+        ket = np.array([0.6, 0.0, 0.0, 0.8], dtype=complex)
+        encoding = qubitised_encoding(GENERAL)
+        walk = qubitised_walk(GENERAL)
+
+        count = 5
+        measured = walk.moments(ket, count)
+
+        scaled = _dense_matrix(_reference_pairs(GENERAL, 2), 2) / encoding.alpha
+        chebyshev = [np.eye(4, dtype=complex), scaled]
+        while len(chebyshev) < count:
+            chebyshev.append(2.0 * scaled @ chebyshev[-1] - chebyshev[-2])
+        expected = [
+            float(np.real(ket.conj() @ chebyshev[k] @ ket)) for k in range(count)
+        ]
+        np.testing.assert_allclose(measured, expected, atol=1e-9)
+
+    @pytest.mark.parametrize("power", [1, 2, 3])
+    def test_roundtrip_is_identity(self, cudaq: ModuleType, power: int):
+        # PREPARE, W^power, (W^power)^-1, UNPREPARE == identity on the whole
+        # register (system back to `ket`, ancillas back to |0...0>).
+        from cudaq_algorithms import sim_utils  # noqa: PLC0415
+
+        ket = np.array([0.6, 0.0, 0.0, 0.8], dtype=complex)
+        encoding = qubitised_encoding(GENERAL)
+        walk = qubitised_walk(GENERAL)
+
+        kernel = walk.roundtrip_kernel(power=power)
+        state = np.asarray(cudaq.get_state(kernel, sim_utils.state_from(ket)))
+
+        n_register = encoding.num_system + encoding.num_ancilla
+        expected = np.zeros(1 << n_register, dtype=complex)
+        expected[: len(ket)] = ket
+        np.testing.assert_allclose(state, expected, atol=1e-9)
+
+    def test_controlled_off_is_identity(self, cudaq: ModuleType):
+        # control_state=0 must reduce the controlled walk to the identity -
+        # documented directly on Walk.controlled_kernel.
+        from cudaq_algorithms import sim_utils  # noqa: PLC0415
+
+        ket = np.array([0.6, 0.0, 0.0, 0.8], dtype=complex)
+        encoding = qubitised_encoding(GENERAL)
+
+        kernel = qubitised_controlled_kernel(GENERAL, power=2, control_state=0)
+        state = np.asarray(cudaq.get_state(kernel, sim_utils.state_from(ket)))
+
+        n_control_and_ancilla = 1 + encoding.num_ancilla
+        n_register = encoding.num_system + n_control_and_ancilla
+        expected = np.zeros(1 << n_register, dtype=complex)
+        expected[: len(ket)] = ket
+        np.testing.assert_allclose(state, expected, atol=1e-9)
+
+    def test_state_prep_is_injected(self, cudaq: ModuleType):
+        from cudaq_algorithms import sim_utils  # noqa: PLC0415
+
+        ket = np.array([0, 0, 0, 1], dtype=complex)  # |11>, CUDA-Q basis
+        prep = bitstring_kernel((1, 1))
+
+        kernel = qubitised_kernel(GENERAL, power=2, state_prep=prep)
+        injected = np.asarray(cudaq.get_state(kernel))
+
+        kernel = qubitised_kernel(GENERAL, power=2)
+        direct = np.asarray(cudaq.get_state(kernel, sim_utils.state_from(ket)))
+
+        np.testing.assert_allclose(injected, direct, atol=1e-9)
 
 
 class TestSoftDependency:

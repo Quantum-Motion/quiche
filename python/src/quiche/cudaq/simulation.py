@@ -28,6 +28,8 @@ from quiche.cudaq._runtime import CudaqKernel, load_cudaq
 if TYPE_CHECKING:
     # cudaq_algorithms is a soft, optional dependency; only imported for real
     # inside `load_cudaq`, never at module import time.
+    from cudaq_algorithms.pauli_lcu import PauliLCU as CudaqPauliLCU
+    from cudaq_algorithms.qubitization import Walk as CudaqWalk
     from cudaq_algorithms.trotter import Trotter as CudaqTrotter
 
 # CUDA-Q's Suzuki-Trotter primitive only implements these product-formula orders.
@@ -43,10 +45,11 @@ def _pauli_pairs(hamiltonian: PauliSum, n_qubits: int) -> list[tuple[float, str]
     repeats words.
 
     The trailing all-identity pair carries `hamiltonian.identity_coefficient`
-    onto the returned `Trotter.identity_coefficient` (see `trotter_evolution`)
-    and pins the register width at `n_qubits` even when no term reaches the top
-    qubit. A zero identity coefficient is dropped again once the width is fixed,
-    so the pad is always safe to append.
+    into the result and pins the register width at `n_qubits` even when no term
+    reaches the top qubit. `Trotter` drops it into `Trotter.identity_coefficient`
+    (see `trotter_evolution`); `PauliLCU` keeps it as a real encoded term (see
+    `qubitised_encoding`) - either way, a zero coefficient is dropped once the
+    width is fixed, so the pad is always safe to append.
     """
     pairs = [
         (coefficient, term.to_str(n_qubits, big_endian=True))
@@ -174,6 +177,83 @@ def qdrift_kernel(
     return evolution.kernel(time=time, steps=1, order=1, state_prep=state_prep)
 
 
+def qubitised_encoding(
+    hamiltonian: PauliSum, *, n_qubits: int | None = None
+) -> "CudaqPauliLCU":
+    """
+    Build the `cudaq_algorithms.pauli_lcu.PauliLCU` block encoding of a PauliSum.
+
+    `n_qubits` is as in `trotter_evolution`. Unlike Trotter, the identity term
+    is *not* dropped: `PauliLCU` (with its default `include_identity=True`)
+    folds it into `alpha`, exactly as `LCUBlockEncodingWrapper.from_hamiltonian`
+    does by hand on the Qualtran side - there is no unrepresentable global phase
+    here, the constant shift is part of what gets block-encoded.
+    """
+    _, algorithms = load_cudaq()
+    width = hamiltonian.n_qubits if n_qubits is None else n_qubits
+    pairs = _pauli_pairs(hamiltonian, width)
+    return algorithms.pauli_lcu.PauliLCU(
+        pairs, num_qubits=width, coefficient_threshold=0.0
+    )
+
+
+def qubitised_walk(
+    hamiltonian: PauliSum, *, n_qubits: int | None = None
+) -> "CudaqWalk":
+    """
+    Build the qubitisation `Walk` operator over `qubitised_encoding(hamiltonian)`.
+
+    The walk's flagged (ancilla-zero) block is `-H / alpha`, not `+H / alpha`
+    - the sign is folded into the walk construction by `cudaq_algorithms` itself.
+    """
+    _, algorithms = load_cudaq()
+    encoding = qubitised_encoding(hamiltonian, n_qubits=n_qubits)
+    return algorithms.qubitization.Walk(encoding)
+
+
+def qubitised_kernel(
+    hamiltonian: PauliSum,
+    power: int = 1,
+    *,
+    n_qubits: int | None = None,
+    uncompute: bool = True,
+    state_prep: CudaqKernel | None = None,
+) -> CudaqKernel:
+    """
+    Build the CUDA-Q kernel applying PREPARE, W^power, optionally UNPREPARE.
+
+    `W` is the qubitisation walk operator for `hamiltonian` (see
+    `qubitised_walk`), optionally preceded by `state_prep`.
+    """
+    walk = qubitised_walk(hamiltonian, n_qubits=n_qubits)
+    return walk.kernel(power=power, uncompute=uncompute, state_prep=state_prep)
+
+
+def qubitised_controlled_kernel(
+    hamiltonian: PauliSum,
+    power: int = 1,
+    *,
+    control_state: int = 1,
+    n_qubits: int | None = None,
+    uncompute: bool = True,
+    state_prep: CudaqKernel | None = None,
+) -> CudaqKernel:
+    """
+    Build the CUDA-Q kernel applying a controlled-W^power, as used in QPE.
+
+    `W` is the qubitisation walk operator for `hamiltonian` (see
+    `qubitised_walk`). The control qubit is the first qubit of the combined
+    `[control, ancillas]` register the returned kernel exposes.
+    """
+    walk = qubitised_walk(hamiltonian, n_qubits=n_qubits)
+    return walk.controlled_kernel(
+        power=power,
+        control_state=control_state,
+        uncompute=uncompute,
+        state_prep=state_prep,
+    )
+
+
 def simulation_kernel(
     simulation: Simulation,
     hamiltonian: PauliSum,
@@ -190,8 +270,11 @@ def simulation_kernel(
 
     `order` is ignored for `Simulation.QDRIFT` (its product formula is
     first-order by construction) and `seed` is ignored for `Simulation.Trotter`
-    (it is deterministic). `Simulation.Qubitised` is not yet implemented in the
-    CUDA-Q backend and is checked before any CUDA-Q import is attempted.
+    (it is deterministic). `Simulation.Qubitised` has no time-evolution
+    semantics to dispatch here - it needs `qubitised_kernel`/
+    `qubitised_controlled_kernel` directly, parametrized by a walk power
+    instead of `time`/`reps`; that case is checked before any CUDA-Q import is
+    attempted.
     """
     match simulation:
         case Simulation.Trotter:
@@ -210,5 +293,8 @@ def simulation_kernel(
             )
 
         case Simulation.Qubitised:
-            msg = "Qubitised simulation is not yet implemented in the CUDA-Q backend."
+            msg = (
+                "Simulation.Qubitised has no (time, reps) form in the CUDA-Q "
+                "backend; use qubitised_kernel/qubitised_controlled_kernel directly."
+            )
             raise NotImplementedError(msg)
