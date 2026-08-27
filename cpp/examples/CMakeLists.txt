@@ -1,8 +1,3 @@
-if(QUICHE_BUILD_HAMLIB)
-    add_executable(hamlib hamlib.cpp)
-    target_link_libraries(hamlib PRIVATE quiche)
-endif()
-
 add_executable(qdrift qdrift.cpp)
 target_link_libraries(qdrift PRIVATE quiche)
 
