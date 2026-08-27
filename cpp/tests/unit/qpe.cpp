@@ -52,7 +52,6 @@ struct QPEContext {
     qreal norm;
     qreal t;
     qreal identityCoeff;
-    int numDataQubits;
     std::vector<int> qpeAncillas;
     std::vector<int> qubitisationAncillas;
 };
@@ -70,17 +69,18 @@ void checkQPE(const QPESystem &system, EstimationFn estimate, int numQPEAncillas
 
         ctx.norm = qdrift::getPauliStrSumNorm(ctx.hamiltonian);
         ctx.t = 2 * const_PI / (1.25 * (2 * ctx.norm)); // time with some headroom to avoid aliasing
-        ctx.numDataQubits = paulis_getIndOfLefmostNonIdentityPauli(ctx.hamiltonian) + 1;
 
+        // Register layout: [data qubits | QPE ancillas | qubitisation ancillas]
+        int numDataQubits = paulis_getIndOfLefmostNonIdentityPauli(ctx.hamiltonian) + 1;
         int numQubitisationAncillas = static_cast<int>(std::max(std::ceil(std::log2(ctx.hamiltonian.numTerms)), 1.0));
-        ctx.qureg = createQureg(ctx.numDataQubits + numQPEAncillas + numQubitisationAncillas);
+        ctx.qureg = createQureg(numDataQubits + numQPEAncillas + numQubitisationAncillas);
         system.prepareState(ctx.qureg);
 
         ctx.qpeAncillas = std::vector<int>(numQPEAncillas);
-        std::iota(ctx.qpeAncillas.begin(), ctx.qpeAncillas.end(), ctx.numDataQubits);
+        std::iota(ctx.qpeAncillas.begin(), ctx.qpeAncillas.end(), numDataQubits);
 
         ctx.qubitisationAncillas = std::vector<int>(numQubitisationAncillas);
-        std::iota(ctx.qubitisationAncillas.begin(), ctx.qubitisationAncillas.end(), ctx.numDataQubits + numQPEAncillas);
+        std::iota(ctx.qubitisationAncillas.begin(), ctx.qubitisationAncillas.end(), numDataQubits + numQPEAncillas);
 
         double energy = estimate(ctx);
 
@@ -200,7 +200,7 @@ TEST_CASE("Kitaev Trotter QPE", "[qpe][kitaev][trotter]") {
 
     auto estimateEnergy = [&](const QPEContext &ctx) {
         double phase =
-            qpe::getPhaseKitaevTrotter(ctx.qureg, ctx.hamiltonian, ctx.numDataQubits, order, reps, ctx.t, rounds);
+            qpe::getPhaseKitaevTrotter(ctx.qureg, ctx.hamiltonian, ctx.qpeAncillas[0], order, reps, ctx.t, rounds);
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
@@ -217,7 +217,7 @@ TEST_CASE("Kitaev QDRIFT QPE", "[qpe][kitaev][qdrift]") {
 
     auto estimateEnergy = [&](const QPEContext &ctx) {
         double phase =
-            qpe::getPhaseKitaevQDRIFT(ctx.qureg, ctx.hamiltonian, ctx.numDataQubits, reps, ctx.t, rounds, rng);
+            qpe::getPhaseKitaevQDRIFT(ctx.qureg, ctx.hamiltonian, ctx.qpeAncillas[0], reps, ctx.t, rounds, rng);
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
@@ -233,7 +233,7 @@ TEST_CASE("Naive Trotter QPE", "[qpe][naive][trotter]") {
     auto system = GENERATE(from_range(exactEigenstateSystems));
 
     auto estimateEnergy = [&](const QPEContext &ctx) {
-        double phase = qpe::getPhaseNaiveTrotter(ctx.qureg, ctx.hamiltonian, ctx.numDataQubits, order, reps, ctx.t);
+        double phase = qpe::getPhaseNaiveTrotter(ctx.qureg, ctx.hamiltonian, ctx.qpeAncillas[0], order, reps, ctx.t);
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
@@ -249,7 +249,7 @@ TEST_CASE("Naive QDRIFT QPE", "[qpe][naive][qdrift]") {
     auto system = GENERATE(from_range(exactEigenstateSystems));
 
     auto estimateEnergy = [&](const QPEContext &ctx) {
-        double phase = qpe::getPhaseNaiveQDRIFT(ctx.qureg, ctx.hamiltonian, ctx.numDataQubits, reps, ctx.t, rng);
+        double phase = qpe::getPhaseNaiveQDRIFT(ctx.qureg, ctx.hamiltonian, ctx.qpeAncillas[0], reps, ctx.t, rng);
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
@@ -266,7 +266,7 @@ TEST_CASE("Iterative Trotter QPE", "[qpe][iterative][trotter]") {
 
     auto estimateEnergy = [&](const QPEContext &ctx) {
         double phase =
-            qpe::getPhaseIterativeTrotter(ctx.qureg, ctx.hamiltonian, ctx.numDataQubits, order, reps, ctx.t, rounds);
+            qpe::getPhaseIterativeTrotter(ctx.qureg, ctx.hamiltonian, ctx.qpeAncillas[0], order, reps, ctx.t, rounds);
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
@@ -283,7 +283,7 @@ TEST_CASE("Iterative QDRIFT QPE", "[qpe][iterative][qdrift]") {
 
     auto estimateEnergy = [&](const QPEContext &ctx) {
         double phase =
-            qpe::getPhaseIterativeQDRIFT(ctx.qureg, ctx.hamiltonian, ctx.numDataQubits, reps, ctx.t, rounds, rng);
+            qpe::getPhaseIterativeQDRIFT(ctx.qureg, ctx.hamiltonian, ctx.qpeAncillas[0], reps, ctx.t, rounds, rng);
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
