@@ -34,6 +34,8 @@ lint = [
     "ruff>=0.15",
 ]
 test = [
+    "cudaq>=0.15,<0.16",
+    "cudaq-algorithms>=0.1",
     "pytest>=9.0",
     "scipy>=1.15",
 ]

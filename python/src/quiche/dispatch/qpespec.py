@@ -29,6 +29,7 @@ from quiche.core import (
     PhaseEstimation,
     Simulation,
 )
+from quiche.cudaq import CudaqKernel
 from quiche.dispatch.budget.estimation import (
     get_kitaev_qpe_rounds,
     get_textbook_qpe_ancillas,
@@ -293,3 +294,15 @@ class QPESpec(Spec):
         routine = QuestRoutine()
         routine.append(self._get_estimation_quest())
         return routine
+
+    def to_cudaq(self) -> CudaqKernel:
+        """
+        Build the CUDA-Q kernel implementing the QPE algorithm.
+
+        Not yet implemented: CUDA-Q Algorithms has no phase-estimation or
+        inverse-QFT primitive to build on. The Hamiltonian-simulation kernels
+        this will eventually compose with already exist -
+        see `quiche.cudaq.simulation.simulation_kernel`.
+        """
+        msg = "QPE is not yet implemented in the CUDA-Q backend."
+        raise NotImplementedError(msg)

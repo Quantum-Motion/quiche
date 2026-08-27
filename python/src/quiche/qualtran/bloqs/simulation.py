@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from quiche.core.paulis import PauliSum, PauliWord
 
 from math import ceil, log2, pi
-from random import choices, getstate, seed, setstate
 from typing import Self
 
 import attrs
@@ -72,7 +71,8 @@ from qualtran.resource_counting import (
     SympySymbolAllocator,
 )
 
-from quiche.core import Pauli, PauliWord
+from quiche.core import Pauli, PauliWord, Seed
+from quiche.core.qdrift import sample_qdrift_indices
 
 from .state_prep import PrepareFromStatePrep
 
@@ -432,7 +432,7 @@ class QDRIFT(Bloq):
     h: PauliSum
     t: float
     n_terms: int
-    seed: None | int | float | str | bytes | bytearray = None
+    seed: Seed = None
 
     def __attrs_post_init__(self) -> Self:
         """Validate attributes."""
@@ -489,12 +489,7 @@ class QDRIFT(Bloq):
 
     def sample_term_indices(self) -> tuple[int, ...]:
         """Generate random sequence for Hamiltonian sampling."""
-        rng_state = getstate()
-        if self.seed:
-            seed(self.seed)
-        c = choices(range(self.h.n_terms), self.positive_coefficients, k=self.n_terms)  # noqa: S311
-        setstate(rng_state)
-        return tuple(c)
+        return sample_qdrift_indices(self.h, self.n_terms, self.seed)
 
     def build_composite_bloq(
         self,
@@ -519,7 +514,7 @@ class QDRIFT(Bloq):
         simulation = bb.add(t, system=simulation)
 
         # Add the constant term as a global phase.
-        bb.add(GlobalPhase(exponent=-self.h.identity_coefficient / pi))
+        bb.add(GlobalPhase(exponent=-self.h.identity_coefficient * self.t / pi))
         return {"simulation": simulation}
 
     def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
@@ -553,7 +548,8 @@ class QDRIFT(Bloq):
             bloq_counts[gate] = count
 
         # Add the global phase.
-        bloq_counts[GlobalPhase(exponent=-self.h.identity_coefficient / pi)] = 1
+        phase = -self.h.identity_coefficient * self.t / pi
+        bloq_counts[GlobalPhase(exponent=phase)] = 1
         return bloq_counts
 
 
@@ -619,10 +615,9 @@ class CTRLQDRIFT(Bloq):
         ctrl, simulation = bb.add(t, ctrl=ctrl, system=simulation)
 
         # Add the constant term as controlled global phase
+        phase = -self.simulation.h.identity_coefficient * self.simulation.t / pi
         ctrl = bb.add(
-            GlobalPhase(
-                exponent=-self.simulation.h.identity_coefficient / pi
-            ).controlled(),
+            GlobalPhase(exponent=phase).controlled(),
             q=ctrl,
         )
         return {"ctrl": ctrl, "simulation": simulation}
@@ -648,11 +643,8 @@ class CTRLQDRIFT(Bloq):
 
             bloq_counts[gate] = count
 
-        bloq_counts[
-            GlobalPhase(
-                exponent=-self.simulation.h.identity_coefficient / pi
-            ).controlled()
-        ] = 1
+        phase = -self.simulation.h.identity_coefficient * self.simulation.t / pi
+        bloq_counts[GlobalPhase(exponent=phase).controlled()] = 1
         return bloq_counts
 
 

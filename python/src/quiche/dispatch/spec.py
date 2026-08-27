@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Common interface for objects dispatching to the Qualtran and QuEST backends."""
+"""Common dispatch interface for the Qualtran, QuEST and CUDA-Q backends."""
 
 from abc import ABC, abstractmethod
 
 from qualtran import Bloq
 
+from quiche.cudaq import CudaqKernel
 from quiche.quest import QuestRoutine
 
 
 class Spec(ABC):
-    """Interface for objects that lower to a Qualtran Bloq or QuEST routine."""
+    """Interface for objects that lower to Qualtran, QuEST or CUDA-Q."""
 
     @abstractmethod
     def to_qualtran(self) -> Bloq:
@@ -31,3 +32,7 @@ class Spec(ABC):
     @abstractmethod
     def to_quest(self) -> QuestRoutine:
         """Build the QuEST routine for this spec."""
+
+    @abstractmethod
+    def to_cudaq(self) -> CudaqKernel:
+        """Build the CUDA-Q kernel for this spec."""

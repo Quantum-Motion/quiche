@@ -14,12 +14,13 @@
 
 """QUICHE - A library for QUantum Integrated CHEmistry."""
 
-from . import bindings, chemistry, core, dispatch, hamlib, qualtran, quest
+from . import bindings, chemistry, core, cudaq, dispatch, hamlib, qualtran, quest
 
 __all__ = [
     "bindings",
     "chemistry",
     "core",
+    "cudaq",
     "dispatch",
     "hamlib",
     "qualtran",

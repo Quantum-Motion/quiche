@@ -29,6 +29,7 @@ from quiche.chemistry import (
     get_parity_state,
 )
 from quiche.core import Mapping
+from quiche.cudaq import CudaqKernel, bitstring_kernel
 from quiche.dispatch.spec import Spec
 from quiche.qualtran.bloqs import BitstringStatePrep
 from quiche.quest import QuestRoutine
@@ -50,6 +51,10 @@ class HartreeFockSpec(Spec):
         routine = QuestRoutine()
         routine.append(partial(initClassicalState, state=self._bitstring()))
         return routine
+
+    def to_cudaq(self) -> CudaqKernel:
+        """Build the CUDA-Q kernel preparing the Hartree-Fock state."""
+        return bitstring_kernel(self._bitstring())
 
     def _bitstring(self) -> NDArray[np.int_]:
         """Transform the occupation basis state to the qubit basis via `mapping`."""

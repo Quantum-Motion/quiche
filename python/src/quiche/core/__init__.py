@@ -17,6 +17,7 @@
 from .algorithms import Mapping, PhaseEstimation, Simulation
 from .errors import Errors
 from .paulis import Pauli, PauliSum, PauliWord
+from .qdrift import Seed, sample_qdrift_indices
 
 __all__ = [
     "Errors",
@@ -25,5 +26,7 @@ __all__ = [
     "PauliSum",
     "PauliWord",
     "PhaseEstimation",
+    "Seed",
     "Simulation",
+    "sample_qdrift_indices",
 ]
