@@ -39,6 +39,7 @@
 namespace {
 
 struct QPESystem {
+    std::string name;
     std::string hamiltonian;
     std::function<void(Qureg)> prepareState;
     double expectedEnergy;
@@ -58,33 +59,36 @@ struct QPEContext {
 
 template <typename EstimationFn>
 void checkQPE(const QPESystem &system, EstimationFn estimate, int numQPEAncillas) {
-    PauliStrSum raw = createInlinePauliStrSum(system.hamiltonian);
 
-    QPEContext ctx;
-    ctx.identityCoeff = getIdentityCoeff(raw).real();
-    ctx.hamiltonian = cloneWithoutIdentity(raw);
-    destroyPauliStrSum(raw);
+    SECTION("Hamiltonian: " + system.name) {
+        PauliStrSum raw = createInlinePauliStrSum(system.hamiltonian);
 
-    ctx.norm = qdrift::getPauliStrSumNorm(ctx.hamiltonian);
-    ctx.t = 2 * const_PI / (1.25 * (2 * ctx.norm)); // time with some headroom to avoid aliasing
-    ctx.numDataQubits = paulis_getIndOfLefmostNonIdentityPauli(ctx.hamiltonian) + 1;
+        QPEContext ctx{};
+        ctx.identityCoeff = getIdentityCoeff(raw).real();
+        ctx.hamiltonian = cloneWithoutIdentity(raw);
+        destroyPauliStrSum(raw);
 
-    int numQubitisationAncillas = static_cast<int>(std::max(std::ceil(std::log2(ctx.hamiltonian.numTerms)), 1.0));
-    ctx.qureg = createQureg(ctx.numDataQubits + numQPEAncillas + numQubitisationAncillas);
-    system.prepareState(ctx.qureg);
+        ctx.norm = qdrift::getPauliStrSumNorm(ctx.hamiltonian);
+        ctx.t = 2 * const_PI / (1.25 * (2 * ctx.norm)); // time with some headroom to avoid aliasing
+        ctx.numDataQubits = paulis_getIndOfLefmostNonIdentityPauli(ctx.hamiltonian) + 1;
 
-    ctx.qpeAncillas = std::vector<int>(numQPEAncillas);
-    std::iota(ctx.qpeAncillas.begin(), ctx.qpeAncillas.end(), ctx.numDataQubits);
+        int numQubitisationAncillas = static_cast<int>(std::max(std::ceil(std::log2(ctx.hamiltonian.numTerms)), 1.0));
+        ctx.qureg = createQureg(ctx.numDataQubits + numQPEAncillas + numQubitisationAncillas);
+        system.prepareState(ctx.qureg);
 
-    ctx.qubitisationAncillas = std::vector<int>(numQubitisationAncillas);
-    std::iota(ctx.qubitisationAncillas.begin(), ctx.qubitisationAncillas.end(), ctx.numDataQubits + numQPEAncillas);
+        ctx.qpeAncillas = std::vector<int>(numQPEAncillas);
+        std::iota(ctx.qpeAncillas.begin(), ctx.qpeAncillas.end(), ctx.numDataQubits);
 
-    double energy = estimate(ctx);
+        ctx.qubitisationAncillas = std::vector<int>(numQubitisationAncillas);
+        std::iota(ctx.qubitisationAncillas.begin(), ctx.qubitisationAncillas.end(), ctx.numDataQubits + numQPEAncillas);
 
-    destroyQureg(ctx.qureg);
-    destroyPauliStrSum(ctx.hamiltonian);
+        double energy = estimate(ctx);
 
-    REQUIRE(energy == Catch::Approx(system.expectedEnergy).margin(system.margin));
+        destroyQureg(ctx.qureg);
+        destroyPauliStrSum(ctx.hamiltonian);
+
+        REQUIRE(energy == Catch::Approx(system.expectedEnergy).margin(system.margin));
+    }
 }
 
 const std::string hydrogenMinimalJW = R"(
@@ -107,9 +111,9 @@ const std::string hydrogenMinimalJW = R"(
 
 // Systems with exact eigenstates only (compatible with every method)
 const std::vector<QPESystem> exactEigenstateSystems = {
-    {"1 Z", [](Qureg q) { initClassicalState(q, 1); }, -1.0, 0.02},
-    {"1 ZZ", [](Qureg q) { initClassicalState(q, 1); }, -1.0, 0.02},
-    {"1 XX \n 1 YY \n 1 ZZ",
+    {"Z", "1 Z", [](Qureg q) { initClassicalState(q, 1); }, -1.0, 0.02},
+    {"ZZ", "1 ZZ", [](Qureg q) { initClassicalState(q, 1); }, -1.0, 0.02},
+    {"XX+YY+ZZ", "1 XX \n 1 YY \n 1 ZZ",
      [](Qureg q) {
          applyHadamard(q, 0);
          applyControlledPauliX(q, 0, 1);
@@ -122,7 +126,7 @@ const std::vector<QPESystem> exactEigenstateSystems = {
 // All systems including H2 with approximate HF eigenstate
 const std::vector<QPESystem> allSystems = [] {
     std::vector<QPESystem> all = exactEigenstateSystems;
-    all.push_back({hydrogenMinimalJW, [](Qureg q) { initClassicalState(q, 3); }, -1.137, 0.05});
+    all.push_back({"H2", hydrogenMinimalJW, [](Qureg q) { initClassicalState(q, 3); }, -1.137, 0.05});
     return all;
 }();
 
