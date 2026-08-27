@@ -57,7 +57,7 @@ struct QPEContext {
 };
 
 template <typename EstimationFn>
-void checkQPE(const QPESystem &system, EstimationFn estimate, int numQPEAncillas) {
+void checkQPE(const QPESystem &system, EstimationFn estimate, int numQPEAncillas, bool allocateQubitisationAncillas) {
 
     SECTION("Hamiltonian: " + system.name) {
         PauliStrSum raw = createInlinePauliStrSum(system.hamiltonian);
@@ -72,7 +72,11 @@ void checkQPE(const QPESystem &system, EstimationFn estimate, int numQPEAncillas
 
         // Register layout: [data qubits | QPE ancillas | qubitisation ancillas]
         int numDataQubits = paulis_getIndOfLefmostNonIdentityPauli(ctx.hamiltonian) + 1;
-        int numQubitisationAncillas = static_cast<int>(std::max(std::ceil(std::log2(ctx.hamiltonian.numTerms)), 1.0));
+        int numQubitisationAncillas =
+            allocateQubitisationAncillas
+                ? static_cast<int>(std::max(std::ceil(std::log2(ctx.hamiltonian.numTerms)), 1.0))
+                : 0;
+
         ctx.qureg = createQureg(numDataQubits + numQPEAncillas + numQubitisationAncillas);
         system.prepareState(ctx.qureg);
 
@@ -136,6 +140,7 @@ TEST_CASE("Textbook Trotter QPE", "[qpe][textbook][trotter]") {
     int numQPEAncillas = 8;
     int order = 2;
     int reps = 5;
+    bool allocateQubitisationAncillas = false;
 
     auto system = GENERATE(from_range(allSystems));
 
@@ -144,13 +149,14 @@ TEST_CASE("Textbook Trotter QPE", "[qpe][textbook][trotter]") {
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
-    checkQPE(system, estimateEnergy, numQPEAncillas);
+    checkQPE(system, estimateEnergy, numQPEAncillas, allocateQubitisationAncillas);
 }
 
 TEST_CASE("Textbook QDRIFT QPE", "[qpe][textbook][qdrift]") {
     int numQPEAncillas = 8;
     int reps = 300;
     std::mt19937_64 rng(126234);
+    bool allocateQubitisationAncillas = false;
 
     auto system = GENERATE(from_range(allSystems));
 
@@ -159,11 +165,12 @@ TEST_CASE("Textbook QDRIFT QPE", "[qpe][textbook][qdrift]") {
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
-    checkQPE(system, estimateEnergy, numQPEAncillas);
+    checkQPE(system, estimateEnergy, numQPEAncillas, allocateQubitisationAncillas);
 }
 
 TEST_CASE("Textbook Qubitised QPE", "[qpe][textbook][qubitised]") {
     int numQPEAncillas = 8;
+    bool allocateQubitisationAncillas = true;
 
     auto system = GENERATE(from_range(allSystems));
 
@@ -173,11 +180,12 @@ TEST_CASE("Textbook Qubitised QPE", "[qpe][textbook][qubitised]") {
         return qpe::getEnergyFromQubitisationPhase(phase, ctx.norm, ctx.identityCoeff);
     };
 
-    checkQPE(system, estimateEnergy, numQPEAncillas);
+    checkQPE(system, estimateEnergy, numQPEAncillas, allocateQubitisationAncillas);
 }
 
 TEST_CASE("Textbook Qubitised Optimised QPE", "[qpe][textbook][qubitised-optimised]") {
     int numQPEAncillas = 8;
+    bool allocateQubitisationAncillas = true;
 
     auto system = GENERATE(from_range(allSystems));
 
@@ -187,7 +195,7 @@ TEST_CASE("Textbook Qubitised Optimised QPE", "[qpe][textbook][qubitised-optimis
         return qpe::getEnergyFromQubitisationPhase(phase, ctx.norm, ctx.identityCoeff);
     };
 
-    checkQPE(system, estimateEnergy, numQPEAncillas);
+    checkQPE(system, estimateEnergy, numQPEAncillas, allocateQubitisationAncillas);
 }
 
 TEST_CASE("Kitaev Trotter QPE", "[qpe][kitaev][trotter]") {
@@ -195,6 +203,7 @@ TEST_CASE("Kitaev Trotter QPE", "[qpe][kitaev][trotter]") {
     int reps = 5;
     int rounds = 8;
     int numQPEAncillas = 1;
+    bool allocateQubitisationAncillas = false;
 
     auto system = GENERATE(from_range(allSystems));
 
@@ -204,7 +213,7 @@ TEST_CASE("Kitaev Trotter QPE", "[qpe][kitaev][trotter]") {
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
-    checkQPE(system, estimateEnergy, numQPEAncillas);
+    checkQPE(system, estimateEnergy, numQPEAncillas, allocateQubitisationAncillas);
 }
 
 TEST_CASE("Kitaev QDRIFT QPE", "[qpe][kitaev][qdrift]") {
@@ -212,6 +221,7 @@ TEST_CASE("Kitaev QDRIFT QPE", "[qpe][kitaev][qdrift]") {
     int rounds = 8;
     std::mt19937_64 rng(7483);
     int numQPEAncillas = 1;
+    bool allocateQubitisationAncillas = false;
 
     auto system = GENERATE(from_range(allSystems));
 
@@ -221,13 +231,14 @@ TEST_CASE("Kitaev QDRIFT QPE", "[qpe][kitaev][qdrift]") {
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
-    checkQPE(system, estimateEnergy, numQPEAncillas);
+    checkQPE(system, estimateEnergy, numQPEAncillas, allocateQubitisationAncillas);
 }
 
 TEST_CASE("Naive Trotter QPE", "[qpe][naive][trotter]") {
     int order = 2;
     int reps = 5;
     int numQPEAncillas = 1;
+    bool allocateQubitisationAncillas = false;
 
     // Naive QPE yields t-dependent weighted average of eigenenergies so not tested with approximate HF eigenstate
     auto system = GENERATE(from_range(exactEigenstateSystems));
@@ -237,13 +248,14 @@ TEST_CASE("Naive Trotter QPE", "[qpe][naive][trotter]") {
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
-    checkQPE(system, estimateEnergy, numQPEAncillas);
+    checkQPE(system, estimateEnergy, numQPEAncillas, allocateQubitisationAncillas);
 }
 
 TEST_CASE("Naive QDRIFT QPE", "[qpe][naive][qdrift]") {
     int reps = 300;
     std::mt19937_64 rng(7483);
     int numQPEAncillas = 1;
+    bool allocateQubitisationAncillas = false;
 
     // Naive QPE yields t-dependent weighted average of eigenenergies so not tested with approximate HF eigenstate
     auto system = GENERATE(from_range(exactEigenstateSystems));
@@ -253,7 +265,7 @@ TEST_CASE("Naive QDRIFT QPE", "[qpe][naive][qdrift]") {
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
-    checkQPE(system, estimateEnergy, numQPEAncillas);
+    checkQPE(system, estimateEnergy, numQPEAncillas, allocateQubitisationAncillas);
 }
 
 TEST_CASE("Iterative Trotter QPE", "[qpe][iterative][trotter]") {
@@ -261,6 +273,7 @@ TEST_CASE("Iterative Trotter QPE", "[qpe][iterative][trotter]") {
     int reps = 5;
     int rounds = 8;
     int numQPEAncillas = 1;
+    bool allocateQubitisationAncillas = false;
 
     auto system = GENERATE(from_range(allSystems));
 
@@ -270,7 +283,7 @@ TEST_CASE("Iterative Trotter QPE", "[qpe][iterative][trotter]") {
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
-    checkQPE(system, estimateEnergy, numQPEAncillas);
+    checkQPE(system, estimateEnergy, numQPEAncillas, allocateQubitisationAncillas);
 }
 
 TEST_CASE("Iterative QDRIFT QPE", "[qpe][iterative][qdrift]") {
@@ -278,6 +291,7 @@ TEST_CASE("Iterative QDRIFT QPE", "[qpe][iterative][qdrift]") {
     int rounds = 8;
     std::mt19937_64 rng(7483);
     int numQPEAncillas = 1;
+    bool allocateQubitisationAncillas = false;
 
     auto system = GENERATE(from_range(allSystems));
 
@@ -287,5 +301,5 @@ TEST_CASE("Iterative QDRIFT QPE", "[qpe][iterative][qdrift]") {
         return qpe::getEnergyFromTrotterPhase(phase, ctx.t, ctx.identityCoeff);
     };
 
-    checkQPE(system, estimateEnergy, numQPEAncillas);
+    checkQPE(system, estimateEnergy, numQPEAncillas, allocateQubitisationAncillas);
 }
