@@ -21,8 +21,10 @@
  * @author Vasco Ferreira
  */
 
+#include <cmath>
 #include <iostream>
 #include <numeric>
+#include <vector>
 
 #include <quest.h>
 #include <quest/src/core/constants.hpp>

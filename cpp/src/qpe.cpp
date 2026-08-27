@@ -16,6 +16,7 @@
 
 #include "quiche/qpe.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 #include <quest/src/core/constants.hpp>

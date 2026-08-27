@@ -22,6 +22,7 @@
  * @author Vasco Ferreira
  */
 
+#include <cmath>
 #include <iostream>
 #include <numeric>
 #include <vector>
