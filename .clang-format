@@ -19,6 +19,9 @@ ReflowComments: true
 SortIncludes: true
 IncludeBlocks: Regroup
 IncludeCategories:
+  - Regex: '^<nanobind'
+    Priority: 3
+
   - Regex: '^<catch2'
     Priority: 4
 

@@ -17,9 +17,12 @@
 #include "quiche/qdrift.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <complex>
 #include <numeric>
 #include <random>
 #include <stdexcept>
+#include <vector>
 
 namespace {
 

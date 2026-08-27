@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -37,7 +38,7 @@ template <typename T>
 std::string formatVector(const std::vector<T> &vec) {
     std::string str;
     str += "[";
-    for (size_t i = 0; i < vec.size(); i++) {
+    for (std::size_t i = 0; i < vec.size(); i++) {
         str += formatVector(vec[i]);
         if (i < vec.size() - 1) {
             str += ", ";

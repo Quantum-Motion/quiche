@@ -21,6 +21,7 @@
 #include <complex>
 #include <numeric>
 #include <stdexcept>
+#include <vector>
 
 #include <quest/src/core/bitwise.hpp>
 #include <quest/src/core/constants.hpp>
