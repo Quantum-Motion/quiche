@@ -76,12 +76,16 @@ def textbook_qpe_kernel(
     """
     Build the Textbook QPE kernel for `Simulation.Trotter`/`Simulation.QDRIFT`.
 
-    The returned kernel has signature `(state: cudaq.State)`: it expects an
-    externally-prepared state on the data register (mirroring `to_qualtran`'s
-    "compose with a state-preparation Bloq" and `to_quest`'s "compose with a
-    state preparation routine" contracts - `state` must have dimension
-    `2**n_qubits`, the caller's responsibility, same as
-    `cudaq_algorithms.trotter.Trotter.state_kernel`), and ends with `mz` on the
+    The returned kernel has signature `(data: cudaq.qview) -> None`: like
+    `bitstring_kernel`/`inverse_qft_kernel`, it operates in place on an
+    already-allocated register rather than accepting a `cudaq.State` - the
+    caller allocates the register (`cudaq.qvector(n_qubits)`), runs a
+    state-preparation kernel on it (mirroring `to_qualtran`'s "compose with a
+    state-preparation Bloq" and `to_quest`'s "compose with a state preparation
+    routine" contracts), then this kernel, all within one compiled top-level
+    kernel - see `QPESpec.to_cudaq`'s docstring for a worked example. `data`
+    must be at least `n_qubits` wide, the caller's responsibility (same
+    requirement as `apply_trotter`/`bitstring_kernel`). Ends with `mz` on the
     QPE ancilla register, ready for `cudaq.sample`.
 
     Ladder rung `k` (`k = 0, ..., num_qpe_ancillas - 1`) applies
@@ -139,9 +143,8 @@ def textbook_qpe_kernel(
     inverse_qft = inverse_qft_kernel()
 
     @cudaq.kernel
-    def qpe(state: cudaq.State) -> None:
+    def qpe(data: cudaq.qview) -> None:
         """Ladder controlled-U^(2^k), then inverse QFT, then measure the ancillas."""
-        data = cudaq.qvector(state)
         ancilla = cudaq.qvector(num_qpe_ancillas)
         h(ancilla)
         for k in range(num_qpe_ancillas):

@@ -299,10 +299,26 @@ class QPESpec(Spec):
         """
         Build the CUDA-Q kernel implementing the QPE algorithm.
 
-        The returned kernel expects the data register to already be in an
-        externally-prepared initial state, supplied as a `cudaq.State` argument;
-        compose it with a state-preparation kernel to get a runnable circuit -
-        see `quiche.cudaq.estimation.textbook_qpe_kernel` for the exact contract
+        The returned kernel has signature `(data: cudaq.qview) -> None`: it
+        operates in place on an already-allocated data register, the same
+        contract as `HartreeFockSpec.to_cudaq()`'s kernel - compose the two by
+        allocating the register once and calling both kernels on it inside one
+        top-level kernel, e.g.:
+
+        ```python
+        prep = state_spec.to_cudaq()
+        qpe = qpe_spec.to_cudaq()
+
+        @cudaq.kernel
+        def run() -> None:
+            data = cudaq.qvector(qpe_spec.num_data)
+            prep(data)
+            qpe(data)
+
+        counts = cudaq.sample(run, shots_count=...)
+        ```
+
+        See `quiche.cudaq.estimation.textbook_qpe_kernel` for the exact contract
         and the energy-recovery formula.
 
         Only `PhaseEstimation.Textbook` with `Simulation.Trotter`/`Simulation.QDRIFT`

@@ -25,10 +25,12 @@ def bitstring_kernel(bitstring: Sequence[int]) -> CudaqKernel:
 
     `bitstring[i]` is the target value of qubit `i`, matching
     `quiche.qualtran.bloqs.BitstringStatePrep` and QuEST's `initClassicalState`.
-    The returned kernel has signature `(qubits: cudaq.qview)` and is injectable
-    directly as the `state_prep=` argument of the CUDA-Q simulation kernel
-    factories in `quiche.cudaq.simulation`; the register it is handed must be at
-    least `len(bitstring)` wide and start in |0...0>.
+    The returned kernel has signature `(data: cudaq.qview)` - `data` names the
+    register consistently with `textbook_qpe_kernel`, which this kernel is
+    meant to be composed with - and is injectable directly as the `state_prep=`
+    argument of the CUDA-Q simulation kernel factories in `quiche.cudaq.simulation`;
+    the register it is handed must be at least `len(bitstring)` wide and start
+    in |0...0>.
     """
     cudaq, _ = load_cudaq()
     # Bound to a bare name: the CUDA-Q kernel AST compiler resolves calls inside a
@@ -41,14 +43,14 @@ def bitstring_kernel(bitstring: Sequence[int]) -> CudaqKernel:
         # An empty list capture cannot cross the CUDA-Q kernel boundary
         # (cuda-quantum#4847), so the all-zero bitstring needs its own kernel.
         @cudaq.kernel
-        def prepare_zero(qubits: cudaq.qview) -> None:
+        def prepare_zero(data: cudaq.qview) -> None:
             """Leave the register in |0...0>."""
 
         return prepare_zero
 
     @cudaq.kernel
-    def prepare_bitstring(qubits: cudaq.qview) -> None:
+    def prepare_bitstring(data: cudaq.qview) -> None:
         """Flip each occupied qubit to prepare the target bitstring."""
-        hartree_fock_occupation(qubits, occupied)
+        hartree_fock_occupation(data, occupied)
 
     return prepare_bitstring

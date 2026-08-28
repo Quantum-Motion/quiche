@@ -18,11 +18,15 @@ import subprocess
 import sys
 from math import copysign
 from types import ModuleType
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from numpy.typing import NDArray
 from scipy.linalg import expm
+
+if TYPE_CHECKING:
+    import cudaq as cudaq_types
 
 from quiche.chemistry import HartreeFockState, get_jw_state
 from quiche.core import (
@@ -156,6 +160,30 @@ def _decode_ancilla(bitstring: str) -> int:
 def _wrap_phase(phase: float) -> float:
     """Wrap a phase (in cycles) to [-0.5, 0.5), matching the QuEST/notebook math."""
     return ((phase + 0.5) % 1.0) - 0.5
+
+
+def _sample_qpe_on_bitstring(
+    cudaq: ModuleType,
+    qpe: CudaqKernel,
+    bitstring: tuple[int, ...],
+    shots_count: int,
+) -> "cudaq_types.SampleResult":
+    """
+    Compose `bitstring_kernel` with a `(data: qview)` QPE kernel and sample it.
+
+    The canonical composition from `QPESpec.to_cudaq`'s docstring: allocate the
+    data register once, prep it, then run QPE on it, all in one top-level kernel.
+    """
+    prep = bitstring_kernel(bitstring)
+    n_qubits = len(bitstring)
+
+    @cudaq.kernel
+    def run() -> None:
+        data = cudaq.qvector(n_qubits)
+        prep(data)
+        qpe(data)
+
+    return cudaq.sample(run, shots_count=shots_count)
 
 
 def _run(cudaq: ModuleType, kernel: CudaqKernel) -> NDArray[np.complex128]:
@@ -480,8 +508,6 @@ class TestTextbookQPEKernel:
     def test_exact_phase_for_single_term_eigenstate(
         self, cudaq: ModuleType, simulation: Simulation
     ):
-        from cudaq_algorithms import sim_utils  # noqa: PLC0415
-
         # H = Z, eigenstate |1>: exp(-i Z t)|1> = exp(i t)|1>, phase = t/(2*pi) mod 1.
         # `time` is chosen so the true phase lands exactly on a representable bin.
         h = _pauli_sum((1.0, "Z"))
@@ -489,9 +515,12 @@ class TestTextbookQPEKernel:
         target = 5
         time = 2 * np.pi * target / (1 << num_qpe_ancillas)
 
-        kernel = textbook_qpe_kernel(h, simulation, num_qpe_ancillas, time, reps=1)
-        state = sim_utils.state_from(np.array([0, 1], dtype=complex))
-        counts = cudaq.sample(kernel, state, shots_count=50)
+        counts = _sample_qpe_on_bitstring(
+            cudaq,
+            textbook_qpe_kernel(h, simulation, num_qpe_ancillas, time, reps=1),
+            (1,),
+            shots_count=50,
+        )
 
         assert len(counts) == 1
         assert _decode_ancilla(next(iter(counts))) == target
@@ -500,8 +529,6 @@ class TestTextbookQPEKernel:
     def test_identity_coefficient_shifts_phase(
         self, cudaq: ModuleType, simulation: Simulation
     ):
-        from cudaq_algorithms import sim_utils  # noqa: PLC0415
-
         # H = Z + 0.3*I, eigenstate |1>: eigenvalue -1 + 0.3, so the r1 identity
         # correction must shift the measured phase by exactly the same amount a
         # direct exp(-i H t)|1> = exp(i t (1 - 0.3))|1> would.
@@ -510,9 +537,12 @@ class TestTextbookQPEKernel:
         target = 11
         time = 2 * np.pi * target / ((1 << num_qpe_ancillas) * (1.0 - 0.3))
 
-        kernel = textbook_qpe_kernel(h, simulation, num_qpe_ancillas, time, reps=1)
-        state = sim_utils.state_from(np.array([0, 1], dtype=complex))
-        counts = cudaq.sample(kernel, state, shots_count=50)
+        counts = _sample_qpe_on_bitstring(
+            cudaq,
+            textbook_qpe_kernel(h, simulation, num_qpe_ancillas, time, reps=1),
+            (1,),
+            shots_count=50,
+        )
 
         assert len(counts) == 1
         assert _decode_ancilla(next(iter(counts))) == target
@@ -521,7 +551,10 @@ class TestTextbookQPEKernel:
         from cudaq_algorithms import sim_utils  # noqa: PLC0415
 
         # Non-exact case: pins genuine Trotter approximation behaviour (hence a
-        # tolerance, not an exact equality) rather than the wiring above.
+        # tolerance, not an exact equality) rather than the wiring above. The
+        # eigenvector isn't a computational basis state, so (unlike the two
+        # exact tests above) it needs a `cudaq.State`-based entry kernel rather
+        # than `bitstring_kernel`.
         h = _pauli_sum((0.6, "X"), (0.4, "Z"))
         eigvals, eigvecs = np.linalg.eigh(h._to_matrix())
         eigenvalue, eigenvector = eigvals[1], eigvecs[:, 1]
@@ -530,11 +563,18 @@ class TestTextbookQPEKernel:
         time = 0.5
         true_phase = _wrap_phase(-eigenvalue * time / (2 * np.pi))
 
-        kernel = textbook_qpe_kernel(
+        qpe = textbook_qpe_kernel(
             h, Simulation.Trotter, num_qpe_ancillas, time, reps=4, order=2
         )
-        state = sim_utils.state_from(eigenvector.astype(complex))
-        counts = cudaq.sample(kernel, state, shots_count=200)
+
+        @cudaq.kernel
+        def run(state: cudaq.State) -> None:
+            """Load an externally-computed state, then run QPE on it."""
+            data = cudaq.qvector(state)
+            qpe(data)
+
+        initial_state = sim_utils.state_from(eigenvector.astype(complex))
+        counts = cudaq.sample(run, initial_state, shots_count=200)
 
         bitstring = max(counts.items(), key=lambda kv: kv[1])[0]
         value = _decode_ancilla(bitstring)
@@ -568,16 +608,17 @@ class TestQPESpecToCudaq:
         )
 
         prep = bitstring_kernel((0,))
+        qpe = spec.to_cudaq()
+        num_data = spec.num_data
 
         @cudaq.kernel
-        def prep_entry() -> None:
-            """Allocate a fresh register and run the injected preparation."""
-            qubits = cudaq.qvector(1)
-            prep(qubits)
+        def run() -> None:
+            """Allocate the data register once, prep it, then run QPE on it."""
+            data = cudaq.qvector(num_data)
+            prep(data)
+            qpe(data)
 
-        initial_state = cudaq.get_state(prep_entry)
-
-        counts = cudaq.sample(spec.to_cudaq(), initial_state, shots_count=20)
+        counts = cudaq.sample(run, shots_count=20)
         assert all(len(bitstring) == spec.num_qpe_ancillas for bitstring in counts)
 
 
