@@ -76,7 +76,7 @@ def textbook_qpe_kernel(
     """
     Build the Textbook QPE kernel for `Simulation.Trotter`/`Simulation.QDRIFT`.
 
-    The returned kernel has signature `(data: cudaq.qview) -> None`: like
+    The returned kernel has signature `(data: cudaq.qview) -> float`: like
     `bitstring_kernel`/`inverse_qft_kernel`, it operates in place on an
     already-allocated register rather than accepting a `cudaq.State` - the
     caller allocates the register (`cudaq.qvector(n_qubits)`), runs a
@@ -85,8 +85,31 @@ def textbook_qpe_kernel(
     routine" contracts), then this kernel, all within one compiled top-level
     kernel - see `QPESpec.to_cudaq`'s docstring for a worked example. `data`
     must be at least `n_qubits` wide, the caller's responsibility (same
-    requirement as `apply_trotter`/`bitstring_kernel`). Ends with `mz` on the
-    QPE ancilla register, ready for `cudaq.sample`.
+    requirement as `apply_trotter`/`bitstring_kernel`).
+
+    The energy recovery is done *inside* the kernel, not left to the caller:
+    after the inverse QFT, the ancilla register is measured and decoded to a
+    phase (unsigned integer `y`, ancilla `k` weighted `2**k`, wrapped to
+    `[-0.5, 0.5)`), then converted to an energy via `-phase * (2*pi/time)` -
+    the minus sign because `U = exp(-i H t)` kicks back phase
+    `exp(-i * eigenvalue * t)`, so the measured phase is
+    `-eigenvalue * t / (2*pi)` (mod 1), not `+eigenvalue * t / (2*pi)`
+    (confirmed directly: an uncorrected `+` sign recovers +0.98 for `H = Z`'s
+    `|1>` eigenstate, whose true eigenvalue is -1). `identity_coefficient` is
+    NOT added again here - the per-rung `r1` correction below already folds it
+    into the measured phase, so doing both double-counts it (also confirmed
+    directly: with the addition, `H = Z + 0.3*I`'s `|1>` eigenstate recovers
+    -0.35 instead of its true eigenvalue -0.7; dropping the addition and
+    refining `num_qpe_ancillas` converges cleanly to -0.7). This is all
+    classical kernel-mode arithmetic on the measured bits, confirmed to compile
+    and execute directly (no `cudaq.sample`/host-side decode needed). This is one
+    shot's own energy estimate; call the kernel directly for a single value, or
+    `cudaq.run(kernel, data, shots_count=n)` to collect `n` of them (a
+    `list[float]`) when `data` isn't already a clean eigenstate and some
+    aggregation - e.g. the mode - across shots is needed. `to_qualtran`/
+    `to_quest` don't have an equivalent: nothing analogous to CUDA-Q's
+    in-kernel classical control flow exists for a Bloq or a QuEST routine, so
+    their energy recovery stays the caller's job.
 
     Ladder rung `k` (`k = 0, ..., num_qpe_ancillas - 1`) applies
     controlled-U^(2^k) by repeating the base `(time, reps, order)`-parametrized
@@ -101,14 +124,9 @@ def textbook_qpe_kernel(
     `identity_coefficient` (dropped from the circuit by `trotter_evolution`/
     `qdrift_evolution` - see their docstrings) is restored per rung with a
     single `r1` phase gate on that rung's ancilla, since `r1(t) = diag(1,
-    e^(i*t))` naturally applies only when the ancilla is `|1>`.
-
-    Energy recovery from the sampled ancilla bitstring (interpreted as an
-    unsigned integer `y` with ancilla `k` weighted `2**k`, matching this
-    kernel's own convention) is the caller's responsibility, exactly as for
-    `to_qualtran`/`to_quest`: `phase = y / 2**num_qpe_ancillas`, wrapped to
-    `[-0.5, 0.5)`, then
-    `energy = phase * (2*pi/time) + hamiltonian.identity_coefficient`.
+    e^(i*t))` naturally applies only when the ancilla is `|1>` - this alone is
+    what makes the measured phase reflect the full Hamiltonian's eigenvalue,
+    not just the non-identity part (see the decode note above).
 
     `Simulation.Qubitised` raises `NotImplementedError`: `cudaq.control()`
     cannot wrap the qubitisation walk step (it calls other kernels
@@ -137,14 +155,18 @@ def textbook_qpe_kernel(
     coefficients = evolution.coefficients
     words = [cudaq.pauli_word(word) for word in evolution.words]
     identity_coefficient = evolution.identity_coefficient
+    # A plain Python float, computed host-side: kernel-mode has no `float()` cast
+    # (confirmed - it fails to compile), so the divisor is precomputed here and
+    # captured as a constant rather than derived from `num_qpe_ancillas` in-kernel.
+    dimension = float(1 << num_qpe_ancillas)
 
     from cudaq_algorithms.trotter import apply_trotter  # noqa: PLC0415
 
     inverse_qft = inverse_qft_kernel()
 
     @cudaq.kernel
-    def qpe(data: cudaq.qview) -> None:
-        """Ladder controlled-U^(2^k), then inverse QFT, then measure the ancillas."""
+    def qpe(data: cudaq.qview) -> float:
+        """Ladder controlled-U^(2^k), inverse QFT, then decode the energy in-kernel."""
         ancilla = cudaq.qvector(num_qpe_ancillas)
         h(ancilla)
         for k in range(num_qpe_ancillas):
@@ -162,6 +184,14 @@ def textbook_qpe_kernel(
                 )
             r1(-identity_coefficient * time * power, ancilla[k])
         inverse_qft(ancilla)
-        mz(ancilla)
+
+        y = 0.0
+        for k in range(num_qpe_ancillas):
+            if mz(ancilla[k]):
+                y += 1 << k
+        phase = y / dimension
+        if phase >= 0.5:
+            phase -= 1.0
+        return -phase * (2.0 * pi / time)
 
     return qpe

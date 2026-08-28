@@ -14,19 +14,16 @@
 
 """Tests for the CUDA-Q backend."""
 
+import statistics
 import subprocess
 import sys
 from math import copysign
 from types import ModuleType
-from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from numpy.typing import NDArray
 from scipy.linalg import expm
-
-if TYPE_CHECKING:
-    import cudaq as cudaq_types
 
 from quiche.chemistry import HartreeFockState, get_jw_state
 from quiche.core import (
@@ -152,38 +149,30 @@ def cudaq() -> ModuleType:
     module.reset_target()
 
 
-def _decode_ancilla(bitstring: str) -> int:
-    """Decode a `cudaq.sample` bitstring to an int, ancilla `k` weighted `2**k`."""
-    return sum(int(bit) << i for i, bit in enumerate(bitstring))
-
-
-def _wrap_phase(phase: float) -> float:
-    """Wrap a phase (in cycles) to [-0.5, 0.5), matching the QuEST/notebook math."""
-    return ((phase + 0.5) % 1.0) - 0.5
-
-
-def _sample_qpe_on_bitstring(
+def _run_qpe_on_bitstring(
     cudaq: ModuleType,
     qpe: CudaqKernel,
     bitstring: tuple[int, ...],
     shots_count: int,
-) -> "cudaq_types.SampleResult":
+) -> list[float]:
     """
-    Compose `bitstring_kernel` with a `(data: qview)` QPE kernel and sample it.
+    Compose `bitstring_kernel` with a `(data: qview) -> float` QPE kernel.
 
     The canonical composition from `QPESpec.to_cudaq`'s docstring: allocate the
-    data register once, prep it, then run QPE on it, all in one top-level kernel.
+    data register once, prep it, then run QPE on it - which decodes the energy
+    for that shot in-kernel and returns it directly. `cudaq.run` (not
+    `cudaq.sample`) collects `shots_count` independent per-shot energies.
     """
     prep = bitstring_kernel(bitstring)
     n_qubits = len(bitstring)
 
     @cudaq.kernel
-    def run() -> None:
+    def run() -> float:
         data = cudaq.qvector(n_qubits)
         prep(data)
-        qpe(data)
+        return qpe(data)
 
-    return cudaq.sample(run, shots_count=shots_count)
+    return cudaq.run(run, shots_count=shots_count)
 
 
 def _run(cudaq: ModuleType, kernel: CudaqKernel) -> NDArray[np.complex128]:
@@ -508,44 +497,39 @@ class TestTextbookQPEKernel:
     def test_exact_phase_for_single_term_eigenstate(
         self, cudaq: ModuleType, simulation: Simulation
     ):
-        # H = Z, eigenstate |1>: exp(-i Z t)|1> = exp(i t)|1>, phase = t/(2*pi) mod 1.
-        # `time` is chosen so the true phase lands exactly on a representable bin.
+        # H = Z, eigenstate |1>: true eigenvalue -1. `time`/`target` are chosen
+        # so the true phase lands exactly on a representable bin, making the
+        # in-kernel decode exactly recover the eigenvalue, not just close to it.
         h = _pauli_sum((1.0, "Z"))
         num_qpe_ancillas = 6
         target = 5
         time = 2 * np.pi * target / (1 << num_qpe_ancillas)
 
-        counts = _sample_qpe_on_bitstring(
-            cudaq,
-            textbook_qpe_kernel(h, simulation, num_qpe_ancillas, time, reps=1),
-            (1,),
-            shots_count=50,
-        )
+        qpe = textbook_qpe_kernel(h, simulation, num_qpe_ancillas, time, reps=1)
+        energies = _run_qpe_on_bitstring(cudaq, qpe, (1,), shots_count=20)
 
-        assert len(counts) == 1
-        assert _decode_ancilla(next(iter(counts))) == target
+        np.testing.assert_allclose(energies, -1.0, atol=1e-9)
 
     @pytest.mark.parametrize("simulation", [Simulation.Trotter, Simulation.QDRIFT])
     def test_identity_coefficient_shifts_phase(
         self, cudaq: ModuleType, simulation: Simulation
     ):
-        # H = Z + 0.3*I, eigenstate |1>: eigenvalue -1 + 0.3, so the r1 identity
-        # correction must shift the measured phase by exactly the same amount a
-        # direct exp(-i H t)|1> = exp(i t (1 - 0.3))|1> would.
+        # H = Z + 0.3*I, eigenstate |1>: true eigenvalue -1 + 0.3 = -0.7. This
+        # is the test that would have caught the identity term being
+        # double-counted (once via the in-circuit r1 correction, once via a
+        # separate addition after decoding) - comparing against the true
+        # eigenvalue directly catches that; comparing only the raw measured
+        # bitstring against a self-referential target (as an earlier version of
+        # this test did) would not have.
         h = _pauli_sum((1.0, "Z"), identity=0.3)
         num_qpe_ancillas = 6
         target = 11
         time = 2 * np.pi * target / ((1 << num_qpe_ancillas) * (1.0 - 0.3))
 
-        counts = _sample_qpe_on_bitstring(
-            cudaq,
-            textbook_qpe_kernel(h, simulation, num_qpe_ancillas, time, reps=1),
-            (1,),
-            shots_count=50,
-        )
+        qpe = textbook_qpe_kernel(h, simulation, num_qpe_ancillas, time, reps=1)
+        energies = _run_qpe_on_bitstring(cudaq, qpe, (1,), shots_count=20)
 
-        assert len(counts) == 1
-        assert _decode_ancilla(next(iter(counts))) == target
+        np.testing.assert_allclose(energies, -0.7, atol=1e-9)
 
     def test_converges_for_noncommuting_hamiltonian(self, cudaq: ModuleType):
         from cudaq_algorithms import sim_utils  # noqa: PLC0415
@@ -561,26 +545,23 @@ class TestTextbookQPEKernel:
 
         num_qpe_ancillas = 8
         time = 0.5
-        true_phase = _wrap_phase(-eigenvalue * time / (2 * np.pi))
 
         qpe = textbook_qpe_kernel(
             h, Simulation.Trotter, num_qpe_ancillas, time, reps=4, order=2
         )
 
         @cudaq.kernel
-        def run(state: cudaq.State) -> None:
+        def run(state: cudaq.State) -> float:
             """Load an externally-computed state, then run QPE on it."""
             data = cudaq.qvector(state)
-            qpe(data)
+            return qpe(data)
 
         initial_state = sim_utils.state_from(eigenvector.astype(complex))
-        counts = cudaq.sample(run, initial_state, shots_count=200)
+        energies = cudaq.run(run, initial_state, shots_count=200)
 
-        bitstring = max(counts.items(), key=lambda kv: kv[1])[0]
-        value = _decode_ancilla(bitstring)
-        measured_phase = _wrap_phase(value / (1 << num_qpe_ancillas))
-
-        assert abs(measured_phase - true_phase) < 1.0 / (1 << num_qpe_ancillas)
+        # One QPE bin, converted from phase-cycles to energy units.
+        bin_width = (2 * np.pi / time) / (1 << num_qpe_ancillas)
+        assert abs(statistics.mode(energies) - eigenvalue) < bin_width
 
     def test_qubitised_not_implemented(self):
         # Dispatched before any cudaq import, so this runs without cudaq installed.
@@ -612,14 +593,15 @@ class TestQPESpecToCudaq:
         num_data = spec.num_data
 
         @cudaq.kernel
-        def run() -> None:
+        def run() -> float:
             """Allocate the data register once, prep it, then run QPE on it."""
             data = cudaq.qvector(num_data)
             prep(data)
-            qpe(data)
+            return qpe(data)
 
-        counts = cudaq.sample(run, shots_count=20)
-        assert all(len(bitstring) == spec.num_qpe_ancillas for bitstring in counts)
+        energies = cudaq.run(run, shots_count=20)
+        assert len(energies) == 20
+        assert all(isinstance(energy, float) for energy in energies)
 
 
 class TestSoftDependency:

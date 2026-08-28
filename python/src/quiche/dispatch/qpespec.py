@@ -299,27 +299,31 @@ class QPESpec(Spec):
         """
         Build the CUDA-Q kernel implementing the QPE algorithm.
 
-        The returned kernel has signature `(data: cudaq.qview) -> None`: it
-        operates in place on an already-allocated data register, the same
-        contract as `HartreeFockSpec.to_cudaq()`'s kernel - compose the two by
-        allocating the register once and calling both kernels on it inside one
-        top-level kernel, e.g.:
+        The returned kernel has signature `(data: cudaq.qview) -> float`: it
+        operates in place on an already-allocated data register (the same
+        contract as `HartreeFockSpec.to_cudaq()`'s kernel) and returns one
+        shot's own energy estimate, decoded from the measured ancillas as
+        classical kernel-mode arithmetic - no separate post-processing step.
+        Compose the two by allocating the register once and calling both
+        kernels on it inside one top-level kernel, e.g.:
 
         ```python
         prep = state_spec.to_cudaq()
         qpe = qpe_spec.to_cudaq()
 
         @cudaq.kernel
-        def run() -> None:
+        def run() -> float:
             data = cudaq.qvector(qpe_spec.num_data)
             prep(data)
-            qpe(data)
+            return qpe(data)
 
-        counts = cudaq.sample(run, shots_count=...)
+        energy = run()                               # a single shot
+        energies = cudaq.run(run, shots_count=100)    # or many, as a list[float]
         ```
 
         See `quiche.cudaq.estimation.textbook_qpe_kernel` for the exact contract
-        and the energy-recovery formula.
+        and why the energy recovery lives in-kernel here (unlike `to_qualtran`/
+        `to_quest`).
 
         Only `PhaseEstimation.Textbook` with `Simulation.Trotter`/`Simulation.QDRIFT`
         is implemented so far; `Simulation.Qubitised` and the other
