@@ -29,7 +29,7 @@ from quiche.core import (
     PhaseEstimation,
     Simulation,
 )
-from quiche.cudaq import CudaqKernel
+from quiche.cudaq import CudaqKernel, textbook_qpe_kernel
 from quiche.dispatch.budget.estimation import (
     get_kitaev_qpe_rounds,
     get_textbook_qpe_ancillas,
@@ -299,10 +299,47 @@ class QPESpec(Spec):
         """
         Build the CUDA-Q kernel implementing the QPE algorithm.
 
-        Not yet implemented: CUDA-Q Algorithms has no phase-estimation or
-        inverse-QFT primitive to build on. The Hamiltonian-simulation kernels
-        this will eventually compose with already exist -
-        see `quiche.cudaq.simulation.simulation_kernel`.
+        The returned kernel expects the data register to already be in an
+        externally-prepared initial state, supplied as a `cudaq.State` argument;
+        compose it with a state-preparation kernel to get a runnable circuit -
+        see `quiche.cudaq.estimation.textbook_qpe_kernel` for the exact contract
+        and the energy-recovery formula.
+
+        Only `PhaseEstimation.Textbook` with `Simulation.Trotter`/`Simulation.QDRIFT`
+        is implemented so far; `Simulation.Qubitised` and the other
+        `PhaseEstimation` algorithms still raise `NotImplementedError`.
         """
-        msg = "QPE is not yet implemented in the CUDA-Q backend."
-        raise NotImplementedError(msg)
+        if self.algorithm is not PhaseEstimation.Textbook:
+            msg = f"{self.algorithm} is not yet implemented in the CUDA-Q backend."
+            raise NotImplementedError(msg)
+
+        match self.simulation:
+            case Simulation.Trotter:
+                return textbook_qpe_kernel(
+                    self.hamiltonian,
+                    self.simulation,
+                    self.num_qpe_ancillas,
+                    self.time,
+                    self.reps,
+                    order=self.order,
+                    seed=self.seed,
+                    n_qubits=self.n_qubits,
+                )
+
+            case Simulation.QDRIFT:
+                return textbook_qpe_kernel(
+                    self.hamiltonian,
+                    self.simulation,
+                    self.num_qpe_ancillas,
+                    self.time,
+                    self.reps,
+                    seed=self.seed,
+                    n_qubits=self.n_qubits,
+                )
+
+            case Simulation.Qubitised:
+                msg = (
+                    "Simulation.Qubitised is not yet implemented in the CUDA-Q "
+                    "Textbook QPE backend."
+                )
+                raise NotImplementedError(msg)

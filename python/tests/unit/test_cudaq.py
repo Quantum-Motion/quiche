@@ -25,9 +25,17 @@ from numpy.typing import NDArray
 from scipy.linalg import expm
 
 from quiche.chemistry import HartreeFockState, get_jw_state
-from quiche.core import Mapping, PauliSum, PauliWord, Simulation
+from quiche.core import (
+    Errors,
+    Mapping,
+    PauliSum,
+    PauliWord,
+    PhaseEstimation,
+    Simulation,
+)
 from quiche.core.qdrift import sample_qdrift_indices
 from quiche.cudaq import CudaqKernel
+from quiche.cudaq.estimation import inverse_qft_kernel, textbook_qpe_kernel
 from quiche.cudaq.simulation import (
     qdrift_evolution,
     qdrift_kernel,
@@ -40,7 +48,7 @@ from quiche.cudaq.simulation import (
     trotter_kernel,
 )
 from quiche.cudaq.state_prep import bitstring_kernel
-from quiche.dispatch import HartreeFockSpec, Spec
+from quiche.dispatch import HartreeFockSpec, QPESpec, Spec
 from quiche.qualtran.bloqs import QDRIFT
 
 TIME = 0.7
@@ -138,6 +146,16 @@ def cudaq() -> ModuleType:
     module.set_target("qpp-cpu")
     yield module
     module.reset_target()
+
+
+def _decode_ancilla(bitstring: str) -> int:
+    """Decode a `cudaq.sample` bitstring to an int, ancilla `k` weighted `2**k`."""
+    return sum(int(bit) << i for i, bit in enumerate(bitstring))
+
+
+def _wrap_phase(phase: float) -> float:
+    """Wrap a phase (in cycles) to [-0.5, 0.5), matching the QuEST/notebook math."""
+    return ((phase + 0.5) % 1.0) - 0.5
 
 
 def _run(cudaq: ModuleType, kernel: CudaqKernel) -> NDArray[np.complex128]:
@@ -423,6 +441,144 @@ class TestQubitisedKernels:
         direct = np.asarray(cudaq.get_state(kernel, sim_utils.state_from(ket)))
 
         np.testing.assert_allclose(injected, direct, atol=1e-9)
+
+
+class TestInverseQFT:
+    """Tests for quiche.cudaq.estimation.inverse_qft_kernel."""
+
+    def test_matches_standard_iqft_matrix(self, cudaq: ModuleType):
+        # Built as its own unitary (one basis input per column) and compared to
+        # the closed-form (1/sqrt(N)) exp(-2*pi*i*x*y/N) directly in CUDA-Q's own
+        # qubit order (qubit i = bit i) - no bit-reversal of the output needed,
+        # unlike some textbook-diagram conventions.
+        n = 3
+        dim = 1 << n
+        inverse_qft = inverse_qft_kernel()
+
+        @cudaq.kernel
+        def prep_and_iqft(target: int) -> None:
+            """Prepare basis state |target> then apply the inverse QFT."""
+            qubits = cudaq.qvector(n)
+            for i in range(n):
+                if ((target >> i) & 1) == 1:
+                    x(qubits[i])  # noqa: F821 -- CUDA-Q intrinsic, not a real Python name
+            inverse_qft(qubits)
+
+        matrix = np.zeros((dim, dim), dtype=complex)
+        for target in range(dim):
+            matrix[:, target] = np.asarray(cudaq.get_state(prep_and_iqft, target))
+
+        row, col = np.meshgrid(np.arange(dim), np.arange(dim), indexing="ij")
+        expected = np.exp(-2j * np.pi * col * row / dim) / np.sqrt(dim)
+        np.testing.assert_allclose(matrix, expected, atol=1e-9)
+
+
+class TestTextbookQPEKernel:
+    """Real CUDA-Q output on qpp-cpu: Textbook QPE for Trotter and QDRIFT."""
+
+    @pytest.mark.parametrize("simulation", [Simulation.Trotter, Simulation.QDRIFT])
+    def test_exact_phase_for_single_term_eigenstate(
+        self, cudaq: ModuleType, simulation: Simulation
+    ):
+        from cudaq_algorithms import sim_utils  # noqa: PLC0415
+
+        # H = Z, eigenstate |1>: exp(-i Z t)|1> = exp(i t)|1>, phase = t/(2*pi) mod 1.
+        # `time` is chosen so the true phase lands exactly on a representable bin.
+        h = _pauli_sum((1.0, "Z"))
+        num_qpe_ancillas = 6
+        target = 5
+        time = 2 * np.pi * target / (1 << num_qpe_ancillas)
+
+        kernel = textbook_qpe_kernel(h, simulation, num_qpe_ancillas, time, reps=1)
+        state = sim_utils.state_from(np.array([0, 1], dtype=complex))
+        counts = cudaq.sample(kernel, state, shots_count=50)
+
+        assert len(counts) == 1
+        assert _decode_ancilla(next(iter(counts))) == target
+
+    @pytest.mark.parametrize("simulation", [Simulation.Trotter, Simulation.QDRIFT])
+    def test_identity_coefficient_shifts_phase(
+        self, cudaq: ModuleType, simulation: Simulation
+    ):
+        from cudaq_algorithms import sim_utils  # noqa: PLC0415
+
+        # H = Z + 0.3*I, eigenstate |1>: eigenvalue -1 + 0.3, so the r1 identity
+        # correction must shift the measured phase by exactly the same amount a
+        # direct exp(-i H t)|1> = exp(i t (1 - 0.3))|1> would.
+        h = _pauli_sum((1.0, "Z"), identity=0.3)
+        num_qpe_ancillas = 6
+        target = 11
+        time = 2 * np.pi * target / ((1 << num_qpe_ancillas) * (1.0 - 0.3))
+
+        kernel = textbook_qpe_kernel(h, simulation, num_qpe_ancillas, time, reps=1)
+        state = sim_utils.state_from(np.array([0, 1], dtype=complex))
+        counts = cudaq.sample(kernel, state, shots_count=50)
+
+        assert len(counts) == 1
+        assert _decode_ancilla(next(iter(counts))) == target
+
+    def test_converges_for_noncommuting_hamiltonian(self, cudaq: ModuleType):
+        from cudaq_algorithms import sim_utils  # noqa: PLC0415
+
+        # Non-exact case: pins genuine Trotter approximation behaviour (hence a
+        # tolerance, not an exact equality) rather than the wiring above.
+        h = _pauli_sum((0.6, "X"), (0.4, "Z"))
+        eigvals, eigvecs = np.linalg.eigh(h._to_matrix())
+        eigenvalue, eigenvector = eigvals[1], eigvecs[:, 1]
+
+        num_qpe_ancillas = 8
+        time = 0.5
+        true_phase = _wrap_phase(-eigenvalue * time / (2 * np.pi))
+
+        kernel = textbook_qpe_kernel(
+            h, Simulation.Trotter, num_qpe_ancillas, time, reps=4, order=2
+        )
+        state = sim_utils.state_from(eigenvector.astype(complex))
+        counts = cudaq.sample(kernel, state, shots_count=200)
+
+        bitstring = max(counts.items(), key=lambda kv: kv[1])[0]
+        value = _decode_ancilla(bitstring)
+        measured_phase = _wrap_phase(value / (1 << num_qpe_ancillas))
+
+        assert abs(measured_phase - true_phase) < 1.0 / (1 << num_qpe_ancillas)
+
+    def test_qubitised_not_implemented(self):
+        # Dispatched before any cudaq import, so this runs without cudaq installed.
+        with pytest.raises(NotImplementedError, match="Qubitised"):
+            textbook_qpe_kernel(GENERAL, Simulation.Qubitised, 4, TIME, reps=1)
+
+
+class TestQPESpecToCudaq:
+    """QPESpec.to_cudaq() wiring: PhaseEstimation.Textbook x {Trotter, QDRIFT}."""
+
+    @pytest.mark.parametrize("simulation", [Simulation.Trotter, Simulation.QDRIFT])
+    def test_runs_and_measures_all_ancillas(
+        self, cudaq: ModuleType, simulation: Simulation
+    ):
+        h = _pauli_sum((0.6, "X"), (0.4, "Z"))
+        budget = Errors(
+            estimation=0.5, simulation=0.5, rotations=0.5, state_prep=0.5, overlap=0.5
+        )
+        spec = QPESpec(
+            hamiltonian=h,
+            n_qubits=1,
+            algorithm=PhaseEstimation.Textbook,
+            simulation=simulation,
+            error_budget=budget,
+        )
+
+        prep = bitstring_kernel((0,))
+
+        @cudaq.kernel
+        def prep_entry() -> None:
+            """Allocate a fresh register and run the injected preparation."""
+            qubits = cudaq.qvector(1)
+            prep(qubits)
+
+        initial_state = cudaq.get_state(prep_entry)
+
+        counts = cudaq.sample(spec.to_cudaq(), initial_state, shots_count=20)
+        assert all(len(bitstring) == spec.num_qpe_ancillas for bitstring in counts)
 
 
 class TestSoftDependency:
