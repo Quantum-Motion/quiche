@@ -24,7 +24,6 @@
 #include <iostream>
 
 #include <quest.h>
-#include <quest/src/core/constants.hpp>
 
 #include "quiche/mappings.hpp"
 #include "quiche/qpe.hpp"
@@ -76,7 +75,7 @@ int main() {
     double t = 1;
 
     double phase = qpe::getPhaseIterativeTrotter(qureg, hamiltonian, ancilla, order, reps, t, numBits);
-    double energy = phase * (2 * const_PI / t) + idCoeff.real();
+    double energy = qpe::getEnergyFromTrotterPhase(phase, t, idCoeff.real());
 
     std::cout << "Phase: " << phase << '\n' << "Energy: " << energy << '\n';
 

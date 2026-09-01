@@ -303,4 +303,10 @@ double getPhaseTextbookQubitisedOptimised(Qureg qureg, PauliStrSum hamiltonian, 
     return getPhaseTextbookInner(qureg, hamiltonian, qpeAncillas, qubitisationLambda);
 }
 
+qreal getEnergyFromTrotterPhase(qreal phase, qreal t, qreal constant) { return phase * (2 * const_PI / t) + constant; }
+
+qreal getEnergyFromQubitisationPhase(qreal phase, qreal norm, qreal constant) {
+    return std::cos(phase * 2 * const_PI) * norm + constant;
+}
+
 } // namespace qpe

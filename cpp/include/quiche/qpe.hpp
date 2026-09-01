@@ -57,4 +57,8 @@ double getPhaseIterativeQDRIFT(Qureg qureg, PauliStrSum hamiltonian, int ancilla
 double getPhaseTextbookQubitisedOptimised(Qureg qureg, PauliStrSum hamiltonian, const std::vector<int> &qpeAncillas,
                                           const std::vector<int> &qubitisationAncillas);
 
+qreal getEnergyFromTrotterPhase(qreal phase, qreal t, qreal constant = 0.0);
+
+qreal getEnergyFromQubitisationPhase(qreal phase, qreal norm, qreal constant = 0.0);
+
 } // namespace qpe
