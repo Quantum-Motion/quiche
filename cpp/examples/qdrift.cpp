@@ -20,9 +20,13 @@
  * @author Vasco Ferreira
  */
 
-#include <iostream>
-
 #include "quiche/qdrift.hpp"
+
+#include <cmath>
+#include <iostream>
+#include <random>
+#include <string>
+#include <vector>
 
 int verbosity = 1;
 

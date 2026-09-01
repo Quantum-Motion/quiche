@@ -1,4 +1,4 @@
-from . import (
+from quiche.bindings import (
     quest_bindings as quest_bindings,
     quiche_bindings as quiche_bindings
 )

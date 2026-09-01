@@ -1,6 +1,5 @@
-add_library(
-    quiche
-    SHARED
+target_sources(quiche
+    PRIVATE
     mappings.cpp
     qdrift.cpp
     qpe.cpp
@@ -8,6 +7,3 @@ add_library(
     quest-patches.cpp
     utils.cpp
 )
-
-target_include_directories(quiche PUBLIC ${PROJECT_SOURCE_DIR}/cpp/include)
-target_link_libraries(quiche PUBLIC QuEST)

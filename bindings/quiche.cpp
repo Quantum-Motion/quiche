@@ -16,6 +16,7 @@
 
 #include <optional>
 #include <random>
+#include <vector>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/optional.h>
@@ -129,5 +130,6 @@ void init_quiche_bindings(nb::module_ &m) {
     quiche.def("getPhaseTextbookQubitisedOptimised", &qpe::getPhaseTextbookQubitisedOptimised, nb::arg("qureg"),
                nb::arg("hamiltonian"), nb::arg("qpe_ancillas"), nb::arg("qubitisation_ancillas"));
 
-    quiche.def("initClassicalState", (void (*)(Qureg, std::vector<int>))(&initClassicalState), nb::arg("qureg"), nb::arg("state"));
+    quiche.def("initClassicalState", (void (*)(Qureg, std::vector<int>))(&initClassicalState), nb::arg("qureg"),
+               nb::arg("state"));
 }

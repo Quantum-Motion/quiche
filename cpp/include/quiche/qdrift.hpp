@@ -20,8 +20,7 @@
  * @author Vasco Ferreira
  */
 
-#ifndef QDRIFT_HPP
-#define QDRIFT_HPP
+#pragma once
 
 #include <random>
 #include <vector>
@@ -50,5 +49,3 @@ void applyQDRIFTPauliStrSumGadget(Qureg qureg, PauliStrSum sum, qreal angle, int
 void applyQDRIFTUnitaryTimeEvolution(Qureg qureg, PauliStrSum hamil, qreal time, int reps, std::mt19937_64 &rng);
 
 } // namespace qdrift
-
-#endif // QDRIFT_HPP

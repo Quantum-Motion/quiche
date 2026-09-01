@@ -20,8 +20,7 @@
  * @author Vasco Ferreira
  */
 
-#ifndef QPE_HPP
-#define QPE_HPP
+#pragma once
 
 #include <random>
 #include <vector>
@@ -63,5 +62,3 @@ qreal getEnergyFromTrotterPhase(qreal phase, qreal t, qreal constant = 0.0);
 qreal getEnergyFromQubitisationPhase(qreal phase, qreal norm, qreal constant = 0.0);
 
 } // namespace qpe
-
-#endif // QPE_HPP

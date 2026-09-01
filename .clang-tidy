@@ -1,14 +1,18 @@
 Checks: >
   bugprone-*,
-  cert-*,
+  -bugprone-easily-swappable-parameters,
+
   clang-analyzer-*,
   concurrency-*,
 
   cppcoreguidelines-*,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
 
   misc-*,
+  -misc-non-private-member-variables-in-classes,
+  -misc-no-recursion,
 
   modernize-*,
   -modernize-use-trailing-return-type,
@@ -17,6 +21,7 @@ Checks: >
   portability-*,
 
   readability-*,
+  -readability-braces-around-statements,
   -readability-identifier-length,
   -readability-implicit-bool-conversion,
   -readability-magic-numbers,

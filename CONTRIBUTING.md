@@ -5,7 +5,7 @@
 ### Installing
 For development, we use the [`uv`](https://docs.astral.sh/uv/) package manager. To install the Python package with development dependencies in editable mode
 ```bash
-cd QUICHE/python
+cd quiche
 uv sync --group dev
 ```
 
@@ -17,7 +17,7 @@ uv sync --reinstall-package=quiche
 ### Testing
 To execute the Python test suite use [`pytest`](https://github.com/pytest-dev/pytest)
 ```bash
-cd QUICHE/python
+cd quiche
 pytest
 ```
 
@@ -39,7 +39,7 @@ For development, simply follow the usual installation steps for the C++ backend.
 ### Testing
 The [`Catch2`](https://github.com/catchorg/Catch2) test suite can be enabled using the CMake build flag `QUICHE_BUILD_TESTS`.
 ```
-cd QUICHE
+cd quiche
 cmake -B build -D QUICHE_BUILD_TESTS=ON
 cmake --build build
 ```

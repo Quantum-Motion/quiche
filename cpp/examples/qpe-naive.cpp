@@ -26,7 +26,6 @@
 #include <random>
 
 #include <quest.h>
-#include <quest/src/core/constants.hpp>
 
 #include "quiche/mappings.hpp"
 #include "quiche/qdrift.hpp"
