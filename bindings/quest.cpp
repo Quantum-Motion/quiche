@@ -16,6 +16,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/complex.h>

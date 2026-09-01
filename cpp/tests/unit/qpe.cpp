@@ -14,6 +14,15 @@
  * limitations under the License.
  */
 
+#include "quiche/qpe.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <numeric>
+#include <random>
+#include <string>
+#include <vector>
+
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -23,7 +32,6 @@
 #include <quest/src/core/paulilogic.hpp>
 
 #include "quiche/qdrift.hpp"
-#include "quiche/qpe.hpp"
 
 TEST_CASE("Textbook Trotter QPE", "[qpe][textbook][trotter]") {
 

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <stdexcept>
 #include <string>
 
 #include <catch2/catch_session.hpp>

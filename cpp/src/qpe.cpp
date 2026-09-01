@@ -16,6 +16,11 @@
 
 #include "quiche/qpe.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <random>
+#include <vector>
+
 #include <quest/src/core/constants.hpp>
 
 #include "quiche/qdrift.hpp"

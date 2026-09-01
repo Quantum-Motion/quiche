@@ -14,15 +14,21 @@
  * limitations under the License.
  */
 
+#include "quiche/qubitisation.hpp"
+
 #include <bitset>
+#include <cmath>
+#include <complex>
+#include <cstddef>
+#include <tuple>
+#include <vector>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
 #include <quest.h>
-
-#include "quiche/qubitisation.hpp"
 
 namespace {
 std::tuple<std::vector<qreal>, std::vector<qreal>> getQuregAmpsRealImagParts(Qureg qureg, qindex startInd,
@@ -65,7 +71,7 @@ TEST_CASE("applySelect", "[qubitisation][select]") {
             // Quick and dirty integer to binary (in vector<int> format) conversion
             std::bitset<2> b(i);
             std::vector<int> states(b.size());
-            for (size_t i = 0; i < b.size(); i++) {
+            for (std::size_t i = 0; i < b.size(); i++) {
                 states[i] = b[i];
             }
 
