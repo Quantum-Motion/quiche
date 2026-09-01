@@ -20,8 +20,9 @@
  * @author Vasco Ferreira
  */
 
-#ifndef QUBITISATION_HPP
-#define QUBITISATION_HPP
+#pragma once
+
+#include <vector>
 
 #include <quest.h>
 
@@ -90,5 +91,3 @@ void applyMultiStateControlledPauliStrSumBlockEncoding(Qureg qureg, const std::v
                                                        const std::vector<int> &indexQubits);
 
 } // namespace qubitisation
-
-#endif // QUBITISATION_HPP

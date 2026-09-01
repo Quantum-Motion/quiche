@@ -6,12 +6,18 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Added `py.typed` marker for type checkers.
 
 ### Changed
 - Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
 - Changed `quiche` submodule imports to lazy imports.
 - Deferred `cirq` import in `quiche.core` to `PauliWord.to_cirq()`.
 - Enabled bytecode compilation for `uv` installs.
+- Raised minimum build requirements to CMake 3.26, scikit-build-core 1.0, and nanobind 2.10.
+- Pinned fetched C++ dependencies (QuEST, Catch2, nanobind) using checksummed release archives where applicable.
+- Exposed namespaced C++ library target `quiche::quiche`.
+- Moved `pyproject.toml` to the repository root.
+- Improved Windows build compatibility.
 
 ### Deprecated
 
@@ -22,6 +28,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ### Fixed
 - Removed zero-count sub-bloqs from call graphs.
 - Fixed `QDRIFT` incorrectly ignoring a `0` seed.
+- Fixed Python stable-ABI wheel builds (added missing `Development.SABIModule` component).
 
 ### Security
 
