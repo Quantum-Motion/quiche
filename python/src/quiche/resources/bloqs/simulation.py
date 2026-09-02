@@ -20,8 +20,6 @@ from collections import Counter
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
-
     from numpy.typing import NDArray
 
     from quiche.core.paulis import PauliSum, PauliWord
@@ -44,7 +42,6 @@ from qualtran import (
     Side,
     Signature,
     SoquetT,
-    make_ctrl_system_with_correct_metabloq,
 )
 from qualtran.bloqs.basic_gates import (
     CNOT,
@@ -60,6 +57,9 @@ from qualtran.bloqs.chemistry.trotter.trotterized_unitary import (
     TrotterizedUnitary,
 )
 from qualtran.bloqs.mcmt import And
+from qualtran.bloqs.mcmt.specialized_ctrl import (
+    get_ctrl_system_1bit_cv_from_bloqs,
+)
 from qualtran.bloqs.multiplexers.select_pauli_lcu import SelectPauliLCU
 from qualtran.bloqs.state_preparation.state_preparation_via_rotation import (
     StatePreparationViaRotations,
@@ -107,26 +107,6 @@ def _adjoint_pauli_to_z_string(
             qs[q] = bb.add(SGate(), q=qs[q])
 
     return qs
-
-
-def _make_generic_add_controlled(cbloq: Bloq) -> Callable:
-    """Create a generic function to add the custom controlled bloq cbloq."""
-
-    def add_controlled(
-        bb: BloqBuilder, ctrl_soqs: Sequence[SoquetT], in_soqs: dict[str, SoquetT]
-    ) -> tuple[Iterable[SoquetT], Iterable[SoquetT]]:
-        # Combine the ctrl soquets with the input soquets
-        in_soqs |= {"ctrl": ctrl_soqs}
-        # Add the given controlled bloq using the BloqBuilder
-        new_out_d = bb.add_d(cbloq, **in_soqs)
-        # Extract the ctrl soquets from the resulting soquets. Using .pop()
-        # simultaneously modifies the soquet register new_out_d such that only the
-        # non-control soquets remain.
-        ctrl_soqs = tuple(new_out_d.pop(creg_name) for creg_name in ["ctrl"])
-        # return the control soquets and the non-control soquets
-        return ctrl_soqs, new_out_d.values()
-
-    return add_controlled
 
 
 @attrs.frozen
@@ -313,13 +293,13 @@ class PauliWordRotation(Bloq):
 
     def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
         """Override function to get controlled bloq."""
-        cbloq = CTRLPauliWordRotation.from_pauliwordrotation(self)
-
-        if ctrl_spec == CtrlSpec():
-            add_controlled = _make_generic_add_controlled(cbloq)
-            return cbloq, add_controlled
-
-        return make_ctrl_system_with_correct_metabloq(self, ctrl_spec=ctrl_spec)
+        return get_ctrl_system_1bit_cv_from_bloqs(
+            self,
+            ctrl_spec,
+            current_ctrl_bit=None,
+            bloq_with_ctrl=CTRLPauliWordRotation.from_pauliwordrotation(self),
+            ctrl_reg_name="ctrl",
+        )
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for PauliWorldRotation."""
@@ -536,16 +516,16 @@ class QDRIFT(Bloq):
 
     def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
         """Override function to get controlled bloq."""
-        cbloq = CTRLQDRIFT(self)
-
-        if ctrl_spec == CtrlSpec():
-            add_controlled = _make_generic_add_controlled(cbloq)
-            return cbloq, add_controlled
-
-        return make_ctrl_system_with_correct_metabloq(self, ctrl_spec=ctrl_spec)
+        return get_ctrl_system_1bit_cv_from_bloqs(
+            self,
+            ctrl_spec,
+            current_ctrl_bit=None,
+            bloq_with_ctrl=CTRLQDRIFT(self),
+            ctrl_reg_name="ctrl",
+        )
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
-        """Compute call graph for CTRLQDRIFT."""
+        """Compute call graph for QDRIFT."""
         # Calculate a Counter that counts the frequency of each index in the sampled
         # configuration.
         sampled_indices = self.sample_term_indices()
@@ -815,13 +795,13 @@ class Trotterisation(Bloq):
 
     def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
         """Override function to get controlled bloq."""
-        cbloq = CTRLTrotterisation(self)
-
-        if ctrl_spec == CtrlSpec():
-            add_controlled = _make_generic_add_controlled(cbloq)
-            return cbloq, add_controlled
-
-        return make_ctrl_system_with_correct_metabloq(self, ctrl_spec=ctrl_spec)
+        return get_ctrl_system_1bit_cv_from_bloqs(
+            self,
+            ctrl_spec,
+            current_ctrl_bit=None,
+            bloq_with_ctrl=CTRLTrotterisation(self),
+            ctrl_reg_name="ctrl",
+        )
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Compute call graph for Trotterisation."""
