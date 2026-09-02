@@ -240,28 +240,10 @@ class PauliWordRotation(Bloq):
     word: PauliWord
     angle: float
     n_qubits: int
+    is_controlled: bool = False
 
-    def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
-        if isinstance(cost_key, QubitCount):
-            # This bloq needs a rotation gate, which may require ancilla qubits. But
-            # the rotation gate is counted separately and the number of ancilla qubits
-            # is calculated in post-processing.
-            # So only the data qubits are counted here.
-            return self.n_qubits
-        return NotImplemented
-
-    @property
-    def signature(self) -> Signature:
-        """Define input and/or output registers of the bloq."""
-        return Signature.build(system=self.n_qubits)
-
-    def build_composite_bloq(
-        self,
-        bb: BloqBuilder,
-        **soqs: SoquetT,
-    ) -> dict[str, SoquetT]:
-        """Implement bloq decomposition into sub-bloqs."""
+    def __attrs_post_init__(self) -> None:
+        """Validate attributes."""
         if max(self.word.qubits) >= self.n_qubits:
             message = (
                 f"Target qubit {max(self.word.qubits)} is out of range for a "
@@ -269,6 +251,53 @@ class PauliWordRotation(Bloq):
             )
             raise ValueError(message)
 
+    @property
+    def control_registers(self) -> tuple[Register, ...]:
+        """Registers holding the control qubit, if any."""
+        return (Register("ctrl", dtype=QBit()),) if self.is_controlled else ()
+
+    @property
+    def n_controls(self) -> int:
+        """Number of control qubits (1 if controlled, 0 otherwise)."""
+        return 1 if self.is_controlled else 0
+
+    @property
+    def signature(self) -> Signature:
+        """Define input and/or output registers of the bloq."""
+        return Signature(
+            [*self.control_registers, Register("system", dtype=QAny(self.n_qubits))]
+        )
+
+    def __str__(self) -> str:
+        """Get human-readable representation."""
+        return "C[PauliWordRotation]" if self.is_controlled else "PauliWordRotation"
+
+    def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
+        """Override function to get controlled bloq."""
+        return get_ctrl_system_1bit_cv_from_bloqs(
+            self,
+            ctrl_spec,
+            current_ctrl_bit=1 if self.is_controlled else None,
+            bloq_with_ctrl=attrs.evolve(self, is_controlled=True),
+            ctrl_reg_name="ctrl",
+        )
+
+    def my_static_costs(self, cost_key: CostKey) -> int:
+        """Return hard-coded qubit counts."""
+        if isinstance(cost_key, QubitCount):
+            # This bloq needs a rotation gate, which may require ancilla qubits. But
+            # the rotation gate is counted separately and the number of ancilla qubits
+            # is calculated in post-processing.
+            # So only the data and control qubits are counted here.
+            return self.n_qubits + (1 if self.is_controlled else 0)
+        return NotImplemented
+
+    def build_composite_bloq(
+        self,
+        bb: BloqBuilder,
+        **soqs: SoquetT,
+    ) -> dict[str, SoquetT]:
+        """Implement bloq decomposition into sub-bloqs."""
         qs = bb.split(soqs["system"])
 
         qs = _pauli_to_z_string(self.word, bb, qs)
@@ -280,7 +309,11 @@ class PauliWordRotation(Bloq):
                 qs[q], qs[gw] = bb.add(CNOT(), ctrl=qs[q], target=qs[gw])
 
         # Rz assumes that self.angle contains any necessary scaling factors
-        qs[gw] = bb.add(Rz(self.angle), q=qs[gw])
+        if self.is_controlled:
+            ctrl = soqs["ctrl"]
+            ctrl, qs[gw] = bb.add(CRz(self.angle), ctrl=ctrl, q=qs[gw])
+        else:
+            qs[gw] = bb.add(Rz(self.angle), q=qs[gw])
 
         # Note that the order of CNOTs doesn't matter since they commute
         for q in self.word.qubits:
@@ -289,17 +322,9 @@ class PauliWordRotation(Bloq):
 
         qs = _adjoint_pauli_to_z_string(self.word, bb, qs)
 
+        if self.is_controlled:
+            return {"ctrl": ctrl, "system": bb.join(qs)}
         return {"system": bb.join(qs)}
-
-    def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
-        """Override function to get controlled bloq."""
-        return get_ctrl_system_1bit_cv_from_bloqs(
-            self,
-            ctrl_spec,
-            current_ctrl_bit=None,
-            bloq_with_ctrl=CTRLPauliWordRotation.from_pauliwordrotation(self),
-            ctrl_reg_name="ctrl",
-        )
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for PauliWorldRotation."""
@@ -307,102 +332,12 @@ class PauliWordRotation(Bloq):
         n_y = sum(term == Pauli.Y for term in self.word.terms)
         n_cnot = 2 * (len(self.word.terms) - 1)
 
-        bloq_counts = {
-            Rz(self.angle): 1,
-        }
+        bloq_counts = {}
 
-        if n_cnot > 0:
-            bloq_counts[CNOT()] = n_cnot
-
-        if n_y:
-            bloq_counts[SGate(is_adjoint=True)] = n_y
-            bloq_counts[SGate()] = n_y
-
-        if n_x + n_y:
-            bloq_counts[Hadamard()] = 2 * (n_x + n_y)
-
-        return bloq_counts
-
-
-@attrs.frozen
-class CTRLPauliWordRotation(Bloq):
-    """Routine constructing the controlled Pauli phasor for a given Pauli."""
-
-    word: PauliWord
-    angle: float
-    n_qubits: int
-    n_controls: int
-
-    @classmethod
-    def from_pauliwordrotation(cls, rotation: PauliWordRotation) -> Self:
-        """Initialise instance from PauliWordRotation."""
-        return cls(rotation.word, rotation.angle, rotation.n_qubits, n_controls=1)
-
-    def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
-        if isinstance(cost_key, QubitCount):
-            # This bloq needs a rotation gate, which may require ancilla qubits. But
-            # the rotation gate is counted separately and the number of ancilla qubits
-            # is calculated in post-processing.
-            # So only the data qubits and controls are counted here.
-            return self.n_qubits + self.n_controls
-        return NotImplemented
-
-    @property
-    def signature(self) -> Signature:
-        """Define input and/or output registers of the bloq."""
-        return Signature(
-            [
-                Register("ctrl", dtype=QBit(), side=Side.THRU),
-                Register("system", dtype=QAny(self.n_qubits), side=Side.THRU),
-            ]
-        )
-
-    def build_composite_bloq(
-        self,
-        bb: BloqBuilder,
-        **soqs: SoquetT,
-    ) -> dict[str, SoquetT]:
-        """Implement bloq decomposition into sub-bloqs."""
-        if max(self.word.qubits) >= self.n_qubits:
-            message = (
-                f"Target qubit {max(self.word.qubits)} is out of range for a "
-                f"{self.n_qubits} qubit register."
-            )
-            raise ValueError(message)
-
-        ctrl = soqs["ctrl"]
-        qs = bb.split(soqs["system"])
-
-        qs = _pauli_to_z_string(self.word, bb, qs)
-
-        gw = self.word.greatest_qubit
-
-        for q in self.word.qubits:
-            if q < gw:
-                qs[q], qs[gw] = bb.add(CNOT(), ctrl=qs[q], target=qs[gw])
-
-        # CRz assumes that self.angle contains any necessary scaling factors
-        ctrl, qs[gw] = bb.add(CRz(self.angle), ctrl=ctrl, q=qs[gw])
-
-        # Note that the order of CNOTs doesn't matter since they commute
-        for q in self.word.qubits:
-            if q < gw:
-                qs[q], qs[gw] = bb.add(CNOT(), ctrl=qs[q], target=qs[gw])
-
-        qs = _adjoint_pauli_to_z_string(self.word, bb, qs)
-
-        return {"ctrl": ctrl, "system": bb.join(qs)}
-
-    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
-        """Build call graph for CTRLPauliWorldRotation."""
-        n_x = sum(term == Pauli.X for term in self.word.terms)
-        n_y = sum(term == Pauli.Y for term in self.word.terms)
-        n_cnot = 2 * (len(self.word.terms) - 1)
-
-        bloq_counts = {
-            CRz(self.angle): 1,
-        }
+        if self.is_controlled:
+            bloq_counts[CRz(self.angle)] = 1
+        else:
+            bloq_counts[Rz(self.angle)] = 1
 
         if n_cnot > 0:
             bloq_counts[CNOT()] = n_cnot
@@ -836,7 +771,7 @@ class Trotterisation(Bloq):
 
 @attrs.frozen
 class CTRLTrotterisation(Bloq):
-    """Controlled QDRIFT application."""
+    """Controlled Trotterisation application."""
 
     simulation: Trotterisation
     n_controls: int = 1
