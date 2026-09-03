@@ -21,11 +21,11 @@
  * @author Vasco Ferreira
  */
 
+#include <cmath>
 #include <iostream>
 #include <random>
 
 #include <quest.h>
-#include <quest/src/core/constants.hpp>
 
 #include "quiche/mappings.hpp"
 #include "quiche/qdrift.hpp"
@@ -80,7 +80,7 @@ int main() {
 
     std::mt19937_64 rng(126234);
     double phase = qpe::getPhaseKitaevQDRIFT(qureg, hamiltonian, ancilla, reps, t, numBits, rng);
-    double energy = phase * (2 * const_PI / t) + idCoeff.real();
+    double energy = qpe::getEnergyFromTrotterPhase(phase, t, idCoeff.real());
 
     std::cout << "Phase: " << phase << '\n' << "Energy: " << energy << '\n';
 

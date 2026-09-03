@@ -19,7 +19,10 @@ ReflowComments: true
 SortIncludes: true
 IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex: '^<(catch2|H5Cpp)'
+  - Regex: '^<nanobind'
+    Priority: 3
+
+  - Regex: '^<catch2'
     Priority: 4
 
   - Regex: '^<quest'

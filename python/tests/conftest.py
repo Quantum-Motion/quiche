@@ -14,21 +14,51 @@
 
 """Common pytest fixtures and setup for test suite."""
 
-from pathlib import Path
-
 import pytest
 
-from quiche.core import Errors, PauliSum
-from quiche.hamlib import get_dataset, parse_hamiltonian
-
-HAMLIB_DATA_DIR = Path(__file__).parent / "data"
+from quiche.core import Errors, PauliSum, PauliWord
 
 
 @pytest.fixture(scope="session")
 def h2() -> PauliSum:
-    """H2 Hamiltonian (smallest JW dataset, chosen to keep tests fast)."""
-    raw = get_dataset(str(HAMLIB_DATA_DIR / "H2.hdf5"), "ham_JW-4")
-    return parse_hamiltonian(raw)
+    """Minimal basis H2 Hamiltonian in Jordan-Wigner mapping."""
+    terms = (
+        PauliWord(terms=("X", "X", "Y", "Y"), qubits=(0, 1, 2, 3)),
+        PauliWord(terms=("X", "Y", "Y", "X"), qubits=(0, 1, 2, 3)),
+        PauliWord(terms=("Y", "X", "X", "Y"), qubits=(0, 1, 2, 3)),
+        PauliWord(terms=("Y", "Y", "X", "X"), qubits=(0, 1, 2, 3)),
+        PauliWord(terms=("Z", "Z"), qubits=(0, 1)),
+        PauliWord(terms=("Z", "Z"), qubits=(0, 2)),
+        PauliWord(terms=("Z", "Z"), qubits=(0, 3)),
+        PauliWord(terms=("Z", "Z"), qubits=(1, 2)),
+        PauliWord(terms=("Z", "Z"), qubits=(1, 3)),
+        PauliWord(terms=("Z", "Z"), qubits=(2, 3)),
+        PauliWord(terms=("Z",), qubits=(0,)),
+        PauliWord(terms=("Z",), qubits=(1,)),
+        PauliWord(terms=("Z",), qubits=(2,)),
+        PauliWord(terms=("Z",), qubits=(3,)),
+    )
+
+    coeffs = (
+        -0.045322,
+        +0.045322,
+        +0.045322,
+        -0.045322,
+        +0.168622,
+        +0.120545,
+        +0.165867,
+        +0.165867,
+        +0.120545,
+        +0.174348,
+        +0.171198,
+        +0.171198,
+        -0.222786,
+        -0.222786,
+    )
+
+    id_coeff = -0.098864
+
+    return PauliSum(coefficients=coeffs, terms=terms, identity_coefficient=id_coeff)
 
 
 @pytest.fixture

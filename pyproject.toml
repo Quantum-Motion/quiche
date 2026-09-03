@@ -7,7 +7,9 @@ authors = [
     { name = "Annina Lieberherr", email = "annina@quantummotion.tech"},
     { name = "Vasco Ferreira", email = "vasco.ferreira@quantummotion.tech"}
 ]
+readme = "README.md"
 license = "Apache-2.0"
+license-files = ["LICENSE"]
 
 # need explicit upper bound due to poetry
 requires-python=">=3.12, <4.0"
@@ -22,7 +24,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["scikit-build-core>=0.10", "nanobind>=2.0"]
+requires = ["scikit-build-core>=1.0", "nanobind>=2.10"]
 build-backend = "scikit_build_core.build"
 
 [dependency-groups]
@@ -40,14 +42,18 @@ test = [
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"
-build-dir = "../build/"
-cmake.args = ["-DQUICHE_BUILD_BINDINGS=ON"]
-cmake.source-dir = "../"
-wheel.packages = ["src/quiche"]
+build-dir = "build/"
+cmake.define = { QUICHE_BUILD_BINDINGS = "ON", BUILD_SHARED_LIBS = "ON" }
+wheel.packages = ["python/src/quiche"]
 wheel.py-api = "cp312"
+install.components = ["quiche_wheel"]
+
+[tool.uv]
+compile-bytecode = true
 
 [tool.ruff]
-exclude = ["*.pyi"]    # Ignore auto-generated stubs
+src = ["python", "python/src"]
+extend-exclude = ["*.pyi"]    # Ignore auto-generated stubs
 lint.select = ["ALL"]
 lint.ignore = [
     "T20",    # flake8-print
@@ -62,10 +68,13 @@ lint.ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" =[
+"python/tests/*" =[
     "S101",   # asserts are used throughout testing
     "D101",   # decide not to require test class documentation
     "D102",   # decide not to require test method documentation
     "ANN201", # Adding "-> None" is overkill in tests
     "SLF001"  # Tests may access private members
 ]
+
+[tool.pytest]
+testpaths = ["python/tests"]

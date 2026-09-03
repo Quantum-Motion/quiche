@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
+#include "quiche/mappings.hpp"
+
+#include <bitset>
+#include <vector>
+
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <catch2/generators/catch_generators_adapters.hpp>
 #include <catch2/generators/catch_generators_random.hpp>
 #include <catch2/generators/catch_generators_range.hpp>
-
-#include "quiche/mappings.hpp"
 
 namespace Gen = Catch::Generators;
 

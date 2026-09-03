@@ -22,12 +22,12 @@
  * @author Vasco Ferreira
  */
 
+#include <cmath>
 #include <iostream>
 #include <numeric>
 #include <vector>
 
 #include <quest.h>
-#include <quest/src/core/constants.hpp>
 
 #include "quiche/mappings.hpp"
 #include "quiche/qdrift.hpp"
@@ -92,7 +92,7 @@ int main() {
 
     double phase = qpe::getPhaseTextbookQubitisedOptimised(qureg, hamiltonian, qpeAncillas, qubitisationAncillas);
     auto lambda = qdrift::getPauliStrSumNorm(hamiltonian);
-    double energy = std::cos(phase * 2 * const_PI) * lambda + idCoeff.real();
+    double energy = qpe::getEnergyFromQubitisationPhase(phase, lambda, idCoeff.real());
 
     std::cout << "Phase: " << phase << '\n' << "Energy: " << energy << '\n';
 
