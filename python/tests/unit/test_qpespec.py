@@ -87,16 +87,3 @@ class TestQPESpec:
         )
         with pytest.raises(NotImplementedError, match="CUDA-Q"):
             spec.to_cudaq()
-
-    def test_to_cudaq_not_implemented_for_qubitised_simulation(
-        self, h2: PauliSum, budget: Errors
-    ):
-        spec = QPESpec(
-            hamiltonian=h2,
-            n_qubits=h2.n_qubits,
-            algorithm=PhaseEstimation.Textbook,
-            simulation=Simulation.Qubitised,
-            error_budget=budget,
-        )
-        with pytest.raises(NotImplementedError, match="Qubitised"):
-            spec.to_cudaq()

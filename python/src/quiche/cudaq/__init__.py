@@ -28,7 +28,11 @@ opaquely inside MLIR initialisation.
 """
 
 from quiche.cudaq._runtime import CudaqKernel
-from quiche.cudaq.estimation import inverse_qft_kernel, textbook_qpe_kernel
+from quiche.cudaq.estimation import (
+    inverse_qft_kernel,
+    qubitised_qpe_kernel,
+    textbook_qpe_kernel,
+)
 from quiche.cudaq.simulation import (
     qdrift_kernel,
     qubitised_controlled_kernel,
@@ -45,6 +49,7 @@ __all__ = [
     "qdrift_kernel",
     "qubitised_controlled_kernel",
     "qubitised_kernel",
+    "qubitised_qpe_kernel",
     "simulation_kernel",
     "textbook_qpe_kernel",
     "trotter_kernel",

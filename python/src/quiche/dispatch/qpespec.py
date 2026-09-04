@@ -29,7 +29,7 @@ from quiche.core import (
     PhaseEstimation,
     Simulation,
 )
-from quiche.cudaq import CudaqKernel, textbook_qpe_kernel
+from quiche.cudaq import CudaqKernel, qubitised_qpe_kernel, textbook_qpe_kernel
 from quiche.dispatch.budget.estimation import (
     get_kitaev_qpe_rounds,
     get_textbook_qpe_ancillas,
@@ -97,9 +97,7 @@ class QPESpec(Spec):
 
             case Simulation.Qubitised:
                 self.num_index_ancillas, self.num_phase_ancillas = (
-                    get_qubitisation_ancillas(
-                        self.hamiltonian, self.error_budget
-                    )
+                    get_qubitisation_ancillas(self.hamiltonian, self.error_budget)
                 )
 
             case Simulation.Trotter:
@@ -321,13 +319,13 @@ class QPESpec(Spec):
         energies = cudaq.run(run, shots_count=100)    # or many, as a list[float]
         ```
 
-        See `quiche.cudaq.estimation.textbook_qpe_kernel` for the exact contract
-        and why the energy recovery lives in-kernel here (unlike `to_qualtran`/
-        `to_quest`).
+        See `quiche.cudaq.estimation.textbook_qpe_kernel`/`qubitised_qpe_kernel`
+        for the exact contract and why the energy recovery lives in-kernel here
+        (unlike `to_qualtran`/`to_quest`).
 
-        Only `PhaseEstimation.Textbook` with `Simulation.Trotter`/`Simulation.QDRIFT`
-        is implemented so far; `Simulation.Qubitised` and the other
-        `PhaseEstimation` algorithms still raise `NotImplementedError`.
+        `PhaseEstimation.Textbook` is implemented for all three `Simulation`
+        variants; the other `PhaseEstimation` algorithms still raise
+        `NotImplementedError`.
         """
         if self.algorithm is not PhaseEstimation.Textbook:
             msg = f"{self.algorithm} is not yet implemented in the CUDA-Q backend."
@@ -358,8 +356,8 @@ class QPESpec(Spec):
                 )
 
             case Simulation.Qubitised:
-                msg = (
-                    "Simulation.Qubitised is not yet implemented in the CUDA-Q "
-                    "Textbook QPE backend."
+                return qubitised_qpe_kernel(
+                    self.hamiltonian,
+                    self.num_qpe_ancillas,
+                    n_qubits=self.n_qubits,
                 )
-                raise NotImplementedError(msg)

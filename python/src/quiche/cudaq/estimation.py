@@ -25,9 +25,15 @@
 
 from math import pi
 
+import numpy as np
+
 from quiche.core import PauliSum, Seed, Simulation
 from quiche.cudaq._runtime import CudaqKernel, load_cudaq
-from quiche.cudaq.simulation import qdrift_evolution, trotter_evolution
+from quiche.cudaq.simulation import (
+    qdrift_evolution,
+    qubitised_encoding,
+    trotter_evolution,
+)
 
 
 def inverse_qft_kernel() -> CudaqKernel:
@@ -128,11 +134,10 @@ def textbook_qpe_kernel(
     what makes the measured phase reflect the full Hamiltonian's eigenvalue,
     not just the non-identity part (see the decode note above).
 
-    `Simulation.Qubitised` raises `NotImplementedError`: `cudaq.control()`
-    cannot wrap the qubitisation walk step (it calls other kernels
-    internally - confirmed to silently produce wrong results, or fail to
-    compile at all, depending on the kernel), so it needs a different
-    controlled-power technique than this ladder uses.
+    `Simulation.Qubitised` raises `NotImplementedError`: it has no `(time,
+    reps, order, seed)` shape to share with this function (no evolution-time
+    concept for a qubitisation walk operator) - use `qubitised_qpe_kernel`
+    directly instead.
     """
     cudaq, _ = load_cudaq()
 
@@ -147,8 +152,9 @@ def textbook_qpe_kernel(
             base_steps, base_order = 1, 1
         case Simulation.Qubitised:
             msg = (
-                "Simulation.Qubitised is not yet implemented in the CUDA-Q "
-                "Textbook QPE backend."
+                "Simulation.Qubitised has no (time, reps, order, seed) shape "
+                "to share with Trotter/QDRIFT - use "
+                "quiche.cudaq.estimation.qubitised_qpe_kernel directly."
             )
             raise NotImplementedError(msg)
 
@@ -193,5 +199,122 @@ def textbook_qpe_kernel(
         if phase >= 0.5:
             phase -= 1.0
         return -phase * (2.0 * pi / time)
+
+    return qpe
+
+
+def qubitised_qpe_kernel(
+    hamiltonian: PauliSum,
+    num_qpe_ancillas: int,
+    *,
+    n_qubits: int | None = None,
+) -> CudaqKernel:
+    """
+    Build the Textbook QPE kernel for `Simulation.Qubitised`.
+
+    Same contract as `textbook_qpe_kernel`: signature `(data: cudaq.qview) ->
+    float`, operates in place on an already-allocated register, decodes one
+    shot's own energy estimate in-kernel (call directly for a single value, or
+    `cudaq.run(kernel, data, shots_count=n)` for `n` of them). A separate
+    function rather than a branch inside `textbook_qpe_kernel`, because
+    Qubitised has no `(time, reps, order, seed)` shape to share - matching
+    both other backends: QuEST's `getPhaseTextbookQubitised` is separate from
+    `getPhaseTextbookTrotter`/`getPhaseTextbookQDRIFT`, and Qualtran's
+    `QubitisationLadder` Bloq is separate from `TrotterLadder` (which Trotter
+    and QDRIFT share).
+
+    Builds `qubitised_encoding(hamiltonian, n_qubits=n_qubits)` fresh and uses
+    its own `.num_ancilla`/`.alpha` as the sole source of truth for register
+    width and the decode formula - deliberately not any externally-supplied
+    ancilla count. `get_qubitisation_ancillas` (`dispatch/budget/simulation.py`)
+    is already known to under-count relative to `PauliLCU.num_ancilla` whenever
+    the identity coefficient is nonzero (see `TestQubitisedEncoding.test_num_ancilla`
+    in `test_cudaq.py`); sidestepping it here matches the pattern
+    `qubitised_kernel`/`qubitised_controlled_kernel` (in `quiche.cudaq.simulation`)
+    already established.
+
+    Mechanism: `cudaq.control()` cannot wrap the qubitisation walk step at all
+    (confirmed during `textbook_qpe_kernel`'s own research - it silently
+    produces wrong results on kernels that call other kernels internally,
+    which the walk step does), so this uses a different technique entirely -
+    no `cudaq.control()` anywhere. Instead, one combined `[control,
+    lcu_ancillas...]` register is allocated once outside the ladder, and each
+    rung "CNOT-borrows" its control value in from the QPE ancilla register
+    (`x.ctrl(ancilla[k], combined[0])`, undone by the same gate after, safe
+    since `combined[0]` is never a gate target anywhere else - confirmed by
+    tracing every gate in `PauliLCU`'s controlled-select/controlled-reflection
+    kernels) around `power` raw calls to `encoding.controlled_walk_step_kernel()`
+    (the library's own hand-rolled controlled primitive, not `cudaq.control()`).
+    `encoding.prepare_kernel()` is called exactly ONCE, before the whole
+    ladder, and `unprepare_kernel()` is never called at all - confirmed
+    necessary, not just simpler: each `controlled_walk_step_kernel()` call
+    already contains its own internal uncontrolled-unprepare -> controlled-
+    reflection -> uncontrolled-prepare cycle (the standard "reflect about
+    PREPARE" construction), so it's self-sufficient once primed; wrapping each
+    *rung's* `power` steps in its own outer prepare/unprepare pair (mirroring
+    `Walk.controlled_kernel`'s single-block structure) does NOT compose across
+    multiple rungs, since `unprepare` only reliably returns the LCU ancilla to
+    `|0>` when reversing an untouched `prepare(|0>)` - after real controlled
+    steps it's left spread/entangled, corrupting the next rung's `prepare`.
+    Not uncomputing at the end is fine because only `ancilla` gets measured,
+    mirroring `textbook_qpe_kernel` never uncomputing `data`.
+
+    Decode: the walk `W` block-encodes `-H/alpha` (confirmed:
+    `qubitised_walk`'s own docstring, and the vendored library's own
+    `test_single_term_walk_keeps_minus_h_over_alpha_sign`), so `W`'s
+    eigenvalues are `e^(+-i*theta)` with `cos(theta) = -eigenvalue/alpha`.
+    QPE measures `phase = y / 2**num_qpe_ancillas` directly - no wrap to
+    `[-0.5, 0.5)` needed here (unlike `textbook_qpe_kernel`'s *linear* phase
+    decode): `cos` is already even and periodic over the full `[0, 1)` range,
+    so the standard +-theta QPE ambiguity is harmless. No separate
+    `identity_coefficient` correction either (unlike `textbook_qpe_kernel`'s
+    per-rung `r1`): `PauliLCU.alpha` already folds it in (confirmed via
+    `test_alpha_includes_identity`), so there's no dropped global phase to
+    restore. `cos()`/`math.cos()` do not work inside a `@cudaq.kernel` body
+    (confirmed via the AST bridge's call dispatch - no handler for bare or
+    `math.`-prefixed calls); `np.cos(...)` does (dispatches to a real MLIR
+    math op via the numpy-specific call path), hence the `numpy` import here.
+
+    Both the ladder construction and the decode formula (specifically "no
+    separate identity correction needed") were validated end to end against
+    real `cudaq` execution and known eigenvalues before being written here -
+    `H = Z`'s `|0>` eigenstate (eigenvalue +1, alpha=1) recovers exactly 1.0;
+    `H = Z + I`'s `|1>` eigenstate (eigenvalue -1+1=0, alpha=2) recovers
+    exactly 0.0, confirming no double-count; a two-qubit `H = ZI - IZ`'s
+    `|11>` eigenstate (eigenvalue 0, alpha=2) also recovers exactly 0.0.
+    """
+    cudaq, _ = load_cudaq()
+
+    encoding = qubitised_encoding(hamiltonian, n_qubits=n_qubits)
+    n_anc = encoding.num_ancilla
+    alpha = encoding.alpha
+    # See textbook_qpe_kernel's identical comment: no float() cast in-kernel.
+    dimension = float(1 << num_qpe_ancillas)
+
+    prep = encoding.prepare_kernel()
+    controlled_step = encoding.controlled_walk_step_kernel()
+    inverse_qft = inverse_qft_kernel()
+
+    @cudaq.kernel
+    def qpe(data: cudaq.qview) -> float:
+        """Ladder controlled-W^(2^k), inverse QFT, then decode the energy in-kernel."""
+        ancilla = cudaq.qvector(num_qpe_ancillas)
+        h(ancilla)
+        combined = cudaq.qvector(1 + n_anc)
+        prep(combined.back(n_anc))
+        for k in range(num_qpe_ancillas):
+            power = 1 << k
+            x.ctrl(ancilla[k], combined[0])
+            for _ in range(power):
+                controlled_step(combined, data)
+            x.ctrl(ancilla[k], combined[0])
+        inverse_qft(ancilla)
+
+        y = 0.0
+        for k in range(num_qpe_ancillas):
+            if mz(ancilla[k]):
+                y += 1 << k
+        phase = y / dimension
+        return -alpha * np.cos(2.0 * pi * phase)
 
     return qpe

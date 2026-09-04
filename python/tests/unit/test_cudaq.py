@@ -36,7 +36,11 @@ from quiche.core import (
 )
 from quiche.core.qdrift import sample_qdrift_indices
 from quiche.cudaq import CudaqKernel
-from quiche.cudaq.estimation import inverse_qft_kernel, textbook_qpe_kernel
+from quiche.cudaq.estimation import (
+    inverse_qft_kernel,
+    qubitised_qpe_kernel,
+    textbook_qpe_kernel,
+)
 from quiche.cudaq.simulation import (
     qdrift_evolution,
     qdrift_kernel,
@@ -569,10 +573,85 @@ class TestTextbookQPEKernel:
             textbook_qpe_kernel(GENERAL, Simulation.Qubitised, 4, TIME, reps=1)
 
 
-class TestQPESpecToCudaq:
-    """QPESpec.to_cudaq() wiring: PhaseEstimation.Textbook x {Trotter, QDRIFT}."""
+class TestQubitisedQPEKernel:
+    """
+    Real CUDA-Q output on qpp-cpu: Textbook QPE via the qubitisation walk.
 
-    @pytest.mark.parametrize("simulation", [Simulation.Trotter, Simulation.QDRIFT])
+    Exact-comparison style throughout (like `TestQubitisedKernels`), not
+    Trotter/QDRIFT's convergence-tolerance style - block encoding is exact, no
+    Trotter-order approximation to reason about. All cases use `num_qpe_ancillas`
+    in the 3-5 range rather than commit 3's 6: `controlled_walk_step_kernel` is
+    heavier per application than a single `apply_trotter` call, and the ladder
+    still costs `2**n - 1` total steps.
+    """
+
+    def test_exact_phase_no_identity(self, cudaq: ModuleType):
+        # H = Z(0) - Z(1), eigenstate |11>: both terms diagonal/commuting, so
+        # eigenvalue is exactly 0. alpha=2, cos(theta)=-0/2=0, theta=pi/2,
+        # phase=0.25 - exact for any num_qpe_ancillas >= 2.
+        h = _pauli_sum((1.0, "ZI"), (-1.0, "IZ"))
+        qpe = qubitised_qpe_kernel(h, num_qpe_ancillas=3)
+        energies = _run_qpe_on_bitstring(cudaq, qpe, (1, 1), shots_count=20)
+        np.testing.assert_allclose(energies, 0.0, atol=1e-9)
+
+    def test_exact_phase_with_identity(self, cudaq: ModuleType):
+        # H = Z + I, eigenstate |1>: eigenvalue -1+1=0, independently known
+        # (not self-referential). alpha=2 (test_alpha_includes_identity's own
+        # formula), same theta=pi/2 exact-bin construction as above - this is
+        # the test shaped to catch an identity double-count, the way commit
+        # 3's analogous Trotter bug was only caught by comparing to a real
+        # eigenvalue rather than a self-referential target.
+        h = _pauli_sum((1.0, "Z"), identity=1.0)
+        qpe = qubitised_qpe_kernel(h, num_qpe_ancillas=3)
+        energies = _run_qpe_on_bitstring(cudaq, qpe, (1,), shots_count=20)
+        np.testing.assert_allclose(energies, 0.0, atol=1e-9)
+
+    def test_exact_phase_pi(self, cudaq: ModuleType):
+        # H = Z, eigenstate |0>: eigenvalue +1, alpha=1, cos(theta)=-1,
+        # theta=pi, phase=0.5 - exact for any num_qpe_ancillas >= 1, and
+        # exercises the 2**k ladder's parity: only rung 0 contributes a
+        # nontrivial kickback at theta=pi (rungs k>=1 apply W an even number
+        # of times, W^2=I here) - a broken "apply once per rung" ladder would
+        # get this wrong for k>=1, not rung 0.
+        h = _pauli_sum((1.0, "Z"))
+        qpe = qubitised_qpe_kernel(h, num_qpe_ancillas=3)
+        energies = _run_qpe_on_bitstring(cudaq, qpe, (0,), shots_count=20)
+        np.testing.assert_allclose(energies, 1.0, atol=1e-9)
+
+    def test_converges_for_noncommuting_hamiltonian(self, cudaq: ModuleType):
+        from cudaq_algorithms import sim_utils  # noqa: PLC0415
+
+        h = _pauli_sum((0.6, "X"), (0.4, "Z"))
+        eigvals, eigvecs = np.linalg.eigh(h._to_matrix())
+        eigenvalue, eigenvector = eigvals[1], eigvecs[:, 1]
+
+        num_qpe_ancillas = 5
+        qpe = qubitised_qpe_kernel(h, num_qpe_ancillas)
+
+        @cudaq.kernel
+        def run(state: cudaq.State) -> float:
+            """Load an externally-computed state, then run QPE on it."""
+            data = cudaq.qvector(state)
+            return qpe(data)
+
+        initial_state = sim_utils.state_from(eigenvector.astype(complex))
+        energies = cudaq.run(run, initial_state, shots_count=200)
+
+        # Max slope of d(-alpha*cos(theta))/dtheta, converted to a bin width
+        # in energy units - unlike textbook_qpe_kernel's linear decode, the
+        # bin width here depends on where on the cosine curve the true phase
+        # lands, so this bound is a representative upper bound, not exact.
+        alpha = qubitised_encoding(h).alpha
+        max_slope = alpha * (2 * np.pi / (1 << num_qpe_ancillas))
+        assert abs(statistics.mode(energies) - eigenvalue) < max_slope
+
+
+class TestQPESpecToCudaq:
+    """QPESpec.to_cudaq() wiring: PhaseEstimation.Textbook x all Simulation kinds."""
+
+    @pytest.mark.parametrize(
+        "simulation", [Simulation.Trotter, Simulation.QDRIFT, Simulation.Qubitised]
+    )
     def test_runs_and_measures_all_ancillas(
         self, cudaq: ModuleType, simulation: Simulation
     ):
