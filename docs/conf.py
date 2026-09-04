@@ -31,7 +31,7 @@ project = "QUICHE"
 author = "Quantum Motion Technologies Ltd."
 copyright = "2026, Quantum Motion Technologies Ltd."  # noqa: A001
 
-with (REPO_ROOT / "python" / "pyproject.toml").open("rb") as f:
+with (REPO_ROOT / "pyproject.toml").open("rb") as f:
     release = tomllib.load(f)["project"]["version"]
 
 version = release
@@ -65,7 +65,7 @@ autodoc_typehints_description_target = "documented_params"
 # CI, which needs no C++ toolchain) the bindings are mocked so that the pure-Python
 # modules can still be imported and documented.
 try:
-    import quiche.bindings  # noqa: F401
+    import quiche.bindings.quest_bindings  # noqa: F401
 except ImportError:
     autodoc_mock_imports = ["quiche.bindings"]
     print("NOTE: compiled bindings not importable, mocking 'quiche.bindings'.")
