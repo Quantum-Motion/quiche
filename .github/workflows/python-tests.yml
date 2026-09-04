@@ -38,7 +38,7 @@ jobs:
 
       - name: Install quiche with dev dependencies
         working-directory: python
-        run: uv sync --group dev
+        run: uv sync --group dev -v
 
       - name: Run pytest
         working-directory: python
