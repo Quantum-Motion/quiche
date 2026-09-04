@@ -95,6 +95,9 @@ test-groups = ["test"]
 build = ["cp312-*"]
 build-frontend = "build[uv]"
 
+[tool.cibuildwheel.windows]
+repair-wheel-command = "delvewheel repair --ignore-in-wheel -w {dest_dir} -v {wheel}"
+
 [tool.cibuildwheel.macos]
 before-all = "brew install libomp"
 environment = { OpenMP_ROOT = "$(brew --prefix libomp)", MACOSX_DEPLOYMENT_TARGET = "15.0" }
