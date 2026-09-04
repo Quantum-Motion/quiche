@@ -19,9 +19,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Install system build dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build build-essential
-
       # QUICHE's Python package builds a native (nanobind/CMake) extension,
       # which fetches QuEST and nanobind from GitHub. Cache the CMake build
       # directory so unchanged CMakeLists don't refetch/rebuild from scratch.
