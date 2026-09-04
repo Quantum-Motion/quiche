@@ -38,6 +38,9 @@ from quiche.core.qdrift import sample_qdrift_indices
 from quiche.cudaq import CudaqKernel
 from quiche.cudaq.estimation import (
     inverse_qft_kernel,
+    iterative_qpe_kernel,
+    naive_qpe_kernel,
+    qubitised_naive_qpe_kernel,
     qubitised_qpe_kernel,
     textbook_qpe_kernel,
 )
@@ -646,14 +649,204 @@ class TestQubitisedQPEKernel:
         assert abs(statistics.mode(energies) - eigenvalue) < max_slope
 
 
+# A fixed non-eigenstate ket, RY(THETA)|0> = 0.8|0> + 0.6|1>, shared by the
+# Naive QPE tests below - both re/im parts of <psi|U|psi> are nontrivial here,
+# unlike an eigenstate (which would give a trivial re/im split).
+THETA = 2 * np.arccos(0.8)
+
+
+def _prep_theta_kernel(cudaq: ModuleType) -> CudaqKernel:
+    """Build a `(qubits: qview)` kernel preparing RY(THETA)|0> on one qubit."""
+
+    @cudaq.kernel
+    def prep(qubits: cudaq.qview) -> None:
+        ry(THETA, qubits[0])  # noqa: F821 -- CUDA-Q intrinsic, not a real Python name
+
+    return prep
+
+
+class TestNaiveQPEKernel:
+    """
+    Real CUDA-Q output on qpp-cpu: Naive (Hadamard-test) QPE for Trotter/QDRIFT.
+
+    Unlike Textbook/Qubitised/Iterative, a single shot carries no phase
+    information - the caller must average many shots to estimate
+    Re/Im(<psi|U|psi>), so this is the one place in the whole CUDA-Q backend
+    where a *statistical* tolerance is unavoidable, not a design choice.
+    """
+
+    @pytest.mark.parametrize("simulation", [Simulation.Trotter, Simulation.QDRIFT])
+    @pytest.mark.parametrize("mode", ["re", "im"])
+    def test_matches_exact_expectation_value(
+        self, cudaq: ModuleType, simulation: Simulation, mode: str
+    ):
+        h = _pauli_sum((0.6, "X"), (0.4, "Z"), identity=0.2)
+        time = 0.5
+        shots_count = 4000
+
+        if simulation is Simulation.QDRIFT:
+            qpe = naive_qpe_kernel(h, simulation, time, reps=30, mode=mode, seed=7)
+        else:
+            qpe = naive_qpe_kernel(h, simulation, time, reps=5, mode=mode)
+
+        prep = _prep_theta_kernel(cudaq)
+
+        @cudaq.kernel
+        def run() -> float:
+            data = cudaq.qvector(1)
+            prep(data)
+            return qpe(data)
+
+        measured = statistics.mean(cudaq.run(run, shots_count=shots_count))
+
+        ket = np.array([np.cos(THETA / 2), np.sin(THETA / 2)], dtype=complex)
+        expectation = ket.conj() @ expm(-1j * time * h._to_matrix()) @ ket
+        expected = expectation.real if mode == "re" else expectation.imag
+
+        # Shot-noise tolerance for a +-1-valued estimator: std <= 1, so SEM =
+        # 1/sqrt(n); a 6-sigma margin keeps this from being flaky.
+        tolerance = 6.0 / np.sqrt(shots_count)
+        assert abs(measured - expected) < tolerance
+
+    def test_qubitised_not_implemented(self):
+        # Dispatched before any cudaq import, so this runs without cudaq installed.
+        with pytest.raises(NotImplementedError, match="Qubitised"):
+            naive_qpe_kernel(GENERAL, Simulation.Qubitised, TIME, reps=1)
+
+
+class TestQubitisedNaiveQPEKernel:
+    """Real CUDA-Q output on qpp-cpu: Naive QPE via the qubitisation walk."""
+
+    @pytest.mark.parametrize("mode", ["re", "im"])
+    def test_matches_walk_expectation_value(self, cudaq: ModuleType, mode: str):
+        from cudaq_algorithms import sim_utils  # noqa: PLC0415
+
+        h = _pauli_sum((0.6, "X"), (0.4, "Z"))
+        shots_count = 4000
+        ket = np.array([np.cos(THETA / 2), np.sin(THETA / 2)], dtype=complex)
+
+        prep = _prep_theta_kernel(cudaq)
+        qpe = qubitised_naive_qpe_kernel(h, mode=mode)
+
+        @cudaq.kernel
+        def run() -> float:
+            data = cudaq.qvector(1)
+            prep(data)
+            return qpe(data)
+
+        measured = statistics.mean(cudaq.run(run, shots_count=shots_count))
+
+        # Reference: <ket|W|ket>, via the walk's own uncontrolled kernel,
+        # projected onto the ancilla=|0...0> block (the leading len(ket)
+        # amplitudes) - the same construction validated during this
+        # commit's own research, not a from-scratch dense-matrix rebuild.
+        walk = qubitised_walk(h)
+        out_state = np.asarray(
+            cudaq.get_state(walk.kernel(power=1), sim_utils.state_from(ket))
+        )
+        expectation = np.vdot(ket, out_state[: len(ket)])
+        expected = expectation.real if mode == "re" else expectation.imag
+
+        tolerance = 6.0 / np.sqrt(shots_count)
+        assert abs(measured - expected) < tolerance
+
+
+class TestIterativeQPEKernel:
+    """
+    Real CUDA-Q output on qpp-cpu: Iterative QPE for Trotter and QDRIFT.
+
+    Same exact-comparison style as `TestTextbookQPEKernel` - IPEA extracts
+    bits deterministically given an eigenstate, so these should be exact,
+    not tolerance-based.
+    """
+
+    @pytest.mark.parametrize("simulation", [Simulation.Trotter, Simulation.QDRIFT])
+    def test_exact_phase_for_single_term_eigenstate(
+        self, cudaq: ModuleType, simulation: Simulation
+    ):
+        # H = Z, eigenstate |1>: true eigenvalue -1. num_rounds/target chosen
+        # so the true phase lands exactly on a representable bin.
+        h = _pauli_sum((1.0, "Z"))
+        num_rounds = 6
+        target = 5
+        time = 2 * np.pi * target / (1 << num_rounds)
+
+        qpe = iterative_qpe_kernel(h, simulation, num_rounds, time, reps=1)
+        energies = _run_qpe_on_bitstring(cudaq, qpe, (1,), shots_count=20)
+
+        np.testing.assert_allclose(energies, -1.0, atol=1e-9)
+
+    @pytest.mark.parametrize("simulation", [Simulation.Trotter, Simulation.QDRIFT])
+    def test_identity_coefficient_shifts_phase(
+        self, cudaq: ModuleType, simulation: Simulation
+    ):
+        # H = Z + 0.3*I, eigenstate |1>: true eigenvalue -1+0.3=-0.7 - the test
+        # shaped to catch an identity double-count (the combined
+        # feedback+identity r1 correction), the way the analogous
+        # textbook_qpe_kernel bug was only caught by comparing to a true
+        # eigenvalue rather than a self-referential target.
+        h = _pauli_sum((1.0, "Z"), identity=0.3)
+        num_rounds = 6
+        target = 11
+        time = 2 * np.pi * target / ((1 << num_rounds) * (1.0 - 0.3))
+
+        qpe = iterative_qpe_kernel(h, simulation, num_rounds, time, reps=1)
+        energies = _run_qpe_on_bitstring(cudaq, qpe, (1,), shots_count=20)
+
+        np.testing.assert_allclose(energies, -0.7, atol=1e-9)
+
+    def test_converges_for_noncommuting_hamiltonian(self, cudaq: ModuleType):
+        from cudaq_algorithms import sim_utils  # noqa: PLC0415
+
+        h = _pauli_sum((0.6, "X"), (0.4, "Z"))
+        eigvals, eigvecs = np.linalg.eigh(h._to_matrix())
+        eigenvalue, eigenvector = eigvals[1], eigvecs[:, 1]
+
+        num_rounds = 8
+        time = 0.5
+        qpe = iterative_qpe_kernel(
+            h, Simulation.Trotter, num_rounds, time, reps=4, order=2
+        )
+
+        @cudaq.kernel
+        def run(state: cudaq.State) -> float:
+            """Load an externally-computed state, then run QPE on it."""
+            data = cudaq.qvector(state)
+            return qpe(data)
+
+        initial_state = sim_utils.state_from(eigenvector.astype(complex))
+        energies = cudaq.run(run, initial_state, shots_count=200)
+
+        bin_width = (2 * np.pi / time) / (1 << num_rounds)
+        assert abs(statistics.mode(energies) - eigenvalue) < bin_width
+
+    def test_qubitised_not_implemented(self):
+        # Dispatched before any cudaq import, so this runs without cudaq installed.
+        with pytest.raises(NotImplementedError, match="Qubitised"):
+            iterative_qpe_kernel(GENERAL, Simulation.Qubitised, 4, TIME, reps=1)
+
+
 class TestQPESpecToCudaq:
-    """QPESpec.to_cudaq() wiring: PhaseEstimation.Textbook x all Simulation kinds."""
+    """QPESpec.to_cudaq() wiring across implemented (algorithm, simulation) pairs."""
 
     @pytest.mark.parametrize(
-        "simulation", [Simulation.Trotter, Simulation.QDRIFT, Simulation.Qubitised]
+        ("algorithm", "simulation"),
+        [
+            (PhaseEstimation.Textbook, Simulation.Trotter),
+            (PhaseEstimation.Textbook, Simulation.QDRIFT),
+            (PhaseEstimation.Textbook, Simulation.Qubitised),
+            (PhaseEstimation.Naive, Simulation.Trotter),
+            (PhaseEstimation.Naive, Simulation.QDRIFT),
+            (PhaseEstimation.Naive, Simulation.Qubitised),
+            (PhaseEstimation.Iterative, Simulation.Trotter),
+            (PhaseEstimation.Iterative, Simulation.QDRIFT),
+        ],
     )
-    def test_runs_and_measures_all_ancillas(
-        self, cudaq: ModuleType, simulation: Simulation
+    def test_runs_and_returns_floats(
+        self,
+        cudaq: ModuleType,
+        algorithm: PhaseEstimation,
+        simulation: Simulation,
     ):
         h = _pauli_sum((0.6, "X"), (0.4, "Z"))
         budget = Errors(
@@ -662,7 +855,7 @@ class TestQPESpecToCudaq:
         spec = QPESpec(
             hamiltonian=h,
             n_qubits=1,
-            algorithm=PhaseEstimation.Textbook,
+            algorithm=algorithm,
             simulation=simulation,
             error_budget=budget,
         )
@@ -681,6 +874,28 @@ class TestQPESpecToCudaq:
         energies = cudaq.run(run, shots_count=20)
         assert len(energies) == 20
         assert all(isinstance(energy, float) for energy in energies)
+
+    def test_kitaev_not_implemented(self, h2: PauliSum, budget: Errors):
+        spec = QPESpec(
+            hamiltonian=h2,
+            n_qubits=h2.n_qubits,
+            algorithm=PhaseEstimation.Kitaev,
+            simulation=Simulation.Trotter,
+            error_budget=budget,
+        )
+        with pytest.raises(NotImplementedError, match="Kitaev"):
+            spec.to_cudaq()
+
+    def test_iterative_qubitised_not_implemented(self, h2: PauliSum, budget: Errors):
+        spec = QPESpec(
+            hamiltonian=h2,
+            n_qubits=h2.n_qubits,
+            algorithm=PhaseEstimation.Iterative,
+            simulation=Simulation.Qubitised,
+            error_budget=budget,
+        )
+        with pytest.raises(NotImplementedError, match="Qubitised"):
+            spec.to_cudaq()
 
 
 class TestSoftDependency:

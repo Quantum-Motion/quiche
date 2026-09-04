@@ -29,7 +29,14 @@ from quiche.core import (
     PhaseEstimation,
     Simulation,
 )
-from quiche.cudaq import CudaqKernel, qubitised_qpe_kernel, textbook_qpe_kernel
+from quiche.cudaq import (
+    CudaqKernel,
+    iterative_qpe_kernel,
+    naive_qpe_kernel,
+    qubitised_naive_qpe_kernel,
+    qubitised_qpe_kernel,
+    textbook_qpe_kernel,
+)
 from quiche.dispatch.budget.estimation import (
     get_kitaev_qpe_rounds,
     get_textbook_qpe_ancillas,
@@ -299,11 +306,9 @@ class QPESpec(Spec):
 
         The returned kernel has signature `(data: cudaq.qview) -> float`: it
         operates in place on an already-allocated data register (the same
-        contract as `HartreeFockSpec.to_cudaq()`'s kernel) and returns one
-        shot's own energy estimate, decoded from the measured ancillas as
-        classical kernel-mode arithmetic - no separate post-processing step.
-        Compose the two by allocating the register once and calling both
-        kernels on it inside one top-level kernel, e.g.:
+        contract as `HartreeFockSpec.to_cudaq()`'s kernel). Compose it with a
+        state-preparation kernel by allocating the register once and calling
+        both kernels on it inside one top-level kernel, e.g.:
 
         ```python
         prep = state_spec.to_cudaq()
@@ -319,18 +324,53 @@ class QPESpec(Spec):
         energies = cudaq.run(run, shots_count=100)    # or many, as a list[float]
         ```
 
-        See `quiche.cudaq.estimation.textbook_qpe_kernel`/`qubitised_qpe_kernel`
-        for the exact contract and why the energy recovery lives in-kernel here
-        (unlike `to_qualtran`/`to_quest`).
+        What the returned `float` *means* depends on `algorithm`:
+        `PhaseEstimation.Textbook`/`Iterative` decode a genuine one-shot
+        energy estimate in-kernel (`run()`/`cudaq.run(...)` above give
+        energies directly). `PhaseEstimation.Naive` instead returns the raw
+        single-shot ancilla outcome (`+1.0`/`-1.0`) - a Hadamard test's one
+        bit carries no phase information on its own; average many shots
+        (`statistics.mean(cudaq.run(run, shots_count=n))`) to estimate
+        `Re`/`Im(<psi|U|psi>)`. See `quiche.cudaq.estimation.textbook_qpe_kernel`/
+        `qubitised_qpe_kernel`/`naive_qpe_kernel`/`iterative_qpe_kernel` for
+        the exact contract of each.
 
-        `PhaseEstimation.Textbook` is implemented for all three `Simulation`
-        variants; the other `PhaseEstimation` algorithms still raise
-        `NotImplementedError`.
+        `PhaseEstimation.Kitaev` raises `NotImplementedError`: in this repo's
+        sense (matching QuEST's/Qualtran's naming) it's per-round
+        expectation-value estimation via repeated measurement with no
+        feedback rotation, combined classically across rounds - a materially
+        different, bigger piece of work than a single in-kernel decode, not
+        yet built. `Simulation.Qubitised` also still raises for
+        `PhaseEstimation.Iterative` specifically (deferred separately).
         """
-        if self.algorithm is not PhaseEstimation.Textbook:
-            msg = f"{self.algorithm} is not yet implemented in the CUDA-Q backend."
-            raise NotImplementedError(msg)
+        return self._get_estimation_cudaq()
 
+    def _get_estimation_cudaq(self) -> CudaqKernel:
+        """Pattern matching and construction for the CUDA-Q kernel."""
+        match self.algorithm:
+            case PhaseEstimation.Textbook:
+                return self._get_textbook_cudaq()
+
+            case PhaseEstimation.Naive:
+                return self._get_naive_cudaq()
+
+            case PhaseEstimation.Iterative:
+                return self._get_iterative_cudaq()
+
+            case PhaseEstimation.Kitaev:
+                msg = (
+                    "PhaseEstimation.Kitaev (in this repo's sense - per-round "
+                    "expectation-value estimation via repeated measurement, "
+                    "no feedback rotation) has no single-kernel decode: it "
+                    "needs many-shot statistics at each of several `power` "
+                    "values combined classically across rounds. Build it "
+                    "from naive_qpe_kernel at varying power plus host-side "
+                    "aggregation instead."
+                )
+                raise NotImplementedError(msg)
+
+    def _get_textbook_cudaq(self) -> CudaqKernel:
+        """Pattern matching and construction for the CUDA-Q Textbook QPE kernel."""
         match self.simulation:
             case Simulation.Trotter:
                 return textbook_qpe_kernel(
@@ -361,3 +401,66 @@ class QPESpec(Spec):
                     self.num_qpe_ancillas,
                     n_qubits=self.n_qubits,
                 )
+
+    def _get_naive_cudaq(self) -> CudaqKernel:
+        """Pattern matching and construction for the CUDA-Q Naive QPE kernel."""
+        match self.simulation:
+            case Simulation.Trotter:
+                return naive_qpe_kernel(
+                    self.hamiltonian,
+                    self.simulation,
+                    self.time,
+                    self.reps,
+                    order=self.order,
+                    seed=self.seed,
+                    n_qubits=self.n_qubits,
+                )
+
+            case Simulation.QDRIFT:
+                return naive_qpe_kernel(
+                    self.hamiltonian,
+                    self.simulation,
+                    self.time,
+                    self.reps,
+                    seed=self.seed,
+                    n_qubits=self.n_qubits,
+                )
+
+            case Simulation.Qubitised:
+                return qubitised_naive_qpe_kernel(
+                    self.hamiltonian,
+                    n_qubits=self.n_qubits,
+                )
+
+    def _get_iterative_cudaq(self) -> CudaqKernel:
+        """Pattern matching and construction for the CUDA-Q Iterative QPE kernel."""
+        match self.simulation:
+            case Simulation.Trotter:
+                return iterative_qpe_kernel(
+                    self.hamiltonian,
+                    self.simulation,
+                    self.num_rounds,
+                    self.time,
+                    self.reps,
+                    order=self.order,
+                    seed=self.seed,
+                    n_qubits=self.n_qubits,
+                )
+
+            case Simulation.QDRIFT:
+                return iterative_qpe_kernel(
+                    self.hamiltonian,
+                    self.simulation,
+                    self.num_rounds,
+                    self.time,
+                    self.reps,
+                    seed=self.seed,
+                    n_qubits=self.n_qubits,
+                )
+
+            case Simulation.Qubitised:
+                msg = (
+                    "Simulation.Qubitised is not yet implemented for "
+                    "Iterative QPE in the CUDA-Q backend."
+                )
+                raise NotImplementedError(msg)

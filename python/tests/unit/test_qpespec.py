@@ -75,9 +75,9 @@ class TestQPESpec:
         with pytest.raises(NotImplementedError, match="Qubitisation"):
             spec.to_quest()
 
-    def test_to_cudaq_not_implemented_for_non_textbook_algorithm(
-        self, h2: PauliSum, budget: Errors
-    ):
+    def test_to_cudaq_not_implemented_for_kitaev(self, h2: PauliSum, budget: Errors):
+        # Kitaev has no single-kernel decode (see QPESpec.to_cudaq's docstring);
+        # Naive and Iterative (Trotter/QDRIFT) are implemented and succeed.
         spec = QPESpec(
             hamiltonian=h2,
             n_qubits=h2.n_qubits,
@@ -85,5 +85,5 @@ class TestQPESpec:
             simulation=Simulation.Trotter,
             error_budget=budget,
         )
-        with pytest.raises(NotImplementedError, match="CUDA-Q"):
+        with pytest.raises(NotImplementedError, match="Kitaev"):
             spec.to_cudaq()

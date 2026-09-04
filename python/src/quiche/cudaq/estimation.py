@@ -123,9 +123,12 @@ def textbook_qpe_kernel(
     and `reps` by `2**k` in one call (same total step count, same `dt`), but
     avoids needing a fresh, longer QDRIFT sample per rung. Cost grows as `2^k`
     per rung (`2^n - 1` total blocks) - inherent to the textbook algorithm, not
-    specific to this implementation (QuEST's C++ backend has the same growth);
-    it's the reason iterative/Kitaev QPE (single ancilla, sequential rounds)
-    exists as a cheaper alternative for large ancilla counts.
+    specific to this implementation (QuEST's C++ backend has the same growth).
+    `iterative_qpe_kernel`'s single-ancilla, sequential-round construction has
+    the *same* total block count (also `2^n - 1`, summed the other way round)
+    - its saving over this ladder is qubit count (`1` ancilla instead of
+    `num_qpe_ancillas`), not gate count; an earlier version of this docstring
+    said "cheaper", which was imprecise about which resource.
 
     `identity_coefficient` (dropped from the circuit by `trotter_evolution`/
     `qdrift_evolution` - see their docstrings) is restored per rung with a
@@ -316,5 +319,309 @@ def qubitised_qpe_kernel(
                 y += 1 << k
         phase = y / dimension
         return -alpha * np.cos(2.0 * pi * phase)
+
+    return qpe
+
+
+def naive_qpe_kernel(
+    hamiltonian: PauliSum,
+    simulation: Simulation,
+    time: float,
+    reps: int,
+    order: int = 2,
+    *,
+    mode: str = "re",
+    seed: Seed = None,
+    n_qubits: int | None = None,
+) -> CudaqKernel:
+    """
+    Build the Naive (Hadamard-test) QPE kernel for `Simulation.Trotter`/`QDRIFT`.
+
+    Single ancilla, single round: `h(ancilla)`, `[sdg(ancilla)` if `mode="im"]`,
+    controlled-U (`base_steps`/`base_order`-parametrized, no ladder - just one
+    application), the same per-rung identity correction as `textbook_qpe_kernel`
+    at `power=1` (no ladder means no `power` multiplier), `h(ancilla)`, `mz`.
+
+    Returns `(data: cudaq.qview) -> float`, but the float means something
+    genuinely different here than in `textbook_qpe_kernel`/`qubitised_qpe_kernel`:
+    it's the raw single-shot ancilla outcome (`+1.0` if measured `|0>`, `-1.0`
+    if `|1>` - the `Z` eigenvalue), **not** a decoded energy. A single
+    Hadamard-test shot carries one bit, not a phase - average many shots
+    (`statistics.mean(cudaq.run(kernel, data, shots_count=n))`) to estimate
+    `Re`/`Im(<psi|U|psi>)`. This is not an inconsistency with the other
+    kernels in this file; it's what a Hadamard test actually measures - there
+    is no single-shot "energy" to decode here at all.
+
+    `mode` is resolved with an ordinary host-level `if`, before the kernel is
+    built - choosing between two small, separately-written kernel bodies,
+    not any in-kernel string comparison (unverified and unnecessary, since
+    `mode` is fully known before kernel construction). `S†` is `sdg(ancilla)`
+    - a dedicated kernel-mode intrinsic, confirmed distinct from (but
+    equivalent to) `s.adj(ancilla)`. The ancilla is a bare `cudaq.qubit()`
+    (idiomatic for a single qubit in CUDA-Q's own examples), not a size-1
+    `cudaq.qvector`.
+
+    `Simulation.Qubitised` raises `NotImplementedError`: same reasoning as
+    `textbook_qpe_kernel`/`qubitised_qpe_kernel` - no `(time, reps, order,
+    seed)` shape to share - use `qubitised_naive_qpe_kernel` directly.
+    """
+    cudaq, _ = load_cudaq()
+
+    match simulation:
+        case Simulation.Trotter:
+            evolution = trotter_evolution(hamiltonian, n_qubits=n_qubits)
+            base_steps, base_order = reps, order
+        case Simulation.QDRIFT:
+            evolution = qdrift_evolution(
+                hamiltonian, reps, seed=seed, n_qubits=n_qubits
+            )
+            base_steps, base_order = 1, 1
+        case Simulation.Qubitised:
+            msg = (
+                "Simulation.Qubitised has no (time, reps, order, seed) shape "
+                "to share with Trotter/QDRIFT - use "
+                "quiche.cudaq.estimation.qubitised_naive_qpe_kernel directly."
+            )
+            raise NotImplementedError(msg)
+
+    coefficients = evolution.coefficients
+    words = [cudaq.pauli_word(word) for word in evolution.words]
+    identity_coefficient = evolution.identity_coefficient
+
+    from cudaq_algorithms.trotter import apply_trotter  # noqa: PLC0415
+
+    if mode == "im":
+
+        @cudaq.kernel
+        def qpe_im(data: cudaq.qview) -> float:
+            """Hadamard test (imaginary part): H, S dagger, controlled-U, H, measure."""
+            ancilla = cudaq.qubit()
+            h(ancilla)
+            sdg(ancilla)
+            cudaq.control(
+                apply_trotter,
+                ancilla,
+                coefficients,
+                words,
+                time,
+                base_steps,
+                base_order,
+                data,
+            )
+            r1(-identity_coefficient * time, ancilla)
+            h(ancilla)
+            if mz(ancilla):
+                return -1.0
+            return 1.0
+
+        return qpe_im
+
+    @cudaq.kernel
+    def qpe_re(data: cudaq.qview) -> float:
+        """Hadamard test (real part): H, controlled-U, H, measure."""
+        ancilla = cudaq.qubit()
+        h(ancilla)
+        cudaq.control(
+            apply_trotter,
+            ancilla,
+            coefficients,
+            words,
+            time,
+            base_steps,
+            base_order,
+            data,
+        )
+        r1(-identity_coefficient * time, ancilla)
+        h(ancilla)
+        if mz(ancilla):
+            return -1.0
+        return 1.0
+
+    return qpe_re
+
+
+def qubitised_naive_qpe_kernel(
+    hamiltonian: PauliSum,
+    *,
+    mode: str = "re",
+    n_qubits: int | None = None,
+) -> CudaqKernel:
+    """
+    Build the Naive (Hadamard-test) QPE kernel for `Simulation.Qubitised`.
+
+    Same `+1.0`/`-1.0` single-shot contract as `naive_qpe_kernel` (see its
+    docstring - this is not a decoded energy). Reuses `qubitised_qpe_kernel`'s
+    exact CNOT-borrow mechanism at `power=1` (a single application, no ladder,
+    no `k` loop): `prepare_kernel()` once, CNOT-borrow the ancilla into
+    `combined[0]`, one `controlled_walk_step_kernel()` call, CNOT-borrow back
+    out. No identity correction (unchanged from `qubitised_qpe_kernel` -
+    `PauliLCU.alpha` already folds it in).
+
+    Note: this measures `Re`/`Im(<psi|W|psi>)` - the *walk* operator `W`, not
+    `H/alpha` directly. `Walk.moment()`/`Walk.moments()` (in
+    `cudaq_algorithms.qubitization`) already give more direct access to
+    Chebyshev-moment expectation values without a Hadamard-test ancilla at
+    all - this function exists for interface consistency with
+    `naive_qpe_kernel` across all three `Simulation` variants, not because
+    it's the most efficient way to extract this information for Qubitised
+    specifically.
+    """
+    cudaq, _ = load_cudaq()
+
+    encoding = qubitised_encoding(hamiltonian, n_qubits=n_qubits)
+    n_anc = encoding.num_ancilla
+    prep = encoding.prepare_kernel()
+    controlled_step = encoding.controlled_walk_step_kernel()
+
+    if mode == "im":
+
+        @cudaq.kernel
+        def qpe_im(data: cudaq.qview) -> float:
+            """Hadamard test (imaginary part) on the qubitisation walk operator."""
+            ancilla = cudaq.qubit()
+            h(ancilla)
+            sdg(ancilla)
+            combined = cudaq.qvector(1 + n_anc)
+            prep(combined.back(n_anc))
+            x.ctrl(ancilla, combined[0])
+            controlled_step(combined, data)
+            x.ctrl(ancilla, combined[0])
+            h(ancilla)
+            if mz(ancilla):
+                return -1.0
+            return 1.0
+
+        return qpe_im
+
+    @cudaq.kernel
+    def qpe_re(data: cudaq.qview) -> float:
+        """Hadamard test (real part) on the qubitisation walk operator."""
+        ancilla = cudaq.qubit()
+        h(ancilla)
+        combined = cudaq.qvector(1 + n_anc)
+        prep(combined.back(n_anc))
+        x.ctrl(ancilla, combined[0])
+        controlled_step(combined, data)
+        x.ctrl(ancilla, combined[0])
+        h(ancilla)
+        if mz(ancilla):
+            return -1.0
+        return 1.0
+
+    return qpe_re
+
+
+def iterative_qpe_kernel(
+    hamiltonian: PauliSum,
+    simulation: Simulation,
+    num_rounds: int,
+    time: float,
+    reps: int,
+    order: int = 2,
+    *,
+    seed: Seed = None,
+    n_qubits: int | None = None,
+) -> CudaqKernel:
+    """
+    Build the Iterative QPE kernel for `Simulation.Trotter`/`Simulation.QDRIFT`.
+
+    Single ancilla, classical Rz feedback - IPEA, Dobsicek et al. 2007. Same
+    evolution setup as `textbook_qpe_kernel`. Returns
+    `(data: cudaq.qview) -> float`, decoding a genuine one-shot energy
+    estimate in-kernel (same contract as `textbook_qpe_kernel`, unlike
+    `naive_qpe_kernel` - IPEA extracts the *whole* phase within one
+    continuous shot, no averaging needed).
+
+    Reuses ONE physical ancilla qubit across `num_rounds` sequential rounds
+    via `reset(...)`, rather than `num_qpe_ancillas` separate ones - the
+    resource-saving point of this algorithm relative to `textbook_qpe_kernel`
+    is qubit count, not gate count (both cost `2**num_rounds - 1` total
+    controlled-block applications).
+
+    Round order and feedback formula match QuEST's C++ `getPhaseIterativeInner`
+    (`cpp/src/qpe.cpp`) - most-significant exponent round first (`index` from
+    `num_rounds - 1` down to `0`), running `phase` accumulating
+    `1 / 2**(index+1)` per round whose measured bit is `1` - but using a
+    **genuine** per-shot `mz()` decision, unlike QuEST's deterministic
+    `calcProbOfQubitOutcome(...) >= 0.5` threshold (a simulator-only proxy
+    for what a real stochastic outcome would give). The identity correction
+    (same derivation as `textbook_qpe_kernel`'s per-rung `r1`, at this round's
+    own `power`) and the IPEA feedback correction are both diagonal `r1`
+    phase shifts applied to `ancilla` at the same point in the circuit, so
+    they combine additively into one `r1` call (`r1(a)*r1(b) = r1(a+b)`).
+
+    The round loop deliberately does **not** use a descending `range(num_rounds
+    - 1, -1, -1)`: confirmed empirically (against a known eigenvalue) that a
+    negative-step `range()` combined with this reset/accumulator/nested-loop
+    pattern produces genuinely non-deterministic, wrong results, even for an
+    exact eigenstate - a real, non-obvious CUDA-Q compiler limitation, not a
+    logic bug in the algorithm (isolated by testing a fully-unrolled version
+    against the looped version, and an ascending loop with a host-computed
+    descending index against the raw descending range - only the descending
+    range failed). The loop below counts up (`round_number` from `0` to
+    `num_rounds - 1`) and computes `index = num_rounds - 1 - round_number`
+    itself.
+
+    `Simulation.Qubitised` raises `NotImplementedError`: combining this
+    reset/feedback construction with the already-complex CNOT-borrow
+    controlled mechanism needs its own separate validation, deferred.
+    """
+    cudaq, _ = load_cudaq()
+
+    match simulation:
+        case Simulation.Trotter:
+            evolution = trotter_evolution(hamiltonian, n_qubits=n_qubits)
+            base_steps, base_order = reps, order
+        case Simulation.QDRIFT:
+            evolution = qdrift_evolution(
+                hamiltonian, reps, seed=seed, n_qubits=n_qubits
+            )
+            base_steps, base_order = 1, 1
+        case Simulation.Qubitised:
+            msg = (
+                "Simulation.Qubitised is not yet implemented for Iterative "
+                "QPE in the CUDA-Q backend - it needs its own validation of "
+                "the reset/feedback construction combined with the "
+                "CNOT-borrow controlled mechanism."
+            )
+            raise NotImplementedError(msg)
+
+    coefficients = evolution.coefficients
+    words = [cudaq.pauli_word(word) for word in evolution.words]
+    identity_coefficient = evolution.identity_coefficient
+
+    from cudaq_algorithms.trotter import apply_trotter  # noqa: PLC0415
+
+    @cudaq.kernel
+    def qpe(data: cudaq.qview) -> float:
+        """Single ancilla, num_rounds sequential rounds with classical Rz feedback."""
+        ancilla = cudaq.qubit()
+        phase = 0.0
+        for round_number in range(num_rounds):
+            index = num_rounds - 1 - round_number
+            reset(ancilla)
+            h(ancilla)
+            power = 1 << index
+            for _ in range(power):
+                cudaq.control(
+                    apply_trotter,
+                    ancilla,
+                    coefficients,
+                    words,
+                    time,
+                    base_steps,
+                    base_order,
+                    data,
+                )
+            r1(
+                -identity_coefficient * time * power - 2.0 * pi * phase * power,
+                ancilla,
+            )
+            h(ancilla)
+            if mz(ancilla):
+                phase += 1.0 / (1 << (index + 1))
+        if phase >= 0.5:
+            phase -= 1.0
+        return -phase * (2.0 * pi / time)
 
     return qpe
