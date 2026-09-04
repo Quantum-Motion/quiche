@@ -21,7 +21,7 @@ The QUICHE documentation is hosted at [quantum-motion.github.io/quiche](https://
 
 ## Installation
 
-> QUICHE's simulation backend relies on [QuEST](https://github.com/QuEST-Kit/QuEST), [nanobind](https://github.com/wjakob/nanobind) (for Python bindings), [HDF5](https://github.com/HDFGroup/hdf5) (for Hamlib features) and [Catch2](https://github.com/catchorg/Catch2) (for testing). The latter three can be toggled using the `QUICHE_BUILD_BINDINGS`, `QUICHE_BUILD_HAMLIB`, and `QUICHE_BUILD_TESTS` flags respectively (see below for usage). If a required dependency is not available during the build process it will be downloaded and installed using CMake's `FetchContent`.
+> QUICHE's simulation backend relies on [QuEST](https://github.com/QuEST-Kit/QuEST), [nanobind](https://github.com/wjakob/nanobind) (for Python bindings) and [Catch2](https://github.com/catchorg/Catch2) (for testing). The latter two can be toggled using the `QUICHE_BUILD_BINDINGS` and `QUICHE_BUILD_TESTS` flags respectively (see below for usage). nanobind and Catch2 are located with `find_package` and downloaded via `FetchContent` if unavailable. QuEST is always built from a pinned source archive, since QUICHE depends on internal QuEST headers that are not part of its installed interface.
 
 Requires Python 3.12 or newer, and a C++ compiler and [CMake](https://cmake.org/) to build the simulation backend.
 
@@ -32,7 +32,7 @@ git clone https://github.com/Quantum-Motion/quiche.git
 
 Then install the Python package, including the simulator bindings
 ```bash
-cd quiche/python
+cd quiche
 python -m venv .venv
 source .venv/bin/activate
 pip install .

@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Testing and validation suite for QUICHE.
-
-Subpackages:
-    unit - short, self-contained logic and validation tests
-    integration - tests that validate interactions between multiple methods
-"""
+"""Testing and validation suite for QUICHE."""
 
 __all__ = []

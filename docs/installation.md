@@ -20,10 +20,10 @@ The docs are built with [Sphinx](https://www.sphinx-doc.org/) and document the p
 from the source tree, so no compilation of the C++ backend is required:
 
 ```bash
-cd quiche/python
+cd quiche
 uv sync --group docs --no-install-project
 source .venv/bin/activate
-cd ../docs
+cd docs
 make html
 ```
 

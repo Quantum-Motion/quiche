@@ -28,12 +28,11 @@ jobs:
       # does not need to be compiled: --no-install-project installs the dependencies
       # only, and conf.py mocks the compiled bindings.
       - name: Install dependencies
-        working-directory: python
         run: uv sync --group docs --no-install-project
 
       - name: Build
         working-directory: docs
-        run: ../python/.venv/bin/sphinx-build -b html . _build/html -W
+        run: ../.venv/bin/sphinx-build -b html . _build/html -W
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

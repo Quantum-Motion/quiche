@@ -21,8 +21,10 @@
  * @author Vasco Ferreira
  */
 
+#include <cmath>
 #include <iostream>
 #include <numeric>
+#include <vector>
 
 #include <quest.h>
 #include <quest/src/core/constants.hpp>
@@ -81,7 +83,7 @@ int main() {
     int order = 2;
     int reps = 10;
     double phase = qpe::getPhaseTextbookTrotter(qureg, hamiltonian, ancillas, order, reps, t);
-    double energy = phase * (2 * const_PI / t) + idCoeff.real();
+    double energy = qpe::getEnergyFromTrotterPhase(phase, t, idCoeff.real());
 
     std::cout << "Phase: " << phase << '\n' << "Energy: " << energy << '\n';
 

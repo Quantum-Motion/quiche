@@ -20,8 +20,9 @@
  * @author Vasco Ferreira
  */
 
-#ifndef MAPPINGS_HPP
-#define MAPPINGS_HPP
+#pragma once
+
+#include <vector>
 
 #include <quest.h>
 
@@ -39,5 +40,3 @@ qindex getHartreeFockStateBK(int numElectrons, int numQubits);
 qindex getHartreeFockStateParity(int numElectrons, int numQubits);
 
 } // namespace mappings
-
-#endif // MAPPINGS_HPP
