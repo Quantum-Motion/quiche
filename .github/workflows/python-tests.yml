@@ -1,9 +1,5 @@
 name: Python tests
 
-# Run the Python test suite on every pull request and on every push to main
-# (i.e. once a PR is merged). Combined with a branch protection rule on
-# `main` that requires the `Python tests` check to pass, this blocks merges
-# whose tests fail.
 on:
   pull_request:
   push:
@@ -19,9 +15,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # QUICHE's Python package builds a native (nanobind/CMake) extension,
-      # which fetches QuEST and nanobind from GitHub. Cache the CMake build
-      # directory so unchanged CMakeLists don't refetch/rebuild from scratch.
+      # Cache QuEST and nanobind sources and their compiled objects.
       - name: Cache CMake build directory
         uses: actions/cache@v6
         with:
@@ -38,7 +32,7 @@ jobs:
 
       - name: Install quiche with dev dependencies
         working-directory: python
-        run: uv sync --group dev -v
+        run: uv sync --group dev
 
       - name: Run pytest
         working-directory: python
