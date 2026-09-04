@@ -84,3 +84,13 @@ lint.ignore = [
 
 [tool.pytest]
 testpaths = ["python/tests"]
+
+[tool.cibuildwheel]
+test-command = "pytest {project}/python/tests/test_bindings.py"
+test-groups = ["test"]
+build = ["cp312-*"]
+build-frontend = "build[uv]"
+
+[tool.cibuildwheel.macos]
+before-all = "brew install libomp"
+environment = { OpenMP_ROOT = "$(brew --prefix libomp)", MACOSX_DEPLOYMENT_TARGET = "15.0" }
