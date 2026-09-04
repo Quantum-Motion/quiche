@@ -86,6 +86,9 @@ lint.ignore = [
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
+# Transitive dependency on llvmlite, which doesn't publish wheels for musl.
+# Building from sdist would require a full LLVM install.
+skip = "*-musllinux_*"
 test-command = "pytest {project}/python/tests/test_bindings.py"
 test-groups = ["test"]
 build = ["cp312-*"]
