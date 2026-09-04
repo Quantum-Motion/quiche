@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["scikit-build-core>=1.0", "nanobind>=2.11"]
+requires = ["scikit-build-core>=1.0", "nanobind>=2.10"]
 build-backend = "scikit_build_core.build"
 
 [dependency-groups]
@@ -89,6 +89,7 @@ testpaths = ["python/tests"]
 # Transitive dependency on llvmlite, which doesn't publish wheels for musl.
 # Building from sdist would require a full LLVM install.
 skip = "*-musllinux_*"
+archs = ["auto64"]
 test-command = "pytest {project}/python/tests/test_bindings.py"
 test-groups = ["test"]
 build = ["cp312-*"]

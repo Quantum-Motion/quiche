@@ -66,9 +66,9 @@ FetchContent_Declare(
 FetchContent_Declare(
     nanobind
     GIT_REPOSITORY https://github.com/wjakob/nanobind
-    GIT_TAG 22acf11a2dac212e857f0d06ce80f808cac8fdad    # v2.11.0
+    GIT_TAG 11087dd7707c80ef85802c661ad459ace5bef671    # v2.10.0
     GIT_PROGRESS TRUE
-    FIND_PACKAGE_ARGS 2.11
+    FIND_PACKAGE_ARGS 2.10
 )
 
 FetchContent_Declare(
