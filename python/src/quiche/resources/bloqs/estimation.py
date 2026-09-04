@@ -57,17 +57,17 @@ class NaiveQPE(Bloq):
     Uses a controlled application of the propagator U to estimate its expectation value
     in a provided initial state. Only one ancilla is used during the Hadamard test.
 
-    If the measurement mode is "re", the bloq represents the following circuit:
+    If the measurement mode is "re", the bloq represents the following circuit::
 
-    |0>   ------H------•--------H----- meas
-                       |
-    |psi> -------------U--------------
+        |0>   ------H------•--------H----- meas
+                           |
+        |psi> -------------U--------------
 
-    and if it is "im", the bloq represents the following circuit:
+    and if it is "im", the bloq represents the following circuit::
 
-    |0>   ---H---S†----•------- H ---- meas
-                       |
-    |psi> -------------U--------------
+        |0>   ---H---S†----•------- H ---- meas
+                           |
+        |psi> -------------U--------------
 
     Properties
     ----------
@@ -166,23 +166,23 @@ class KitaevQPE(Bloq):
     Kitaev single-ancilla phase estimation.
 
     For a unitary operator U and an initial state that approximates some eigenstate
-    |psi>, estimate the phase theta in U|psi> = e^{2 pi i theta} |psi>. The Kitaev QPE
-    estimates the k-th digit of the phase by applying the propagator U^(2^k) for
-    increasing k values.
+    ``|psi>``, estimate the phase theta in ``U|psi> = e^{2 pi i theta} |psi>``. The
+    Kitaev QPE estimates the k-th digit of the phase by applying the propagator U^(2^k)
+    for increasing k values.
     This bloq implements the QPE for a single selection of k. It needs to be called
     multiple times with different k values to reflect a full phase estimation.
 
-    If the measurement mode is "re", the bloq represents the following circuit:
+    If the measurement mode is "re", the bloq represents the following circuit::
 
-    |0>   ------H------•--------H----- meas
-                       |
-    |psi> -------------U^(2^k)--------
+        |0>   ------H------•--------H----- meas
+                           |
+        |psi> -------------U^(2^k)--------
 
-    and if it is "im", the bloq represents the following circuit:
+    and if it is "im", the bloq represents the following circuit::
 
-    |0>   ---H---S†----•------- H ---- meas
-                       |
-    |psi> -------------U^(2^k)--------
+        |0>   ---H---S†----•------- H ---- meas
+                           |
+        |psi> -------------U^(2^k)--------
 
     Properties
     ----------
@@ -287,24 +287,24 @@ class IterativeQPE(Bloq):
     Iterative phase estimation.
 
     For a unitary operator U and an initial state that approximates some eigenstate
-    |psi>, estimate the phase theta in U|psi> = e^{2 pi i theta} |psi>. In iterative
-    QPE, a rotation around z is inserted between the controlled propagator and the
-    second Hadamard gate. The rotation angle depends on previous measurements, which we
-    cannot evaluate in Qualtran. Instead we use symbolic angles.
+    ``|psi>``, estimate the phase theta in ``U|psi> = e^{2 pi i theta} |psi>``. In
+    iterative QPE, a rotation around z is inserted between the controlled propagator and
+    the second Hadamard gate. The rotation angle depends on previous measurements, which
+    we cannot evaluate in Qualtran. Instead we use symbolic angles.
     This bloq implements the QPE for a single selection of k. It needs to be called
     multiple times with different k values to reflect a full phase estimation.
 
-    If the measurement mode is "re", the bloq represents the following circuit:
+    If the measurement mode is "re", the bloq represents the following circuit::
 
-    |0>   ------H------•----Rz----H----- meas
-                       |
-    |psi> -------------U^(2^k)----------
+        |0>   ------H------•----Rz----H----- meas
+                           |
+        |psi> -------------U^(2^k)----------
 
-    and if it is "im", the bloq represents the following circuit:
+    and if it is "im", the bloq represents the following circuit::
 
-    |0>   ---H---S†----•----Rz---H---- meas
-                       |
-    |psi> -------------U^(2^k)----------
+        |0>   ---H---S†----•----Rz---H---- meas
+                           |
+        |psi> -------------U^(2^k)----------
 
     Properties
     ----------

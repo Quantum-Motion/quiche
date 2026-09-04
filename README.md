@@ -6,6 +6,11 @@ QUICHE (QUantum Integrated CHEmistry) is a toolkit for studying quantum computin
 > Breaking changes may occur without notice.
 
 
+## Documentation
+
+The QUICHE documentation is hosted at [quantum-motion.github.io/quiche](https://quantum-motion.github.io/quiche/), and includes a quickstart, an explanation of the core concepts and a full Python API reference. The sources live in [`docs`](https://github.com/Quantum-Motion/quiche/blob/main/docs) and can be built locally, see the [contributing guide](https://github.com/Quantum-Motion/quiche/blob/main/CONTRIBUTING.md).
+
+
 ## Features
 
 - Range of quantum phase estimation algorithms including various single- and multi-ancilla methods.
@@ -17,6 +22,8 @@ QUICHE (QUantum Integrated CHEmistry) is a toolkit for studying quantum computin
 ## Installation
 
 > QUICHE's simulation backend relies on [QuEST](https://github.com/QuEST-Kit/QuEST), [nanobind](https://github.com/wjakob/nanobind) (for Python bindings) and [Catch2](https://github.com/catchorg/Catch2) (for testing). The latter two can be toggled using the `QUICHE_BUILD_BINDINGS` and `QUICHE_BUILD_TESTS` flags respectively (see below for usage). nanobind and Catch2 are located with `find_package` and downloaded via `FetchContent` if unavailable. QuEST is always built from a pinned source archive, since QUICHE depends on internal QuEST headers that are not part of its installed interface.
+
+Requires Python 3.12 or newer, and a C++ compiler and [CMake](https://cmake.org/) to build the simulation backend.
 
 Begin by cloning and navigating to the QUICHE repo
 ```bash
@@ -31,10 +38,14 @@ source .venv/bin/activate
 pip install .
 ```
 
-Then just import the package from Python
+Installing the package compiles the C++ backend and the bindings, so the first install takes a few minutes. Once it finishes, the package is importable:
 ```python3
 import quiche
 ```
+
+For an editable, development install see the [contributing guide](https://github.com/Quantum-Motion/quiche/blob/main/CONTRIBUTING.md).
+
+## C++ backend only
 
 Alternatively to build only the C++ simulator backend along with the examples, for instance, simply execute
 ```bash
@@ -48,7 +59,7 @@ Then execute an example (e.g. the Textbook QPE example)
 ./build/cpp/examples/qpe-textbook
 ```
 
-The other C++ configuration flags, can be similarly toggled `ON` and `OFF`. For additional configuration flags available for the QuEST simulation see also the [QuEST docs](https://quest-kit.github.io/QuEST/).
+The other C++ configuration flags can be similarly toggled `ON` and `OFF`. For additional configuration flags available for the QuEST simulation see also the [QuEST docs](https://quest-kit.github.io/QuEST/).
 
 
 ## Usage
