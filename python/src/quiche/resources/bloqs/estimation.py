@@ -106,7 +106,11 @@ class _SingleAncillaQPE(Bloq):
     @property
     def controlled_propagator(self) -> Bloq:
         """Return the controlled propagator `C[U^exponent]`."""
-        return Power(self.simulation.controlled(), self.exponent)
+        return (
+            self.simulation.controlled()
+            if self.exponent == 1
+            else Power(self.simulation.controlled(), self.exponent)
+        )
 
     @property
     def n_simulation_qubits(self) -> int:
