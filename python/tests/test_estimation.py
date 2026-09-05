@@ -144,7 +144,7 @@ class TestIterativeQPE:
     @pytest.mark.parametrize(
         ("k", "mode", "err_msg"),
         [
-            (-1, "re", "Exponent k must be positive"),
+            (-1, "re", "Exponent must be positive"),
             (3, "a", "Measurement mode must be either 're' or 'im'"),
         ],
     )

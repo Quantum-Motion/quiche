@@ -14,6 +14,8 @@
 
 """Quantum phase estimation routines."""
 
+import abc
+import numbers
 from collections.abc import Callable
 from typing import Self
 
@@ -27,7 +29,6 @@ from qualtran import (
     QBit,
     QUInt,
     Register,
-    Side,
     Signature,
     SoquetT,
 )
@@ -50,7 +51,141 @@ from .simulation import QDRIFT, Trotterisation
 
 
 @attrs.frozen
-class NaiveQPE(Bloq):
+class _SingleAncillaQPE(Bloq):
+    """
+    Base class for single-ancilla QPE algorithms.
+
+    Provides the common Hadamard-test structure used for Naive QPE, Kitaev QPE and
+    Iterative QPE.
+
+    |0>   ---H---[S†]------•------[Rz]---H---- meas
+                           |
+    |psi> -------------U^exponent-------------
+
+    `S†` applied if measuring imaginary component.
+    `Rz` used for feedback rotation in Iterative QPE (enabled according to
+        the `apply_feedback` property).
+
+    The exponent of the propagator is also determined by the `exponent` property.
+
+    Properties
+    ----------
+    simulation : Bloq
+        Bloq implementing the Hamiltonian simulation.
+    mode : {'re', 'im'}
+        Specifies whether to measure the real or imaginary part of the expectation
+        value.
+    """
+
+    simulation: Bloq
+    mode: str
+
+    def __attrs_post_init__(self) -> Self:
+        """Input validator."""
+        if not isinstance(self.exponent, numbers.Integral) or self.exponent < 1:
+            err_msg = "Exponent must be positive integer."
+            raise ValueError(err_msg)
+        if self.mode not in ("re", "im"):
+            err_msg = "Measurement mode must be either 're' or 'im'."
+            raise ValueError(err_msg)
+
+        return self
+
+    @property
+    @abc.abstractmethod
+    def exponent(self) -> int:
+        """Return the power to which the propagator is raised."""
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def apply_feedback(self) -> bool:
+        """Return whether a feedback rotation precedes the final Hadamard or not."""
+        raise NotImplementedError
+
+    @property
+    def controlled_propagator(self) -> Bloq:
+        """Return the controlled propagator `C[U^exponent]`."""
+        return (
+            self.simulation.controlled()
+            if self.exponent == 1
+            else Power(self.simulation.controlled(), self.exponent)
+        )
+
+    @property
+    def n_simulation_qubits(self) -> int:
+        """Return number of qubits used for Hamiltonian simulation."""
+        return self.simulation.signature[0].total_bits()
+
+    @property
+    def n_estimation_bits(self) -> int:
+        """Return number of estimation qubits."""
+        return 1
+
+    @property
+    def signature(self) -> Signature:
+        """Define input and/or output registers of the bloq."""
+        return Signature([Register("simulation", dtype=QAny(self.n_simulation_qubits))])
+
+    def my_static_costs(self, cost_key: "CostKey") -> int:
+        """Return hard-coded qubit counts."""
+        if isinstance(cost_key, QubitCount) and (
+            isinstance(self.simulation, (QDRIFT, Trotterisation))
+        ):
+            # This bloq only needs the data qubits and one ancilla. So far assumes that
+            # will not be initialised with a Qubitisation simulation bloq.
+            return self.n_simulation_qubits + 1
+        return NotImplemented
+
+    def build_composite_bloq(
+        self,
+        bb: BloqBuilder,
+        **soqs: SoquetT,
+    ) -> dict[str, SoquetT]:
+        """Implement bloq decomposition into sub-bloqs."""
+        simulation = soqs["simulation"]
+
+        estimation = bb.add(RectangularWindowState(self.n_estimation_bits))
+
+        if self.mode == "im":
+            estimation = bb.add(SGate(is_adjoint=True), q=estimation)
+
+        estimation, simulation = bb.add(
+            self.controlled_propagator,
+            ctrl=estimation,
+            simulation=simulation,
+        )
+
+        if self.apply_feedback:
+            theta = sympy.Symbol("a")
+            estimation = bb.add(Rz(theta), q=estimation)
+
+        estimation = bb.add(Hadamard(), q=estimation)
+
+        bb.free(estimation)
+        return {"simulation": simulation}
+
+    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
+        """Build call graph for single-ancilla QPE."""
+        bloq_counts = {
+            RectangularWindowState(self.n_estimation_bits): 1,
+            self.controlled_propagator: 1,
+            Hadamard(): 1,
+            Free(QBit()): 1,
+        }
+
+        if self.mode == "im":
+            bloq_counts[SGate(is_adjoint=True)] = 1
+
+        if self.apply_feedback:
+            theta = sympy.Symbol("a")
+            bloq_counts[Rz(theta)] = 1
+
+        return bloq_counts
+
+
+@attrs.frozen
+class NaiveQPE(_SingleAncillaQPE):
     """
     Naive, single-ancilla phase estimation (Hadamard test).
 
@@ -86,82 +221,19 @@ class NaiveQPE(Bloq):
     simulation: Bloq
     mode: str
 
-    def __attrs_post_init__(self) -> Self:
-        """Input validator."""
-        if self.mode not in ("re", "im"):
-            err_msg = "Measurement mode must be either 're' or 'im'."
-            raise ValueError(err_msg)
-
-        return self
-
-    def my_static_costs(self, cost_key: "CostKey") -> int:
-        """Return hard-coded qubit counts."""
-        if isinstance(cost_key, QubitCount) and (
-            isinstance(self.simulation, (QDRIFT, Trotterisation))
-        ):
-            # This bloq only needs the data qubits and one ancilla. So far assumes that
-            # NaiveQPE will not be initialised with a Qubitisation simulation bloq.
-            return self.n_simulation_qubits + 1
-        return NotImplemented
-
     @property
-    def n_simulation_qubits(self) -> int:
-        """Return number of qubits used for Hamiltonian simulation."""
-        return self.simulation.signature[0].total_bits()
-
-    @property
-    def n_estimation_bits(self) -> int:
-        """Return number of estimation qubits."""
+    def exponent(self) -> int:
+        """Power to which the propagator is raised (always 1 for Naive QPE)."""
         return 1
 
     @property
-    def signature(self) -> Signature:
-        """Define input and/or output registers of the bloq."""
-        return Signature(
-            [
-                Register(
-                    "simulation", dtype=QAny(self.n_simulation_qubits), side=Side.THRU
-                ),
-            ],
-        )
-
-    def build_composite_bloq(
-        self,
-        bb: BloqBuilder,
-        **soqs: SoquetT,
-    ) -> dict[str, SoquetT]:
-        """Build the bloq decomposition for NaiveQPE."""
-        simulation = soqs["simulation"]
-
-        estimation = bb.add(RectangularWindowState(self.n_estimation_bits))
-
-        if self.mode == "im":
-            estimation = bb.add(SGate(is_adjoint=True), q=estimation)
-
-        estimation, simulation = bb.add(
-            self.simulation.controlled(), ctrl=estimation, simulation=simulation
-        )
-
-        estimation = bb.add(Hadamard(), q=estimation)
-
-        bb.free(estimation)
-        return {"simulation": simulation}
-
-    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
-        """Build call graph for NaiveQPE."""
-        bloq_counts = {
-            RectangularWindowState(self.n_estimation_bits): 1,
-            self.simulation.controlled(): 1,
-            Hadamard(): 1,
-            Free(QBit()): 1,
-        }
-        if self.mode == "im":
-            bloq_counts[SGate(is_adjoint=True)] = 1
-        return bloq_counts
+    def apply_feedback(self) -> bool:
+        """Whether a feedback rotation is applied (`False` for Naive QPE)."""
+        return False
 
 
 @attrs.frozen
-class KitaevQPE(Bloq):
+class KitaevQPE(_SingleAncillaQPE):
     """
     Kitaev single-ancilla phase estimation.
 
@@ -203,86 +275,19 @@ class KitaevQPE(Bloq):
     k: int
     mode: str
 
-    def __attrs_post_init__(self) -> Self:
-        """Input validator."""
-        if self.k < 0:
-            err_msg = "Exponent k must be positive."
-            raise ValueError(err_msg)
-        if self.mode not in ("re", "im"):
-            err_msg = "Measurement mode must be either 're' or 'im'."
-            raise ValueError(err_msg)
-
-        return self
-
-    def my_static_costs(self, cost_key: "CostKey") -> int:
-        """Return hard-coded qubit counts."""
-        if isinstance(cost_key, QubitCount) and (
-            isinstance(self.simulation, (QDRIFT, Trotterisation))
-        ):
-            # This bloq only needs the data qubits and one ancilla. So far assumes that
-            # KitaevQPE will not be initialised with a Qubitisation simulation bloq.
-            return self.n_simulation_qubits + 1
-        return NotImplemented
+    @property
+    def exponent(self) -> int:
+        """Power to which the propagator is raised (2^k for Kitaev QPE)."""
+        return 2**self.k
 
     @property
-    def n_simulation_qubits(self) -> int:
-        """Return number of qubits used for Hamiltonian simulation."""
-        return self.simulation.signature[0].total_bits()
-
-    @property
-    def n_estimation_bits(self) -> int:
-        """Return number of estimation qubits."""
-        return 1
-
-    @property
-    def signature(self) -> Signature:
-        """Define input and/or output registers of the bloq."""
-        return Signature(
-            [
-                Register(
-                    "simulation", dtype=QAny(self.n_simulation_qubits), side=Side.THRU
-                ),
-            ],
-        )
-
-    def build_composite_bloq(
-        self,
-        bb: BloqBuilder,
-        **soqs: SoquetT,
-    ) -> dict[str, SoquetT]:
-        """Build the bloq decomposition for KitaevQPE."""
-        simulation = soqs["simulation"]
-
-        estimation = bb.add(RectangularWindowState(self.n_estimation_bits))
-
-        if self.mode == "im":
-            estimation = bb.add(SGate(is_adjoint=True), q=estimation)
-
-        c_simulation = self.simulation.controlled()
-        estimation, simulation = bb.add(
-            Power(c_simulation, 2**self.k), ctrl=estimation, simulation=simulation
-        )
-
-        estimation = bb.add(Hadamard(), q=estimation)
-
-        bb.free(estimation)
-        return {"simulation": simulation}
-
-    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
-        """Build call graph for KitaevQPE."""
-        bloq_counts = {
-            RectangularWindowState(self.n_estimation_bits): 1,
-            Power(self.simulation.controlled(), 2**self.k): 1,
-            Hadamard(): 1,
-            Free(QBit()): 1,
-        }
-        if self.mode == "im":
-            bloq_counts[SGate(is_adjoint=True)] = 1
-        return bloq_counts
+    def apply_feedback(self) -> bool:
+        """Whether a feedback rotation is applied (`False` for Kitaev QPE)."""
+        return False
 
 
 @attrs.frozen
-class IterativeQPE(Bloq):
+class IterativeQPE(_SingleAncillaQPE):
     """
     Iterative phase estimation.
 
@@ -325,86 +330,15 @@ class IterativeQPE(Bloq):
     k: int
     mode: str
 
-    def __attrs_post_init__(self) -> Self:
-        """Input validator."""
-        if self.k < 0:
-            err_msg = "Exponent k must be positive."
-            raise ValueError(err_msg)
-        if self.mode not in ("re", "im"):
-            err_msg = "Measurement mode must be either 're' or 'im'."
-            raise ValueError(err_msg)
-
-        return self
-
-    def my_static_costs(self, cost_key: "CostKey") -> int:
-        """Return hard-coded qubit counts."""
-        if isinstance(cost_key, QubitCount) and (
-            isinstance(self.simulation, (QDRIFT, Trotterisation))
-        ):
-            # This bloq only needs the data qubits and one ancilla. So far assumes that
-            # IterativeQPE will not be initialised with a Qubitisation simulation bloq.
-            return self.n_simulation_qubits + 1
-        return NotImplemented
+    @property
+    def exponent(self) -> int:
+        """Power to which the propagator is raised (2^k for Iterative QPE)."""
+        return 2**self.k
 
     @property
-    def n_simulation_qubits(self) -> int:
-        """Return number of qubits used for Hamiltonian simulation."""
-        return self.simulation.signature[0].total_bits()
-
-    @property
-    def n_estimation_bits(self) -> int:
-        """Return number of estimation qubits."""
-        return 1
-
-    @property
-    def signature(self) -> Signature:
-        """Define input and/or output registers of the bloq."""
-        return Signature(
-            [
-                Register(
-                    "simulation", dtype=QAny(self.n_simulation_qubits), side=Side.THRU
-                ),
-            ],
-        )
-
-    def build_composite_bloq(
-        self,
-        bb: BloqBuilder,
-        **soqs: SoquetT,
-    ) -> dict[str, SoquetT]:
-        """Build the bloq decomposition for IterativeQPE."""
-        simulation = soqs["simulation"]
-
-        estimation = bb.add(RectangularWindowState(self.n_estimation_bits))
-
-        if self.mode == "im":
-            estimation = bb.add(SGate(is_adjoint=True), q=estimation)
-
-        c_simulation = self.simulation.controlled()
-        estimation, simulation = bb.add(
-            Power(c_simulation, 2**self.k), ctrl=estimation, simulation=simulation
-        )
-
-        theta = sympy.Symbol("a")
-        estimation = bb.add(Rz(theta), q=estimation)
-        estimation = bb.add(Hadamard(), q=estimation)
-
-        bb.free(estimation)
-        return {"simulation": simulation}
-
-    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
-        """Build call graph for IterativeQPE."""
-        theta = sympy.Symbol("a")
-        bloq_counts = {
-            RectangularWindowState(self.n_estimation_bits): 1,
-            Power(self.simulation.controlled(), 2**self.k): 1,
-            Hadamard(): 1,
-            Rz(theta): 1,
-            Free(QBit()): 1,
-        }
-        if self.mode == "im":
-            bloq_counts[SGate(is_adjoint=True)] = 1
-        return bloq_counts
+    def apply_feedback(self) -> bool:
+        """Whether a feedback rotation is applied (`True` for Iterative QPE)."""
+        return True
 
 
 @attrs.frozen
