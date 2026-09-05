@@ -138,6 +138,7 @@ class _SingleAncillaQPE(Bloq):
         bb: BloqBuilder,
         **soqs: SoquetT,
     ) -> dict[str, SoquetT]:
+        """Implement bloq decomposition into sub-bloqs."""
         simulation = soqs["simulation"]
 
         estimation = bb.add(RectangularWindowState(self.n_estimation_bits))
@@ -161,6 +162,7 @@ class _SingleAncillaQPE(Bloq):
         return {"simulation": simulation}
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
+        """Build call graph for single-ancilla QPE."""
         bloq_counts = {
             RectangularWindowState(self.n_estimation_bits): 1,
             self.controlled_propagator: 1,
