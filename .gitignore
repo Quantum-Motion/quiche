@@ -3,6 +3,7 @@ __pycache__
 .ipynb_checkpoints
 .venv
 *.egg-info
+dist
 
 # C++
 compile_commands.json

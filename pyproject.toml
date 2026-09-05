@@ -43,10 +43,16 @@ test = [
 [tool.scikit-build]
 minimum-version = "build-system.requires"
 build-dir = "build/"
-cmake.define = { QUICHE_BUILD_BINDINGS = "ON", BUILD_SHARED_LIBS = "ON" }
 wheel.packages = ["python/src/quiche"]
 wheel.py-api = "cp312"
 install.components = ["quiche_wheel"]
+
+[tool.scikit-build.cmake.define]
+QUICHE_BUILD_BINDINGS = "ON"
+BUILD_SHARED_LIBS = "ON"
+FLOAT_PRECISION = "2"
+ENABLE_MULTITHREADING = "ON"
+ENABLE_DISTRIBUTION = "OFF"
 
 [tool.uv]
 compile-bytecode = true
@@ -78,3 +84,20 @@ lint.ignore = [
 
 [tool.pytest]
 testpaths = ["python/tests"]
+
+[tool.cibuildwheel]
+# Transitive dependency on llvmlite, which doesn't publish wheels for musl.
+# Building from sdist would require a full LLVM install.
+skip = "*-musllinux_*"
+archs = ["auto64"]
+test-command = "pytest {project}/python/tests/test_bindings.py"
+test-groups = ["test"]
+build = ["cp312-*"]
+build-frontend = "build[uv]"
+
+[tool.cibuildwheel.windows]
+repair-wheel-command = "delvewheel repair --ignore-in-wheel -w {dest_dir} -v {wheel}"
+
+[tool.cibuildwheel.macos]
+before-all = "brew install libomp"
+environment = { OpenMP_ROOT = "$(brew --prefix libomp)", MACOSX_DEPLOYMENT_TARGET = "15.0" }
