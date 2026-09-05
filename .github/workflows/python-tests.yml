@@ -1,0 +1,49 @@
+name: Python tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+# PR runs cancel older runs for the same branch. Non-PR runs group by the
+# unique run_id, so pushes to main don't cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # Cache QuEST and nanobind sources and their compiled objects.
+      - name: Cache CMake build directory
+        uses: actions/cache@v6
+        with:
+          path: build
+          key: ${{ runner.os }}-cmake-build-${{ hashFiles('CMakeLists.txt', 'cpp/**/CMakeLists.txt', 'bindings/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-build-
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install quiche with dev dependencies
+        working-directory: python
+        run: uv sync --group dev
+
+      - name: Run pytest
+        working-directory: python
+        run: uv run pytest
