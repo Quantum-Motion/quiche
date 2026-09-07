@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 15
 
     environment:
-      name: publish
+      name: pypi
 
     permissions:
       id-token: write
