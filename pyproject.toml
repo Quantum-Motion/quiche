@@ -11,6 +11,32 @@ readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 
+keywords = [
+    "quantum computing",
+    "quantum chemistry",
+    "quantum phase estimation",
+    "QPE",
+    "resource estimation",
+    "quantum simulation",
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: C++",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Typing :: Typed",
+]
+
+urls.repository = "https://github.com/Quantum-Motion/quiche"
+urls.issues = "https://github.com/Quantum-Motion/quiche/issues"
+urls.changelog = "https://github.com/Quantum-Motion/quiche/blob/main/CHANGELOG.md"
+
 # need explicit upper bound due to poetry
 requires-python=">=3.12, <4.0"
 
