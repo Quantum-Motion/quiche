@@ -34,9 +34,9 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-urls.repository = "https://github.com/Quantum-Motion/quiche"
-urls.issues = "https://github.com/Quantum-Motion/quiche/issues"
-urls.changelog = "https://github.com/Quantum-Motion/quiche/blob/main/CHANGELOG.md"
+urls.Repository = "https://github.com/Quantum-Motion/quiche"
+urls.Issues = "https://github.com/Quantum-Motion/quiche/issues"
+urls.Changelog = "https://github.com/Quantum-Motion/quiche/blob/main/CHANGELOG.md"
 
 # need explicit upper bound due to poetry
 requires-python=">=3.12, <4.0"
