@@ -19,12 +19,15 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Exposed namespaced C++ library target `quiche::quiche`.
 - Moved `pyproject.toml` to the repository root.
 - Improved Windows build compatibility.
+- `.controlled()` on `PauliWordRotation`, `QDRIFT` and `Trotterisation` now constructs the same bloq but with `is_controlled=True` rather than a separate class.
+- `PauliWordRotation` now validates its target qubit range on construction rather than on decomposition.
 
 ### Deprecated
 
 ### Removed
 - Removed the C++ Hamlib module (keeping just the Python one), along with the corresponding example and unit tests.
 - Removed the `QUICHE_BUILD_HAMLIB` build flag and the HDF5 dependency for the C++ backend.
+- Removed `CTRLPauliWordRotation`, `CTRLQDRIFT` and `CTRLTrotterisation` (use `.controlled()` on the corresponding bloq instead).
 
 ### Fixed
 - Removed zero-count sub-bloqs from call graphs.

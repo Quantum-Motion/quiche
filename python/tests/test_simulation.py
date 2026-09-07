@@ -198,10 +198,8 @@ class TestPauliWordRotation:
 
     def test_wrong_n_qubits(self):
         word = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.X), qubits=(0, 2, 7))
-        rot = PauliWordRotation(word, 0.4, 7)
-
         with pytest.raises(ValueError, match="Target qubit 7 is out of range"):
-            rot.decompose_bloq()
+            PauliWordRotation(word, 0.4, 7)
 
     def test_decomposition(self, rotation: PauliWordRotation):
         circ = rotation.decompose_bloq().to_cirq_circuit(
