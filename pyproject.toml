@@ -1,6 +1,7 @@
 [project]
 name = "quiche"
-version = "0.0.1"
+# TODO: update before merging
+version = "0.0.1.dev1"
 description = "QUantum Integrated CHEmistry toolkit."
 authors = [
     { name = "Thomas Bromley", email = "thomas@quantummotion.tech"},
