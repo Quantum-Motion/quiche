@@ -1,5 +1,5 @@
 [project]
-name = "quiche"
+name = "pyquiche"
 # TODO: update before merging
 version = "0.0.1.dev1"
 description = "QUantum Integrated CHEmistry toolkit."
