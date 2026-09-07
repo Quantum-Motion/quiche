@@ -1,0 +1,41 @@
+name: Publish wheels and sdist to PyPI
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+
+  build:
+    uses: ./.github/workflows/build-wheels.yml
+
+    permissions:
+      contents: read
+
+  pypi-publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    environment:
+      name: publish
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download wheel and sdist artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "dist-{wheels-*,sdist}"
+          path: dist
+          merge-multiple: true
+
+      # TODO: switch to PyPI by removing repository-url once finished testing
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
