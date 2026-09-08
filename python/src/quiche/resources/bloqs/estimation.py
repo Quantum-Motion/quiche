@@ -17,7 +17,6 @@
 import abc
 import numbers
 from collections.abc import Callable
-from typing import Self
 
 import attrs
 import sympy
@@ -80,7 +79,7 @@ class _SingleAncillaQPE(Bloq):
     simulation: Bloq
     mode: str
 
-    def __attrs_post_init__(self) -> Self:
+    def __attrs_post_init__(self) -> None:
         """Input validator."""
         if not isinstance(self.exponent, numbers.Integral) or self.exponent < 1:
             err_msg = "Exponent must be positive integer."
@@ -88,8 +87,6 @@ class _SingleAncillaQPE(Bloq):
         if self.mode not in ("re", "im"):
             err_msg = "Measurement mode must be either 're' or 'im'."
             raise ValueError(err_msg)
-
-        return self
 
     @property
     @abc.abstractmethod

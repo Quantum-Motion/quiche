@@ -14,8 +14,6 @@
 
 """State preparation routines."""
 
-from typing import Self
-
 import attrs
 import numpy as np
 from qualtran import Bloq, BloqBuilder, QAny, Register, Side, Signature, SoquetT
@@ -70,13 +68,11 @@ class BitstringStatePrep(Bloq):
 
     bitstring: tuple[int, ...]
 
-    def __attrs_post_init__(self) -> Self:
+    def __attrs_post_init__(self) -> None:
         """Input validator."""
         if not all(i in {0, 1} for i in self.bitstring):
             err_msg = "Invalid bitstring."
             raise ValueError(err_msg)
-
-        return self
 
     @property
     def signature(self) -> Signature:
