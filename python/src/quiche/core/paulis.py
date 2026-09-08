@@ -39,13 +39,13 @@ class Pauli(StrEnum):
     Z = "Z"
 
     def _to_matrix(self) -> NDArray:
-        if self is Pauli.X:
-            return np.array([[0, 1], [1, 0]])
-        if self is Pauli.Y:
-            return np.array([[0, -1j], [1j, 0]])
-        if self is Pauli.Z:
-            return np.array([[1, 0], [0, -1]])
-        return None
+        match self:
+            case Pauli.X:
+                return np.array([[0, 1], [1, 0]])
+            case Pauli.Y:
+                return np.array([[0, -1j], [1j, 0]])
+            case Pauli.Z:
+                return np.array([[1, 0], [0, -1]])
 
 
 class PauliWord(BaseModel):
