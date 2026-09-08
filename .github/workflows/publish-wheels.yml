@@ -3,9 +3,6 @@ name: Publish wheels and sdist to PyPI
 on:
   workflow_dispatch:
   push:
-    # TODO: remove this branch before merging.
-    branches:
-      - build/wheels
     tags:
       - "v*"
 
