@@ -124,7 +124,7 @@ build-frontend = "build[uv]"
 
 [tool.cibuildwheel.windows]
 # `--add-path`: search System32 before PATH to keep the vendored MSVC runtimes
-# consistent with the compiler used to build the bindings.
+# consistent with the toolset used to build the bindings.
 # `--ignore-existing`: QuEST.dll and quiche.dll are already installed into the wheel.
 repair-wheel-command = "delvewheel repair --ignore-existing --add-path C:/Windows/System32 -w {dest_dir} -v {wheel}"
 

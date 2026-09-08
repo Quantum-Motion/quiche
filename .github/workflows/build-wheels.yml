@@ -29,6 +29,15 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.1
 
+      # TODO: remove, for testing only
+      - name: Compare System32 and redist runtimes
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          sha256sum /c/Windows/System32/{msvcp140,vcomp140}.dll \
+            "/c/Program Files/Microsoft Visual Studio"/*/*/VC/Redist/MSVC/*/x64/Microsoft.VC*.CRT/msvcp140.dll \
+            "/c/Program Files/Microsoft Visual Studio"/*/*/VC/Redist/MSVC/*/x64/Microsoft.VC*.OpenMP/vcomp140.dll
+
       - name: Run cibuildwheel
         run: uvx cibuildwheel~=4.2.0 --output-dir dist
 
