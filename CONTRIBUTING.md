@@ -10,8 +10,8 @@ uv sync --group dev
 ```
 
 If necessary, the C++ backend and bindings can also be rebuilt during development using
-```
-uv sync --reinstall-package=quiche
+```bash
+uv sync --reinstall-package=pyquiche
 ```
 
 ### Testing
@@ -38,7 +38,7 @@ For development, simply follow the usual installation steps for the C++ backend.
 
 ### Testing
 The [`Catch2`](https://github.com/catchorg/Catch2) test suite can be enabled using the CMake build flag `QUICHE_BUILD_TESTS`.
-```
+```bash
 cd quiche
 cmake -B build -D QUICHE_BUILD_TESTS=ON
 cmake --build build
@@ -59,4 +59,19 @@ They are not strictly enforced, and deviations are acceptable where appropriate.
 Aim to keep your PRs and commits self-contained and commit messages descriptive. Although not strictly enforced we recommend following the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format.
 
 ### Changelog
-Before a new release, the changelog file (`CHANGELOG.md`) should be updated, following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
+Changes to the API, behaviour, packaging or build requirements should be recorded in the `[Unreleased]` section of `CHANGELOG.md`, following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
+
+## Releasing
+
+1. Open a PR to `main` that:
+    - Renames the `[Unreleased]` section of `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`, and adds a new `[Unreleased]` above it with empty category headings.
+    - Bumps `version` in `pyproject.toml`.
+    - Bumps `VERSION` in `CMakeLists.txt`.
+2. Once merged, tag the merge commit with the version from step 1 (prefixed with `v`) and push it:
+    ```bash
+    git tag vX.Y.Z
+    git push origin vX.Y.Z
+    ```
+3. The `publish-wheels.yml` workflow will trigger on the tag, build the wheels and sdist, then pause for approval before uploading to PyPI.
+
+> A published version is permanent. A release can be yanked (hidden from dependency resolution) but never replaced or re-uploaded, so fixes require a new version number.

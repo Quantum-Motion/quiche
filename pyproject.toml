@@ -1,6 +1,7 @@
 [project]
-name = "quiche"
-version = "0.0.1"
+name = "pyquiche"
+# TODO: update before merging
+version = "0.0.1.dev2"
 description = "QUantum Integrated CHEmistry toolkit."
 authors = [
     { name = "Thomas Bromley", email = "thomas@quantummotion.tech"},
@@ -9,7 +10,33 @@ authors = [
 ]
 readme = "README.md"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "licenses/*.txt"]
+
+keywords = [
+    "quantum computing",
+    "quantum chemistry",
+    "quantum phase estimation",
+    "QPE",
+    "resource estimation",
+    "quantum simulation",
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: C++",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Typing :: Typed",
+]
+
+urls.Repository = "https://github.com/Quantum-Motion/quiche"
+urls.Issues = "https://github.com/Quantum-Motion/quiche/issues"
+urls.Changelog = "https://github.com/Quantum-Motion/quiche/blob/main/CHANGELOG.md"
 
 # need explicit upper bound due to poetry
 requires-python=">=3.12, <4.0"
@@ -43,10 +70,16 @@ test = [
 [tool.scikit-build]
 minimum-version = "build-system.requires"
 build-dir = "build/"
-cmake.define = { QUICHE_BUILD_BINDINGS = "ON", BUILD_SHARED_LIBS = "ON" }
 wheel.packages = ["python/src/quiche"]
 wheel.py-api = "cp312"
 install.components = ["quiche_wheel"]
+
+[tool.scikit-build.cmake.define]
+QUICHE_BUILD_BINDINGS = "ON"
+BUILD_SHARED_LIBS = "ON"
+FLOAT_PRECISION = "2"
+ENABLE_MULTITHREADING = "ON"
+ENABLE_DISTRIBUTION = "OFF"
 
 [tool.uv]
 compile-bytecode = true
@@ -78,3 +111,23 @@ lint.ignore = [
 
 [tool.pytest]
 testpaths = ["python/tests"]
+
+[tool.cibuildwheel]
+# Transitive dependency on llvmlite, which doesn't publish wheels for musl.
+# Building from sdist would require a full LLVM install.
+skip = "*-musllinux_*"
+archs = ["auto64"]
+test-command = "pytest {project}/python/tests/test_bindings.py"
+test-groups = ["test"]
+build = ["cp312-*"]
+build-frontend = "build[uv]"
+
+[tool.cibuildwheel.windows]
+# `--add-path`: search System32 before PATH to keep the vendored MSVC runtimes
+# consistent with the toolset used to build the bindings.
+# `--ignore-existing`: QuEST.dll and quiche.dll are already installed into the wheel.
+repair-wheel-command = "delvewheel repair --ignore-existing --add-path C:/Windows/System32 -w {dest_dir} -v {wheel}"
+
+[tool.cibuildwheel.macos]
+before-all = "brew install libomp"
+environment = { OpenMP_ROOT = "$(brew --prefix libomp)", MACOSX_DEPLOYMENT_TARGET = "15.0" }

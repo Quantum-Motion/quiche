@@ -1,0 +1,97 @@
+Files: pyquiche.libs/msvcp140.dll pyquiche.libs/vcomp140.dll
+License: MSVC-Runtime-Distributable-2026
+Availability:
+    https://learn.microsoft.com/visualstudio/releases/2026/redistribution
+    https://visualstudio.microsoft.com/license-terms/vs2026-ga-pro-enterprise/
+
+--------------------------------------------------------------------------------
+
+Excerpt from: Distributable Code Files for Visual Studio 2026 and later
+
+    The following section is the "Distributable List" or the "REDIST.TXT" that
+    is referenced in the "Distributable Code" section of the Microsoft Software
+    License Terms for Visual Studio Enterprise, Visual Studio Professional,
+    Visual Studio Community, and Visual Studio Build Tools ("the software"). If
+    you have a validly licensed copy of such software, you may copy and
+    distribute with your program the unmodified form of the files listed below,
+    subject to the License Terms for the software.
+
+    [...]
+
+    Visual C++ Runtime Files
+
+    [...]
+
+    Subject to the License Terms for the software, you may copy and distribute with
+    your program any of the files within the following folder and its subfolders
+    except as noted below. You may not modify these files.
+
+        [VisualStudioFolder]\VC\redist
+
+    The same Visual C++ Runtime Redistributable package is available from Latest
+    supported Visual C++ Redistributable downloads and Download Visual Studio
+    Tools. Distribution of the Visual C++ Runtime Redistributable package, merge
+    modules, and individual binaries obtained from those pages is limited to
+    licensed Visual Studio users and is subject to its license terms.
+
+    Note
+    You may not distribute the contents of the following folders (please see
+    List of Utilities and Build Tools for Visual Studio for allowed usage for
+    development/testing purposes):
+
+        [VisualStudioFolder]VC\Redist\MSVC\[version]\debug_nonredist
+        [VisualStudioFolder]\VC\Redist\MSVC\[version]\onecore\debug_nonredist
+
+    [...]
+
+--------------------------------------------------------------------------------
+
+Excerpt from: Microsoft Software License Terms. Microsoft Visual Studio
+Enterprise 2026, Visual Studio Professional 2026, and Trial Edition.
+
+    Last Updated: October 1, 2025.
+
+    [...]
+
+    7. DISTRIBUTABLE CODE. The software contains code that you may distribute in
+    applications you develop as described in this Section. For purposes of this
+    Section, the term “distribution” also means deployment of your applications
+    for third parties to access over the Internet.
+
+    a. Right to Use and Distribute. The code and text files listed in (i) and
+    (ii) below are “Distributable Code”.
+        i. Distributable List. You may copy and distribute the object code form
+        of code listed on the Distributable List located at
+        https://aka.ms/vs/18/redistribution.
+        ii. Sample Code, Templates, and Styles. You may copy, modify, and
+        distribute the source and object code form of code marked as “sample”,
+        “template”, “simple styles”, and “sketch styles”.
+        iii. Third Party Distribution. You may permit distributors of your
+        applications to copy and distribute the Distributable Code as part of
+        those applications.
+
+    b. Distribution Requirements. For any Distributable Code you distribute, you
+    must:
+        • add significant primary functionality to it in your applications;
+        • require distributors and external end users to agree to terms that
+        protect the Distributable Code at least as much as these license terms;
+        and
+        • indemnify, defend, and hold harmless Microsoft from any claims,
+        including attorneys’ fees, related to the distribution or use of your
+        applications, except to the extent that any claim is based solely on the
+        Distributable Code.
+
+    c. Distribution Restrictions. You may not:
+        • distribute Unreleased Components;
+        • distribute software developed with Insiders Channel Software or that
+        depends on Unreleased Components;
+        • use Microsoft’s trademarks in your applications’ names or in a way
+        that suggests your applications come from or are endorsed by Microsoft;
+        or
+        • modify or distribute the source code of any Distributable Code so that
+        any part of it becomes subject to an Excluded License. An Excluded
+        License is one that requires, as a condition of use, modification or
+        distribution of code, that (i) it be disclosed or distributed in source
+        code form; or (ii) others have the right to modify it.
+
+    [...]

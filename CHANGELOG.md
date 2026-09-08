@@ -8,6 +8,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ### Added
 - Added `py.typed` marker for type checkers.
 - Added `qpe::getEnergyFromTrotterPhase` and `qpe::getEnergyFromQubitisationPhase` functions for converting a QPE phase to an energy.
+- Added `pyquiche` package to PyPI, with prebuilt, multithreaded wheels for Linux, macOS and Windows (GPU, MPI and single/quad precision builds still require building from source).
 
 ### Changed
 - Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
@@ -21,6 +22,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Improved Windows build compatibility.
 - `.controlled()` on `PauliWordRotation`, `QDRIFT` and `Trotterisation` now constructs the same bloq but with `is_controlled=True` rather than a separate class.
 - `PauliWordRotation` now validates its target qubit range on construction rather than on decomposition.
+- Renamed the package from `quiche` to `pyquiche` to avoid PyPI clash (the import name `quiche` is unchanged).
 
 ### Deprecated
 
