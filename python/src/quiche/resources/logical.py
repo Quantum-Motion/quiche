@@ -42,7 +42,7 @@ def logical_qubit_resources(circuit: Bloq) -> int:
     return get_cost_value(circuit, QubitCount(), generalizer=[ignore_split_join])
 
 
-# TODO: Implement other synthesis methods and add capabilities to account for
+# TODO(Annina): Implement other synthesis methods and add capabilities to account for
 # additional ancilla due to synthesis methods. Although and bloqs also incur additional
 # ancillas, these are handled in the my_static_cost subroutine of each bloq and do not
 # need to be accounted for during postprocessing like rotations.
