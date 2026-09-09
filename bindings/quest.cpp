@@ -109,7 +109,6 @@ void init_quest_bindings(nb::module_ &m) {
 
         // Initialisations
         .def("initBlankState", &initBlankState)
-        .def("initBlankState", &initBlankState)
         .def("initZeroState", &initZeroState)
         .def("initPlusState", &initPlusState)
         .def("initPureState", &initPureState)
