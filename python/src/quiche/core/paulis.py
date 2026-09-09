@@ -76,6 +76,14 @@ class PauliWord(BaseModel):
             raise ValueError(error_msg)
         return self
 
+    @model_validator(mode="after")
+    def check_qubits_unique(self) -> Self:
+        """Validate each target qubit appears at most once."""
+        if len(set(self.qubits)) != len(self.qubits):
+            error_msg = "The target qubits of the PauliWord must be unique."
+            raise ValueError(error_msg)
+        return self
+
     @computed_field
     @cached_property
     def greatest_qubit(self) -> int:
@@ -156,6 +164,15 @@ class PauliSum(BaseModel):
     coefficients: tuple[float, ...]
     terms: tuple[PauliWord, ...]
     identity_coefficient: float
+
+    @model_validator(mode="after")
+    def check_nonzero_lengths(self) -> Self:
+        """Validate number of terms is nonzero."""
+        if len(self.terms) == 0:
+            error_msg = "The number of terms of the PauliSum must be nonzero."
+            raise ValueError(error_msg)
+
+        return self
 
     @model_validator(mode="after")
     def check_lengths_match(self) -> Self:
