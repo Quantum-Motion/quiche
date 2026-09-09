@@ -37,7 +37,7 @@ class IdentityStatePrep(Bloq):
 
     n_qubits: int
 
-    def my_static_costs(self, cost_key: "CostKey") -> int:
+    def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount):
             # Only data qubits are needed for this state preparation.
@@ -108,7 +108,7 @@ class BitstringStatePrep(Bloq):
 
         return bloq_counts
 
-    def my_static_costs(self, cost_key: "CostKey") -> int:
+    def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount):
             # Only data qubits are needed for this state preparation.

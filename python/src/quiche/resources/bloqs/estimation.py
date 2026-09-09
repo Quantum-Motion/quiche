@@ -124,7 +124,7 @@ class _SingleAncillaQPE(Bloq):
         """Define input and/or output registers of the bloq."""
         return Signature([Register("simulation", dtype=QAny(self.n_simulation_qubits))])
 
-    def my_static_costs(self, cost_key: "CostKey") -> int:
+    def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount) and (
             isinstance(self.simulation, (QDRIFT, Trotterisation))
@@ -348,7 +348,7 @@ class TextbookQPE(Bloq):
     num_qpe_ancillas: int  # ancilla used for phase estimation
     num_other_ancillas: int  # other ancilla used e.g. for block encoding
 
-    def my_static_costs(self, cost_key: "CostKey") -> int:
+    def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         # There are three stages to the QPE:
         # 1. State preparation on simulation and estimation registers
@@ -491,7 +491,7 @@ class TrotterLadder(Bloq):
     num_data: int
     num_qpe_ancillas: int
 
-    def my_static_costs(self, cost_key: "CostKey") -> int:
+    def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount) and (
             isinstance(self.simulation, (Trotterisation, QDRIFT))
