@@ -74,7 +74,7 @@ std::vector<qindex> getFlipSet(int index) {
     }
 
     return set;
-};
+}
 
 std::vector<qindex> getParitySet(int index) {
 

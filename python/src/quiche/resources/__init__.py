@@ -15,10 +15,15 @@
 """Logic for the resource-estimation backend of QUICHE."""
 
 from . import bloqs
-from .logical import logical_gate_resources, logical_qubit_resources
+from .logical import (
+    logical_gate_resources,
+    logical_qubit_resources,
+    logical_rotations_to_tgates,
+)
 
 __all__ = [
     "bloqs",
     "logical_gate_resources",
     "logical_qubit_resources",
+    "logical_rotations_to_tgates",
 ]
