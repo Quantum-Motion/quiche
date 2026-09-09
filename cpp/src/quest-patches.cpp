@@ -104,17 +104,22 @@ PauliStrSum cloneWithoutIdentity(PauliStrSum sum) {
     // note: since QuEST allows repeated terms in PauliStrSums this
     // needs to account for the (unlikely) possibility of multiple identities
 
-    // these copy so initial sum is unaffected
-    std::vector<qcomp> filteredCoeffs(sum.coeffs, sum.coeffs + sum.numTerms);
-    std::vector<PauliStr> filteredStrings(sum.strings, sum.strings + sum.numTerms);
+    std::vector<qcomp> filteredCoeffs;
+    std::vector<PauliStr> filteredStrings;
 
-    for (qindex i = 0; i < filteredStrings.size(); i++) {
-        if (paulis_isIdentity(filteredStrings[i])) {
-            filteredStrings.erase(filteredStrings.begin() + i);
-            filteredCoeffs.erase(filteredCoeffs.begin() + i);
-            i--;
-        }
+    filteredCoeffs.reserve(sum.numTerms);
+    filteredStrings.reserve(sum.numTerms);
+
+    for (qindex i = 0; i < sum.numTerms; i++) {
+        if (paulis_isIdentity(sum.strings[i]))
+            continue;
+
+        filteredCoeffs.push_back(sum.coeffs[i]);
+        filteredStrings.push_back(sum.strings[i]);
     }
+
+    if (filteredStrings.empty())
+        throw std::invalid_argument("PauliStrSum contains only identity terms.");
 
     // validates
     return createPauliStrSum(filteredStrings, filteredCoeffs);
