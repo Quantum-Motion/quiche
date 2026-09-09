@@ -112,7 +112,7 @@ class _SingleAncillaQPE(Bloq):
     @property
     def n_simulation_qubits(self) -> int:
         """Return number of qubits used for Hamiltonian simulation."""
-        return self.simulation.signature[0].total_bits()
+        return self.simulation.signature.get_left("simulation").total_bits()
 
     @property
     def n_estimation_bits(self) -> int:
