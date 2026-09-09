@@ -79,8 +79,8 @@ void init_quest_bindings(nb::module_ &m) {
                  finalizeQuESTEnv();
                  return false;
              })
-        .def("syncQuESTEnv", &syncQuESTEnv)
-        .def("isQuESTEnvInit", &isQuESTEnvInit);
+        .def("sync",   [](QuESTEnv &) { syncQuESTEnv(); })
+        .def("isInit", [](QuESTEnv &) { return isQuESTEnvInit(); });
 
     // PauliStr
     nb::class_<PauliStr>(quest, "PauliStr")
@@ -93,8 +93,8 @@ void init_quest_bindings(nb::module_ &m) {
         .def(nb::new_(nb::overload_cast<vector<PauliStr>, vector<qcomp>>(&createPauliStrSum)))
         .def(nb::new_(nb::overload_cast<string>(&createInlinePauliStrSum)))
         .def("__del__", &destroyPauliStrSum)
-        .def("fromFile", nb::overload_cast<string>(&createPauliStrSumFromFile))
-        .def("fromReversedFile", nb::overload_cast<string>(&createPauliStrSumFromReversedFile))
+        .def_static("fromFile", nb::overload_cast<string>(&createPauliStrSumFromFile))
+        .def_static("fromReversedFile", nb::overload_cast<string>(&createPauliStrSumFromReversedFile))
         .def("report", &reportPauliStrSum);
 
     // Qureg
@@ -103,10 +103,10 @@ void init_quest_bindings(nb::module_ &m) {
         .def("__del__", &destroyQureg)
 
         // Constructors
-        .def("createDensityQureg", &createDensityQureg)
-        .def("createForcedQureg", &createForcedQureg)
-        .def("createForcedDensityQureg", &createForcedDensityQureg)
-        .def("createCustomQureg", &createCustomQureg)
+        .def_static("createDensityQureg", &createDensityQureg)
+        .def_static("createForcedQureg", &createForcedQureg)
+        .def_static("createForcedDensityQureg", &createForcedDensityQureg)
+        .def_static("createCustomQureg", &createCustomQureg)
         .def("createCloneQureg", &createCloneQureg)
 
         // Initialisations
