@@ -79,7 +79,7 @@ void init_quest_bindings(nb::module_ &m) {
                  finalizeQuESTEnv();
                  return false;
              })
-        .def("sync",   [](QuESTEnv &) { syncQuESTEnv(); })
+        .def("sync", [](QuESTEnv &) { syncQuESTEnv(); })
         .def("isInit", [](QuESTEnv &) { return isQuESTEnvInit(); });
 
     // PauliStr
