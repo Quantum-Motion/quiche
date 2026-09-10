@@ -167,8 +167,9 @@ class TestSOSSABlockEncoding:
         reg = sig[2]
         assert reg.name == "data"
 
-    def test_bloq_counts(self):
-        assert_equivalent_bloq_counts(self.sossa, generalizer=[ignore_split_join])
+    @pytest.mark.parametrize("bloq", [sossa, sossa.controlled()])
+    def test_bloq_counts(self, bloq: Bloq):
+        assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
 
 class TestSOSSASqrtBlockEncoding:
