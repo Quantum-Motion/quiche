@@ -34,5 +34,5 @@ jobs:
 
       - name: Run clang-format
         run: |
-          find cpp bindings \( -name '*.cpp' -o -name '*.hpp' \) \
-          | xargs -r uv run --no-sync clang-format --dry-run --Werror --verbose
+            find cpp bindings \( -name '*.cpp' -o -name '*.hpp' \) \
+            -exec uv run --no-sync clang-format --dry-run --Werror --verbose {} +
