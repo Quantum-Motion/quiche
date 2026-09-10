@@ -15,7 +15,7 @@
 """Core data structures for quantum primites, routines and errors."""
 
 from .algorithms import Mapping, PhaseEstimation, Simulation
-from .electronic import ElectronicHamiltonian
+from .electronic import ElectronicHamiltonian, SecondQuantisedHamiltonian
 from .errors import Errors
 from .paulis import Pauli, PauliSum, PauliWord
 
@@ -27,5 +27,6 @@ __all__ = [
     "PauliSum",
     "PauliWord",
     "PhaseEstimation",
+    "SecondQuantisedHamiltonian",
     "Simulation",
 ]
