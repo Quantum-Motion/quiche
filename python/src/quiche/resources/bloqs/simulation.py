@@ -361,7 +361,7 @@ class QDRIFT(Bloq):
     seed: int | float | str | bytes | bytearray | None = None
     is_controlled: bool = False
 
-    def __attrs_post_init__(self) -> Self:
+    def __attrs_post_init__(self) -> None:
         """Validate attributes."""
         if self.n_terms < 1:
             error_msg = "Choose positive n_terms."
@@ -370,8 +370,6 @@ class QDRIFT(Bloq):
         if self.t < 0:
             error_msg = "Choose positive evolution time."
             raise ValueError(error_msg)
-
-        return self
 
     @property
     def control_registers(self) -> tuple[Register, ...]:
@@ -526,7 +524,7 @@ class Trotterisation(Bloq):
     order: int
     is_controlled: bool = False
 
-    def __attrs_post_init__(self) -> Self:
+    def __attrs_post_init__(self) -> None:
         """Validate attributes."""
         if self.n_steps < 1:
             error_msg = "Choose positive n_steps."
@@ -543,8 +541,6 @@ class Trotterisation(Bloq):
         if self.order > 1 and self.order % 2 == 1:
             error_msg = "Suzuki-Trotter order must be even."
             raise ValueError(error_msg)
-
-        return self
 
     @property
     def control_registers(self) -> tuple[Register, ...]:

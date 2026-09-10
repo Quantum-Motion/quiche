@@ -17,7 +17,7 @@
 import abc
 import numbers
 from collections.abc import Callable
-from typing import Self
+from typing import Literal
 
 import attrs
 import sympy
@@ -78,9 +78,9 @@ class _SingleAncillaQPE(Bloq):
     """
 
     simulation: Bloq
-    mode: str
+    mode: Literal["re", "im"]
 
-    def __attrs_post_init__(self) -> Self:
+    def __attrs_post_init__(self) -> None:
         """Input validator."""
         if not isinstance(self.exponent, numbers.Integral) or self.exponent < 1:
             err_msg = "Exponent must be positive integer."
@@ -88,8 +88,6 @@ class _SingleAncillaQPE(Bloq):
         if self.mode not in ("re", "im"):
             err_msg = "Measurement mode must be either 're' or 'im'."
             raise ValueError(err_msg)
-
-        return self
 
     @property
     @abc.abstractmethod
@@ -115,7 +113,7 @@ class _SingleAncillaQPE(Bloq):
     @property
     def n_simulation_qubits(self) -> int:
         """Return number of qubits used for Hamiltonian simulation."""
-        return self.simulation.signature[0].total_bits()
+        return self.simulation.signature.get_left("simulation").total_bits()
 
     @property
     def n_estimation_bits(self) -> int:
@@ -127,7 +125,7 @@ class _SingleAncillaQPE(Bloq):
         """Define input and/or output registers of the bloq."""
         return Signature([Register("simulation", dtype=QAny(self.n_simulation_qubits))])
 
-    def my_static_costs(self, cost_key: "CostKey") -> int:
+    def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount) and (
             isinstance(self.simulation, (QDRIFT, Trotterisation))
@@ -219,7 +217,7 @@ class NaiveQPE(_SingleAncillaQPE):
     """
 
     simulation: Bloq
-    mode: str
+    mode: Literal["re", "im"]
 
     @property
     def exponent(self) -> int:
@@ -273,7 +271,7 @@ class KitaevQPE(_SingleAncillaQPE):
 
     simulation: Bloq
     k: int
-    mode: str
+    mode: Literal["re", "im"]
 
     @property
     def exponent(self) -> int:
@@ -328,7 +326,7 @@ class IterativeQPE(_SingleAncillaQPE):
 
     simulation: Bloq
     k: int
-    mode: str
+    mode: Literal["re", "im"]
 
     @property
     def exponent(self) -> int:
@@ -351,7 +349,7 @@ class TextbookQPE(Bloq):
     num_qpe_ancillas: int  # ancilla used for phase estimation
     num_other_ancillas: int  # other ancilla used e.g. for block encoding
 
-    def my_static_costs(self, cost_key: "CostKey") -> int:
+    def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         # There are three stages to the QPE:
         # 1. State preparation on simulation and estimation registers
@@ -494,7 +492,7 @@ class TrotterLadder(Bloq):
     num_data: int
     num_qpe_ancillas: int
 
-    def my_static_costs(self, cost_key: "CostKey") -> int:
+    def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount) and (
             isinstance(self.simulation, (Trotterisation, QDRIFT))

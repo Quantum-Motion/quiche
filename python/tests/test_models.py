@@ -55,6 +55,11 @@ class TestPauliWord:
         with pytest.raises(ValueError, match=error_msg):
             PauliWord(terms=(Pauli.X, Pauli.Y), qubits=(1,))
 
+    def test_duplicate_qubits(self):
+        error_msg = "The target qubits of the PauliWord must be unique."
+        with pytest.raises(ValueError, match=error_msg):
+            PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 1, 0))
+
     def test_invalid_qubit(self):
         err_msg = "Input should be a valid integer, got a number with a fractional part"
         with pytest.raises(ValueError, match=err_msg):
@@ -86,6 +91,11 @@ class TestPauliWord:
 
 class TestPauliSum:
     """Test PauliSum class."""
+
+    def test_no_terms(self):
+        error_msg = "The number of terms of the PauliSum must be nonzero."
+        with pytest.raises(ValueError, match=error_msg):
+            PauliSum(coefficients=(), terms=(), identity_coefficient=10.0)
 
     def test_length_mismatch(self):
         word1 = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
