@@ -15,6 +15,7 @@
 """Resource calculations for quantum circuits and routines."""
 
 from math import log2
+from typing import Literal
 
 from qualtran import Bloq
 from qualtran.resource_counting import (
@@ -47,7 +48,9 @@ def logical_qubit_resources(circuit: Bloq) -> int:
 # ancillas, these are handled in the my_static_cost subroutine of each bloq and do not
 # need to be accounted for during postprocessing like rotations.
 def logical_rotations_to_tgates(
-    gates: GateCounts, errors: Errors, rotation_synthesis: str
+    gates: GateCounts,
+    errors: Errors,
+    rotation_synthesis: Literal["direct"],
 ) -> GateCounts:
     """Transform rotation gates to T gates according to the error budget."""
     gc_dict = gates.asdict()

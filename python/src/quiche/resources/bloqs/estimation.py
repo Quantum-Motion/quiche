@@ -17,6 +17,7 @@
 import abc
 import numbers
 from collections.abc import Callable
+from typing import Literal
 
 import attrs
 import sympy
@@ -77,7 +78,7 @@ class _SingleAncillaQPE(Bloq):
     """
 
     simulation: Bloq
-    mode: str
+    mode: Literal["re", "im"]
 
     def __attrs_post_init__(self) -> None:
         """Input validator."""
@@ -216,7 +217,7 @@ class NaiveQPE(_SingleAncillaQPE):
     """
 
     simulation: Bloq
-    mode: str
+    mode: Literal["re", "im"]
 
     @property
     def exponent(self) -> int:
@@ -270,7 +271,7 @@ class KitaevQPE(_SingleAncillaQPE):
 
     simulation: Bloq
     k: int
-    mode: str
+    mode: Literal["re", "im"]
 
     @property
     def exponent(self) -> int:
@@ -325,7 +326,7 @@ class IterativeQPE(_SingleAncillaQPE):
 
     simulation: Bloq
     k: int
-    mode: str
+    mode: Literal["re", "im"]
 
     @property
     def exponent(self) -> int:
