@@ -235,8 +235,9 @@ class TestSOSSASqrtBlockEncoding:
         reg = sig[2]
         assert reg.name == "data"
 
-    def test_bloq_counts(self):
-        assert_equivalent_bloq_counts(self.sossasqrt, generalizer=[ignore_split_join])
+    @pytest.mark.parametrize("bloq", [sossasqrt, sossasqrt.controlled()])
+    def test_bloq_counts(self, bloq: Bloq):
+        assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
 class TestLCUBlockEncodingWrapper:
     """Tests for LCUBlockEncodingWrapper."""
