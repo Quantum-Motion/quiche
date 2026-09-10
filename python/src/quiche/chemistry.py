@@ -72,7 +72,7 @@ def get_jw_state(occupation: NDArray[np.int_]) -> NDArray[np.int_]:
         The qubit basis state resulting from the fermion-to-qubit mapping.
 
     """
-    return occupation
+    return np.array(occupation, dtype=int)
 
 
 def get_parity_state(occupation: NDArray[np.int_]) -> NDArray[np.int_]:
@@ -108,7 +108,7 @@ def _bk_transformation_matrix(size: int) -> NDArray[np.int_]:
         Matrix transforming from occupation basis to qubit basis.
 
     """
-    mat = np.array([1], dtype=int)
+    mat = np.array([[1]], dtype=int)
 
     id2 = np.eye(2, dtype=int)
     for i in range(ceil(log2(size))):

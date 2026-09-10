@@ -14,6 +14,9 @@
 
 """Structures to define and dispatch phase estimation calculations."""
 
+# TODO(Vasco): refactor
+# ruff: noqa: C901
+
 from collections.abc import Callable
 from functools import partial
 

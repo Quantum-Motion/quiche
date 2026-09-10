@@ -38,6 +38,12 @@ void validateQubitsUnique(std::vector<int> qubits) {
     }
 }
 
+void validateQubitsNonEmpty(const std::vector<int> &qubits) {
+    if (qubits.empty()) {
+        throw std::invalid_argument("At least one qubit must be given.");
+    }
+}
+
 void validateQubitisationAncillasSize(const std::vector<int> &qubits, qindex numTerms) {
     int paddedNumQubits = std::max(std::ceil(std::log2(numTerms)), 1.0);
     if (qubits.size() < paddedNumQubits) {
@@ -119,6 +125,7 @@ void applyMultiControlledReflection(Qureg qureg, const std::vector<int> &control
 void applyMultiStateControlledReflection(Qureg qureg, const std::vector<int> &controls, const std::vector<int> &states,
                                          const std::vector<int> &targets) {
 
+    validateQubitsNonEmpty(targets);
     validateQubitsUnique(targets);
 
     std::vector<int> combinedQubits(targets.begin(), targets.end());
@@ -157,7 +164,7 @@ void applyControlledCoeffsPrep(Qureg qureg, int control, const std::vector<qreal
     applyMultiStateControlledCoeffsPrep(qureg, {control}, {1}, coeffs, targets, inverse);
 }
 
-void applyMultiControlledCoeffsPrep(Qureg qureg, std::vector<int> &controls, const std::vector<qreal> &coeffs,
+void applyMultiControlledCoeffsPrep(Qureg qureg, const std::vector<int> &controls, const std::vector<qreal> &coeffs,
                                     const std::vector<int> &targets, bool inverse) {
     std::vector<int> states(controls.size(), 1);
     applyMultiStateControlledCoeffsPrep(qureg, controls, states, coeffs, targets, inverse);
@@ -224,7 +231,7 @@ void applyControlledPauliStrSumPrep(Qureg qureg, int control, PauliStrSum sum, c
     applyMultiStateControlledPauliStrSumPrep(qureg, {control}, {1}, sum, targets, inverse);
 }
 
-void applyMultiControlledPauliStrSumPrep(Qureg qureg, std::vector<int> &controls, PauliStrSum sum,
+void applyMultiControlledPauliStrSumPrep(Qureg qureg, const std::vector<int> &controls, PauliStrSum sum,
                                          const std::vector<int> &targets, bool inverse) {
     std::vector<int> states(controls.size(), 1);
     applyMultiStateControlledPauliStrSumPrep(qureg, controls, states, sum, targets, inverse);

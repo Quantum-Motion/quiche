@@ -69,6 +69,7 @@ lint.ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"python/*.ipynb" = ["CPY001"] # Don't require copyright in notebooks
 "python/tests/*" =[
     "S101",   # asserts are used throughout testing
     "D101",   # decide not to require test class documentation

@@ -57,7 +57,7 @@ void applyCoeffsPrep(Qureg qureg, const std::vector<qreal> &coeffs, const std::v
 void applyControlledCoeffsPrep(Qureg qureg, int control, const std::vector<qreal> &coeffs,
                                const std::vector<int> &targets, bool inverse);
 
-void applyMultiControlledCoeffsPrep(Qureg qureg, std::vector<int> &controls, const std::vector<qreal> &coeffs,
+void applyMultiControlledCoeffsPrep(Qureg qureg, const std::vector<int> &controls, const std::vector<qreal> &coeffs,
                                     const std::vector<int> &targets, bool inverse);
 
 void applyMultiStateControlledCoeffsPrep(Qureg qureg, const std::vector<int> &controls, const std::vector<int> &states,
@@ -69,7 +69,7 @@ void applyPauliStrSumPrep(Qureg qureg, PauliStrSum sum, const std::vector<int> &
 void applyControlledPauliStrSumPrep(Qureg qureg, int control, PauliStrSum sum, const std::vector<int> &targets,
                                     bool inverse);
 
-void applyMultiControlledPauliStrSumPrep(Qureg qureg, std::vector<int> &controls, PauliStrSum sum,
+void applyMultiControlledPauliStrSumPrep(Qureg qureg, const std::vector<int> &controls, PauliStrSum sum,
                                          const std::vector<int> &targets, bool inverse);
 
 void applyMultiStateControlledPauliStrSumPrep(Qureg qureg, const std::vector<int> &controls,

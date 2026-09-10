@@ -74,7 +74,7 @@ std::vector<qindex> getFlipSet(int index) {
     }
 
     return set;
-};
+}
 
 std::vector<qindex> getParitySet(int index) {
 
@@ -92,6 +92,20 @@ std::vector<qindex> getParitySet(int index) {
     // note that indices will be in decreasing size
     return set;
 }
+
+void validateNumQubits(int numQubits) {
+    if (numQubits < 0 || numQubits > 63) {
+        throw std::invalid_argument("Invalid number of qubits.");
+    }
+}
+
+void validateNumElectrons(int numElectrons, int numQubits) {
+    if (numElectrons < 0 || numElectrons > numQubits) {
+        throw std::invalid_argument("Invalid number of electrons.");
+    }
+}
+
+void validateNumElectrons(int numElectrons) { validateNumElectrons(numElectrons, 63); }
 
 void validateOccupationVector(const std::vector<int> &occupation) {
     bool isBinary = std::all_of(occupation.begin(), occupation.end(), [](int x) { return x == 0 || x == 1; });
@@ -132,11 +146,16 @@ std::vector<int> getQubitBasisStateParity(std::vector<int> occupation) {
 }
 
 qindex getHartreeFockStateJW(int numElectrons) {
+    validateNumElectrons(numElectrons);
+
     // Jordan-Wigner = occupation basis string
     return getLSBMask(numElectrons);
 }
 
 qindex getHartreeFockStateBK(int numElectrons, int numQubits) {
+    validateNumQubits(numQubits);
+    validateNumElectrons(numElectrons, numQubits);
+
     qindex bits = getLSBMask(numElectrons);
 
     for (int i = 0; i < numElectrons; i++)
@@ -147,6 +166,9 @@ qindex getHartreeFockStateBK(int numElectrons, int numQubits) {
 }
 
 qindex getHartreeFockStateParity(int numElectrons, int numQubits) {
+    validateNumQubits(numQubits);
+    validateNumElectrons(numElectrons, numQubits);
+
     qindex bits = getLSBMask(numElectrons);
 
     // calculate prefix sum

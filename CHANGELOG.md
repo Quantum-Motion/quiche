@@ -8,6 +8,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ### Added
 - Added `py.typed` marker for type checkers.
 - Added `qpe::getEnergyFromTrotterPhase` and `qpe::getEnergyFromQubitisationPhase` functions for converting a QPE phase to an energy.
+- Added `logical_rotations_to_tgates` to `quiche.resources` exports.
 
 ### Changed
 - Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
@@ -21,6 +22,12 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Improved Windows build compatibility.
 - `.controlled()` on `PauliWordRotation`, `QDRIFT` and `Trotterisation` now constructs the same bloq but with `is_controlled=True` rather than a separate class.
 - `PauliWordRotation` now validates its target qubit range on construction rather than on decomposition.
+- Tightened `PauliWord` validation to reject repeated target qubits.
+- Tightened `PauliSum` validation to require at least one term.
+- Added electron and qubit count validation to `getHartreeFockStateJW`, `getHartreeFockStateBK` and `getHartreeFockStateParity`.
+- Made `cloneWithoutIdentity` reject `PauliStrSum`s containing only identity terms.
+- Renamed the `QuESTEnv` binding methods `syncQuESTEnv` and `isQuESTEnvInit` to `sync` and `isInit`.
+- Added missing `const` qualifiers to the control arguments of `applyMultiControlledCoeffsPrep` and `applyMultiControlledPauliStrSumPrep`.
 
 ### Deprecated
 
@@ -28,11 +35,17 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Removed the C++ Hamlib module (keeping just the Python one), along with the corresponding example and unit tests.
 - Removed the `QUICHE_BUILD_HAMLIB` build flag and the HDF5 dependency for the C++ backend.
 - Removed `CTRLPauliWordRotation`, `CTRLQDRIFT` and `CTRLTrotterisation` (use `.controlled()` on the corresponding bloq instead).
+- Removed the (empty) `quiche.dispatch.budget.state_prep` module.
+- Removed the dangling `StatePrep` entry from `quiche.core.__all__`.
 
 ### Fixed
 - Removed zero-count sub-bloqs from call graphs.
 - Fixed `QDRIFT` incorrectly ignoring a `0` seed.
 - Fixed Python stable-ABI wheel builds (added missing `Development.SABIModule` component).
+- Fixed `get_bk_state` raising `IndexError` for single-orbital systems.
+- Fixed `get_jw_state` returning its input rather than an integer array as its signature declares.
+- Fixed incorrectly bound `QuESTEnv.sync` and `QuESTEnv.isInit`.
+- Rebound `PauliStrSum.fromFile`, `PauliStrSum.fromReversedFile` and the `Qureg` creation methods (`createDensityQureg`, `createForcedQureg`, `createForcedDensityQureg` and `createCustomQureg`) as static methods.
 
 ### Security
 
