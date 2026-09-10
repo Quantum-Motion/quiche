@@ -30,7 +30,7 @@
 import pytest
 
 from quiche.core import Pauli, PauliWord
-from quiche.hamlib import parse_hamiltonian
+from quiche.io.hamlib import parse_hamiltonian
 
 # fmt: off
 HAMLIB_TEST_CASES = [
