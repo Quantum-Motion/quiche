@@ -30,7 +30,7 @@
 import pytest
 
 from quiche.core import Pauli, PauliWord
-from quiche.io.hamlib import parse_hamiltonian
+from quiche.io.hamlib import parse
 
 # fmt: off
 HAMLIB_TEST_CASES = [
@@ -192,7 +192,7 @@ def test_hamlib_parsing(
         for paulis, targets in zip(expected_paulis, expected_targets, strict=True)
     )
 
-    pauli_sum = parse_hamiltonian(data_string)
+    pauli_sum = parse(data_string)
     assert pauli_sum.identity_coefficient == pytest.approx(expected_identity_coeff)
     assert pauli_sum.coefficients == pytest.approx(expected_coeffs)
     assert pauli_sum.terms == expected_terms

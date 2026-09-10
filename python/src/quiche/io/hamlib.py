@@ -12,64 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Helpers to read and parse hamlib Hamiltonians."""
+"""Helpers to read and parse Hamlib Hamiltonians."""
 
-import re
+from pathlib import Path
 
 import h5py
+from openfermion import QubitOperator
 
-from quiche.core.paulis import Pauli, PauliSum, PauliWord
+from quiche.core.paulis import PauliSum
+
+from ._openfermion import _qubit_operator_to_pauli_sum
 
 
-def get_dataset(filename: str, dataset: str) -> str:
-    """Find and decode a Hamlib dataset."""
-    with h5py.File(filename, "r") as f:
-        data = f[dataset][()]
+def read_dataset(path: str | Path, key: str) -> str:
+    """Read and decode a dataset from a Hamlib HDF5 file."""
+    with h5py.File(path, "r") as file:
+        data = file[key][()]
 
     return data.decode("utf-8")
 
 
-def parse_hamiltonian(data_string: str) -> PauliSum:
-    """
-    Quick and dirty parser for hamlib Hamiltonians.
-
-    NB: THIS IS A NAIVE, NON-DEFENSIVE IMPLEMENTATION. NOT FOR PRODUCTION USE.
-    """
-    coeffs_list = []
-    paulis_list = []
-    id_coeff = 0
-
-    main_pattern = r"\(?(.*?)\)?\s+\[(.*?)\]"
-    pauli_pattern = r"([XYZ])(\d+)"
-
-    for line in data_string.strip().splitlines():
-        main_match = re.match(main_pattern, line)
-
-        if main_match:
-            coeff_string = main_match.group(1).strip()
-            pauli_string = main_match.group(2).strip()
-
-            coeff = complex(coeff_string).real
-
-            # Empty operator string `[]` corresponds to identity
-            if not pauli_string:
-                id_coeff = coeff
-            else:
-                coeffs_list.append(coeff)
-
-                matches = re.findall(pauli_pattern, pauli_string)
-                terms = tuple(Pauli(m[0]) for m in matches)
-                qubits = tuple(int(m[1]) for m in matches)
-
-                pw = PauliWord(terms=terms, qubits=qubits)
-
-                paulis_list.append(pw)
-        else:
-            error_msg = "String parsing error: failed to match data."
-            raise RuntimeError(error_msg)
-
-    return PauliSum(
-        coefficients=tuple(coeffs_list),
-        terms=tuple(paulis_list),
-        identity_coefficient=id_coeff,
-    )
+def parse(text: str) -> PauliSum:
+    """Parse a Hamlib Hamiltonian string into a PauliSum."""
+    operator = QubitOperator(text)
+    return _qubit_operator_to_pauli_sum(operator)
