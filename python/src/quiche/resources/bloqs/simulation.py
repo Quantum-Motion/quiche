@@ -222,8 +222,9 @@ class SOSSABlockEncoding(Bloq):
     def reflection(self) -> ReflectionUsingPrepare:
         """A reflection around the zero state on the inner ancilla qubits."""
         return ReflectionUsingPrepare.reflection_around_zero(
-                bitsizes=(self.num_inner_select_ancillas,),
-            )
+            bitsizes=(self.num_inner_select_ancillas,),
+            global_phase=-1,
+        )
 
     def build_composite_bloq(
         self, bb: BloqBuilder, **soqs: SoquetT
