@@ -479,7 +479,7 @@ class QDRIFT(Bloq):
             simulation = bb.add(t, system=simulation)
 
         # Add the constant term as a global phase.
-        phase = GlobalPhase(exponent=-self.h.identity_coefficient / pi)
+        phase = GlobalPhase(exponent=-self.h.identity_coefficient * self.t / pi)
 
         if self.is_controlled:
             ctrl = bb.add(phase.controlled(), q=ctrl)
@@ -509,7 +509,7 @@ class QDRIFT(Bloq):
             bloq_counts[gate.controlled() if self.is_controlled else gate] = count
 
         # Add the global phase.
-        phase = GlobalPhase(exponent=-self.h.identity_coefficient / pi)
+        phase = GlobalPhase(exponent=-self.h.identity_coefficient * self.t / pi)
         bloq_counts[phase.controlled() if self.is_controlled else phase] = 1
         return bloq_counts
 
