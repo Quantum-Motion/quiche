@@ -14,6 +14,6 @@
 
 """Readers and parsers for external Hamiltonian file formats."""
 
-from . import hamlib
+from . import fcidump, hamlib
 
-__all__ = ["hamlib"]
+__all__ = ["fcidump", "hamlib"]
