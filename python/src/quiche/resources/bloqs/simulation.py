@@ -183,7 +183,7 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
         terms = [u.to_cirq(h.n_qubits) for u in h.terms]
         nterms = h.n_terms
         lam = h.lam
-        coeffs = np.array(h.coefficients, dtype=complex)
+        coeffs = np.array(h.coefficients)
 
         # Add the identity term in the Hamiltonian, if needed
         if h.identity_coefficient != 0.0:
@@ -192,7 +192,10 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
             lam += abs(h.identity_coefficient)
             coeffs = np.append(coeffs, [h.identity_coefficient])
 
-        prep_coeffs = np.sqrt(np.array(coeffs, dtype=complex) / lam)
+        terms = [
+            term if c >= 0 else -term for term, c in zip(terms, coeffs, strict=True)
+        ]
+        prep_coeffs = np.sqrt(np.abs(coeffs) / lam)
 
         # find the number of select qubits
         select_nqubits = ceil(log2(nterms))
