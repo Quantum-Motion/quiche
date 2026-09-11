@@ -28,6 +28,10 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Made `cloneWithoutIdentity` reject `PauliStrSum`s containing only identity terms.
 - Renamed the `QuESTEnv` binding methods `syncQuESTEnv` and `isQuESTEnvInit` to `sync` and `isInit`.
 - Added missing `const` qualifiers to the control arguments of `applyMultiControlledCoeffsPrep` and `applyMultiControlledPauliStrSumPrep`.
+- Changed `QDRIFT` sampling to use its own `numpy` generator, requiring an explicit integer `seed` (sampled terms will differ for a given seed from previous sampling).
+- `QPESpec` now takes `seed` as a field rather than an `extras` entry (required when simulating with `QDRIFT`).
+- `PrepareFromStatePrep` now exposes the phase gradient as a junk register, adding a `phase_gradient` register to the block encoding signature.
+- `QDRIFT` and `Trotterisation` now reject a zero evolution time.
 
 ### Deprecated
 
@@ -37,6 +41,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Removed `CTRLPauliWordRotation`, `CTRLQDRIFT` and `CTRLTrotterisation` (use `.controlled()` on the corresponding bloq instead).
 - Removed the (empty) `quiche.dispatch.budget.state_prep` module.
 - Removed the dangling `StatePrep` entry from `quiche.core.__all__`.
+- Removed `QDRIFT.sample_term_indices()` (use the `sampled_indices` property instead).
 
 ### Fixed
 - Removed zero-count sub-bloqs from call graphs.
@@ -46,6 +51,10 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Fixed `get_jw_state` returning its input rather than an integer array as its signature declares.
 - Fixed incorrectly bound `QuESTEnv.sync` and `QuESTEnv.isInit`.
 - Rebound `PauliStrSum.fromFile`, `PauliStrSum.fromReversedFile` and the `Qureg` creation methods (`createDensityQureg`, `createForcedQureg`, `createForcedDensityQureg` and `createCustomQureg`) as static methods.
+- Fixed `QDRIFT` dropping the evolution time from the identity term's global phase.
+- Fixed `QDRIFT` sampling from the global `random` state.
+- Fixed `LCUBlockEncodingWrapper` discarding the signs of negative coefficients.
+- Fixed `LCUBlockEncodingWrapper` including the phase gradient qubits in the index register for SELECT.
 
 ### Security
 
