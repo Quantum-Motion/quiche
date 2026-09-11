@@ -169,17 +169,10 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
     @classmethod
     def from_hamiltonian(cls, h: PauliSum, phase_bitsize: int) -> Self:
         """Process the input arguments and return an LCU block encoding."""
-        #############
-        # VALIDATION
-        #############
-        # Check phase_bitsize large enough.
         if phase_bitsize < 2:
             error_msg = "Choose phase_bitsize at least 2."
             raise ValueError(error_msg)
 
-        #############
-        # COMPUTE BLOQ
-        #############
         terms = [u.to_cirq(h.n_qubits) for u in h.terms]
         nterms = h.n_terms
         lam = h.lam
@@ -207,7 +200,6 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
             terms += [id_string] * nadd
             prep_coeffs = np.append(prep_coeffs, np.zeros(nadd, dtype=np.float64))
 
-        # create SELECT and PREP operators
         select = SelectPauliLCUWrapper(
             selection_bitsize=select_nqubits,
             target_bitsize=h.n_qubits,
@@ -246,9 +238,9 @@ class PauliWordRotation(Bloq):
 
     def __attrs_post_init__(self) -> None:
         """Validate attributes."""
-        if max(self.word.qubits) >= self.n_qubits:
+        if self.word.greatest_qubit >= self.n_qubits:
             message = (
-                f"Target qubit {max(self.word.qubits)} is out of range for a "
+                f"Target qubit {self.word.greatest_qubit} is out of range for a "
                 f"{self.n_qubits} qubit register."
             )
             raise ValueError(message)
@@ -330,8 +322,8 @@ class PauliWordRotation(Bloq):
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for PauliWordRotation."""
-        n_x = sum(term == Pauli.X for term in self.word.terms)
-        n_y = sum(term == Pauli.Y for term in self.word.terms)
+        n_x = sum(term is Pauli.X for term in self.word.terms)
+        n_y = sum(term is Pauli.Y for term in self.word.terms)
         n_cnot = 2 * (len(self.word.terms) - 1)
 
         bloq_counts = {}
@@ -370,7 +362,7 @@ class QDRIFT(Bloq):
             error_msg = "Choose positive n_terms."
             raise ValueError(error_msg)
 
-        if self.t < 0:
+        if self.t <= 0:
             error_msg = "Choose positive evolution time."
             raise ValueError(error_msg)
 
@@ -533,7 +525,7 @@ class Trotterisation(Bloq):
             error_msg = "Choose positive n_steps."
             raise ValueError(error_msg)
 
-        if self.t < 0:
+        if self.t <= 0:
             error_msg = "Choose positive evolution time."
             raise ValueError(error_msg)
 
@@ -592,11 +584,6 @@ class Trotterisation(Bloq):
             # So only the data and control qubits are counted here.
             return self.n_qubits + self.n_controls
         return NotImplemented
-
-    @property
-    def _trotter_error_bound(self) -> float:
-        """Compute an error bound. The total error is trotter_error_bound * t^{p+1}."""
-        return self.h.lam ** (self.order + 1.0)
 
     @property
     def n_qubits(self) -> int:
@@ -716,9 +703,7 @@ class Trotterisation(Bloq):
         bloq_counts = {}
 
         # For each index in the Counter, add the relevant bloq to the count.
-        for joint_coeff_idx, count in index_counts.items():
-            coeff = joint_coeff_idx[0]
-            idx = joint_coeff_idx[1]
+        for (coeff, idx), count in index_counts.items():
             word = self.h.terms[idx]
             angle = coeff * self.h.coefficients[idx] * self.dt
 
