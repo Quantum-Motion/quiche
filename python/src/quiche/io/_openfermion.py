@@ -12,14 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Conversions between quiche and openfermion representations."""
 
-from openfermion import QubitOperator
+import numpy as np
+from openfermion import InteractionOperator, QubitOperator
+from openfermion.chem.molecular_data import spinorb_from_spatial
+from openfermion.transforms import (
+    binary_code_transform,
+    bravyi_kitaev,
+    get_fermion_operator,
+    jordan_wigner,
+    parity_code,
+)
 
-from quiche.core.paulis import Pauli, PauliSum, PauliWord
+from quiche.core import (
+    ElectronicHamiltonian,
+    Mapping,
+    Pauli,
+    PauliSum,
+    PauliWord,
+    SecondQuantisedHamiltonian,
+)
 
 
 def _qubit_operator_to_pauli_sum(operator: QubitOperator) -> PauliSum:
-    """Convert an openfermion `QubitOperator` into a `PauliSum`."""
+    """Convert an openfermion QubitOperator into a PauliSum."""
     identity_coefficient = operator.constant
     if identity_coefficient.imag:
         error_msg = f"Complex identity coefficient: {identity_coefficient}."
@@ -51,4 +68,52 @@ def _qubit_operator_to_pauli_sum(operator: QubitOperator) -> PauliSum:
         coefficients=tuple(coefficients),
         terms=tuple(pauli_words),
         identity_coefficient=identity_coefficient.real,
+    )
+
+
+def _second_quantised_to_interaction_operator(
+    hamiltonian: SecondQuantisedHamiltonian,
+) -> InteractionOperator:
+    """Convert a SecondQuantisedHamiltonian into an openfermion InteractionOperator."""
+    # Map from chemist to openfermion ordering
+    reordered_two_body = np.einsum("pqrs->prsq", hamiltonian.two_body)
+
+    one_body, two_body = spinorb_from_spatial(hamiltonian.one_body, reordered_two_body)
+    return InteractionOperator(hamiltonian.core_energy, one_body, two_body / 2)
+
+
+def _interaction_to_qubit_operator(
+    operator: InteractionOperator,
+    mapping: Mapping,
+    num_spin_orbitals: int,
+) -> QubitOperator:
+    """Apply a fermion-to-qubit mapping to an openfermion InteractionOperator."""
+    match mapping:
+        case Mapping.JordanWigner:
+            return jordan_wigner(operator)
+        case Mapping.BravyiKitaev:
+            return bravyi_kitaev(operator, n_qubits=num_spin_orbitals)
+        case Mapping.Parity:
+            return binary_code_transform(
+                get_fermion_operator(operator), parity_code(num_spin_orbitals)
+            )
+
+
+def _second_quantised_to_electronic_hamiltonian(
+    hamiltonian: SecondQuantisedHamiltonian,
+    mapping: Mapping,
+) -> ElectronicHamiltonian:
+    """Convert a SecondQuantisedHamiltonian into an ElectronicHamiltonian."""
+    interaction_operator = _second_quantised_to_interaction_operator(hamiltonian)
+    qubit_operator = _interaction_to_qubit_operator(
+        interaction_operator,
+        mapping,
+        hamiltonian.num_spin_orbitals,
+    )
+    paulis = _qubit_operator_to_pauli_sum(qubit_operator)
+
+    return ElectronicHamiltonian(
+        electrons=hamiltonian.electrons,
+        mapping=mapping,
+        paulis=paulis,
     )

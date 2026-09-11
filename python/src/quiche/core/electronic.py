@@ -42,7 +42,12 @@ class ElectronicHamiltonian:
 
 
 class SecondQuantisedHamiltonian(BaseModel):
-    """Class encompassing a second quantisation electronic Hamiltonian."""
+    """
+    Class encompassing a second quantisation electronic Hamiltonian.
+
+    One body integrals are indexed `h[p, q]` and two body integrals are in chemist
+    notation, `h[p, q, r, s] = (pq|rs)`, over spatial orbitals.
+    """
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
@@ -152,3 +157,12 @@ class SecondQuantisedHamiltonian(BaseModel):
                 self.two_body.tobytes(),
             )
         )
+
+    def to_qubit_hamiltonian(self, mapping: Mapping) -> ElectronicHamiltonian:
+        """Get the qubit Hamiltonian after applying fermion-to-qubit mapping."""
+        # Lazily import openfermion wrappers, only used here
+        from quiche.io._openfermion import (  # noqa: PLC0415
+            _second_quantised_to_electronic_hamiltonian,
+        )
+
+        return _second_quantised_to_electronic_hamiltonian(self, mapping)

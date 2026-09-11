@@ -19,7 +19,7 @@ from pathlib import Path
 import h5py
 from openfermion import QubitOperator
 
-from quiche.core.paulis import PauliSum
+from quiche.core import PauliSum
 
 from ._openfermion import _qubit_operator_to_pauli_sum
 
