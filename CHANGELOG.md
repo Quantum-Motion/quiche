@@ -9,6 +9,9 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `py.typed` marker for type checkers.
 - Added `qpe::getEnergyFromTrotterPhase` and `qpe::getEnergyFromQubitisationPhase` functions for converting a QPE phase to an energy.
 - Added `logical_rotations_to_tgates` to `quiche.resources` exports.
+- Added `SecondQuantisedHamiltonian` to `quiche.core` for electronic integrals.
+- Added `quiche.io.fcidump` for reading FCIDUMP integral files.
+- Added `openfermion` as a runtime dependency.
 
 ### Changed
 - Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
@@ -28,6 +31,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Made `cloneWithoutIdentity` reject `PauliStrSum`s containing only identity terms.
 - Renamed the `QuESTEnv` binding methods `syncQuESTEnv` and `isQuESTEnvInit` to `sync` and `isInit`.
 - Added missing `const` qualifiers to the control arguments of `applyMultiControlledCoeffsPrep` and `applyMultiControlledPauliStrSumPrep`.
+- Moved `quiche.hamlib` into the new `quiche.io` subpackage.
+- Renamed `hamlib.get_dataset` and `hamlib.parse_hamiltonian` to `hamlib.read_dataset` and `hamlib.parse`.
 
 ### Deprecated
 
