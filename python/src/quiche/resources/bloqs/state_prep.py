@@ -153,7 +153,7 @@ class PrepareFromStatePrep(PrepareOracle):
         bb: BloqBuilder,
         **soqs: SoquetT,
     ) -> dict[str, SoquetT]:
-        """Implement decomposition into sub-bloqs using state prep bloq decompositon."""
+        """Implement decomposition into sub-bloqs using stateprep bloq decomposition."""
         selection, phase_gradient = bb.add(
             self.stateprep,
             target_state=soqs["selection"],

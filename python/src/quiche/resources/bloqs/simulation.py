@@ -353,7 +353,12 @@ class QDRIFT(Bloq):
     h: PauliSum
     t: float
     n_terms: int
-    seed: int
+    seed: int = attrs.field(
+        validator=[
+            attrs.validators.instance_of((int, np.integer)),
+            attrs.validators.ge(0),
+        ]
+    )
     is_controlled: bool = False
 
     def __attrs_post_init__(self) -> None:
