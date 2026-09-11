@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 
     from quiche.core.paulis import PauliSum, PauliWord
 
+from functools import cached_property
 from math import ceil, log2, pi
-from random import choices, getstate, seed, setstate
 from typing import Self
 
 import attrs
@@ -358,7 +358,7 @@ class QDRIFT(Bloq):
     h: PauliSum
     t: float
     n_terms: int
-    seed: int | float | str | bytes | bytearray | None = None
+    seed: int
     is_controlled: bool = False
 
     def __attrs_post_init__(self) -> None:
@@ -435,14 +435,14 @@ class QDRIFT(Bloq):
         """Get timestep for each operator."""
         return self.t * self.lam / self.n_terms
 
-    def sample_term_indices(self) -> tuple[int, ...]:
-        """Generate random sequence for Hamiltonian sampling."""
-        rng_state = getstate()
-        if self.seed is not None:
-            seed(self.seed)
-        c = choices(range(self.h.n_terms), self.positive_coefficients, k=self.n_terms)  # noqa: S311
-        setstate(rng_state)
-        return tuple(c)
+    @cached_property
+    def sampled_indices(self) -> tuple[int, ...]:
+        """Random sequence of indices for Hamiltonian sampling."""
+        rng = np.random.default_rng(self.seed)
+        probabilities = np.asarray(self.positive_coefficients) / self.lam
+        return tuple(
+            rng.choice(self.h.n_terms, size=self.n_terms, p=probabilities).tolist()
+        )
 
     def build_composite_bloq(
         self,
@@ -462,14 +462,15 @@ class QDRIFT(Bloq):
             bloqs = tuple(
                 PauliWordRotation(t, self.dt, self.n_qubits) for t in self.h.terms
             )
-        indices = self.sample_term_indices()
         # The frequency with which indices are sampled already accounts for the term's
         # coefficient in the Hamiltonian, so only need to record the sign of the
         # coefficient.
-        coeffs = tuple(-1 if self.h.coefficients[i] < 0 else 1 for i in indices)
+        coeffs = tuple(
+            -1 if self.h.coefficients[i] < 0 else 1 for i in self.sampled_indices
+        )
         # Use the sampled indices and the pre-built individual propagators to build the
         # full propagator.
-        t = TrotterizedUnitary(bloqs, indices, coeffs, self.dt)
+        t = TrotterizedUnitary(bloqs, self.sampled_indices, coeffs, self.dt)
 
         if self.is_controlled:
             ctrl = soqs["ctrl"]
@@ -492,8 +493,7 @@ class QDRIFT(Bloq):
         """Compute call graph for QDRIFT."""
         # Calculate a Counter that counts the frequency of each index in the sampled
         # configuration.
-        sampled_indices = self.sample_term_indices()
-        index_counts = Counter(sampled_indices)
+        index_counts = Counter(self.sampled_indices)
 
         bloq_counts = {}
         # For each index in the Counter, add the relevant bloq to the count.
