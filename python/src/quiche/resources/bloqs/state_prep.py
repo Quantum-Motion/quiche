@@ -15,7 +15,6 @@
 """State preparation routines."""
 
 import attrs
-import numpy as np
 from qualtran import Bloq, BloqBuilder, QAny, Register, Side, Signature, SoquetT
 from qualtran.bloqs.basic_gates import XGate
 from qualtran.bloqs.bookkeeping import Allocate
@@ -137,7 +136,12 @@ class PrepareFromStatePrep(PrepareOracle):
     @property
     def selection_registers(self) -> tuple[Register, ...]:
         """Get selection (index) register."""
-        return (Register("selection", QAny(self.phase_bitsize + self.select_nqubits)),)
+        return (Register("selection", QAny(self.select_nqubits)),)
+
+    @property
+    def junk_registers(self) -> tuple[Register, ...]:
+        """Get the junk (phase gradient) register."""
+        return (Register("phase_gradient", QAny(self.phase_bitsize)),)
 
     # We must implement the required abstract method to expose the concrete circuit
     def build_prepare_circuit(self) -> Bloq:
@@ -149,28 +153,15 @@ class PrepareFromStatePrep(PrepareOracle):
         bb: BloqBuilder,
         **soqs: SoquetT,
     ) -> dict[str, SoquetT]:
-        """
-        Implement decomposition into sub-bloqs using state prep bloq decompositon.
-
-        Because the state prep unitary uses registers 'target_state' and
-        'phase_gradient', the register 'selection' needs to be split up in the process.
-        """
-        # split the selection register into the state prep register
-        xs = bb.split(soqs["selection"])
-        target_state = bb.join(xs[: self.select_nqubits])
-        phase_gradient = bb.join(xs[self.select_nqubits :])
-
-        target_state, phase_gradient = bb.add(
-            self.stateprep, target_state=target_state, phase_gradient=phase_gradient
+        """Implement decomposition into sub-bloqs using stateprep bloq decomposition."""
+        selection, phase_gradient = bb.add(
+            self.stateprep,
+            target_state=soqs["selection"],
+            phase_gradient=soqs["phase_gradient"],
         )
 
-        xs = np.concatenate([bb.split(target_state), bb.split(phase_gradient)])
-        result = bb.join(xs)
-
-        return {"selection": result}
+        return {"selection": selection, "phase_gradient": phase_gradient}
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for PrepareFromStatePrep."""
-        return {
-            self.stateprep: 1,
-        }
+        return {self.stateprep: 1}

@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 
     from quiche.core.paulis import PauliSum, PauliWord
 
+from functools import cached_property
 from math import ceil, log2, pi
-from random import choices, getstate, seed, setstate
 from typing import Self
 
 import attrs
@@ -169,30 +169,24 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
     @classmethod
     def from_hamiltonian(cls, h: PauliSum, phase_bitsize: int) -> Self:
         """Process the input arguments and return an LCU block encoding."""
-        #############
-        # VALIDATION
-        #############
-        # Check phase_bitsize large enough.
         if phase_bitsize < 2:
             error_msg = "Choose phase_bitsize at least 2."
             raise ValueError(error_msg)
 
-        #############
-        # COMPUTE BLOQ
-        #############
         terms = [u.to_cirq(h.n_qubits) for u in h.terms]
-        nterms = h.n_terms
+        nterms = h.n_terms_with_identity
         lam = h.lam
-        coeffs = np.array(h.coefficients, dtype=complex)
+        coeffs = np.array(h.coefficients)
 
         # Add the identity term in the Hamiltonian, if needed
-        if h.identity_coefficient != 0.0:
+        if h.has_identity:
             terms.append(DensePauliString.eye(h.n_qubits))
-            nterms += 1
-            lam += abs(h.identity_coefficient)
             coeffs = np.append(coeffs, [h.identity_coefficient])
 
-        prep_coeffs = np.sqrt(np.array(coeffs, dtype=complex) / lam)
+        terms = [
+            term if c >= 0 else -term for term, c in zip(terms, coeffs, strict=True)
+        ]
+        prep_coeffs = np.sqrt(np.abs(coeffs) / lam)
 
         # find the number of select qubits
         select_nqubits = ceil(log2(nterms))
@@ -204,9 +198,8 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
             terms += [id_string] * nadd
             prep_coeffs = np.append(prep_coeffs, np.zeros(nadd, dtype=np.float64))
 
-        # create SELECT and PREP operators
         select = SelectPauliLCUWrapper(
-            selection_bitsize=select_nqubits + phase_bitsize,
+            selection_bitsize=select_nqubits,
             target_bitsize=h.n_qubits,
             select_unitaries=terms,
         )
@@ -243,9 +236,9 @@ class PauliWordRotation(Bloq):
 
     def __attrs_post_init__(self) -> None:
         """Validate attributes."""
-        if max(self.word.qubits) >= self.n_qubits:
+        if self.word.greatest_qubit >= self.n_qubits:
             message = (
-                f"Target qubit {max(self.word.qubits)} is out of range for a "
+                f"Target qubit {self.word.greatest_qubit} is out of range for a "
                 f"{self.n_qubits} qubit register."
             )
             raise ValueError(message)
@@ -327,8 +320,8 @@ class PauliWordRotation(Bloq):
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for PauliWordRotation."""
-        n_x = sum(term == Pauli.X for term in self.word.terms)
-        n_y = sum(term == Pauli.Y for term in self.word.terms)
+        n_x = sum(term is Pauli.X for term in self.word.terms)
+        n_y = sum(term is Pauli.Y for term in self.word.terms)
         n_cnot = 2 * (len(self.word.terms) - 1)
 
         bloq_counts = {}
@@ -358,7 +351,12 @@ class QDRIFT(Bloq):
     h: PauliSum
     t: float
     n_terms: int
-    seed: int | float | str | bytes | bytearray | None = None
+    seed: int = attrs.field(
+        validator=[
+            attrs.validators.instance_of((int, np.integer)),
+            attrs.validators.ge(0),
+        ]
+    )
     is_controlled: bool = False
 
     def __attrs_post_init__(self) -> None:
@@ -367,7 +365,7 @@ class QDRIFT(Bloq):
             error_msg = "Choose positive n_terms."
             raise ValueError(error_msg)
 
-        if self.t < 0:
+        if self.t <= 0:
             error_msg = "Choose positive evolution time."
             raise ValueError(error_msg)
 
@@ -418,6 +416,7 @@ class QDRIFT(Bloq):
     @property
     def positive_coefficients(self) -> tuple[float, ...]:
         """Get absolute value of the coefficients."""
+        # Note identity deliberately not included (applied as a global phase)
         return tuple(map(abs, self.h.coefficients))
 
     @property
@@ -435,14 +434,14 @@ class QDRIFT(Bloq):
         """Get timestep for each operator."""
         return self.t * self.lam / self.n_terms
 
-    def sample_term_indices(self) -> tuple[int, ...]:
-        """Generate random sequence for Hamiltonian sampling."""
-        rng_state = getstate()
-        if self.seed is not None:
-            seed(self.seed)
-        c = choices(range(self.h.n_terms), self.positive_coefficients, k=self.n_terms)  # noqa: S311
-        setstate(rng_state)
-        return tuple(c)
+    @cached_property
+    def sampled_indices(self) -> tuple[int, ...]:
+        """Random sequence of indices for Hamiltonian sampling."""
+        rng = np.random.default_rng(self.seed)
+        probabilities = np.asarray(self.positive_coefficients) / self.lam
+        return tuple(
+            rng.choice(self.h.n_terms, size=self.n_terms, p=probabilities).tolist()
+        )
 
     def build_composite_bloq(
         self,
@@ -462,14 +461,15 @@ class QDRIFT(Bloq):
             bloqs = tuple(
                 PauliWordRotation(t, self.dt, self.n_qubits) for t in self.h.terms
             )
-        indices = self.sample_term_indices()
         # The frequency with which indices are sampled already accounts for the term's
         # coefficient in the Hamiltonian, so only need to record the sign of the
         # coefficient.
-        coeffs = tuple(-1 if self.h.coefficients[i] < 0 else 1 for i in indices)
+        coeffs = tuple(
+            -1 if self.h.coefficients[i] < 0 else 1 for i in self.sampled_indices
+        )
         # Use the sampled indices and the pre-built individual propagators to build the
         # full propagator.
-        t = TrotterizedUnitary(bloqs, indices, coeffs, self.dt)
+        t = TrotterizedUnitary(bloqs, self.sampled_indices, coeffs, self.dt)
 
         if self.is_controlled:
             ctrl = soqs["ctrl"]
@@ -479,7 +479,7 @@ class QDRIFT(Bloq):
             simulation = bb.add(t, system=simulation)
 
         # Add the constant term as a global phase.
-        phase = GlobalPhase(exponent=-self.h.identity_coefficient / pi)
+        phase = GlobalPhase(exponent=-self.h.identity_coefficient * self.t / pi)
 
         if self.is_controlled:
             ctrl = bb.add(phase.controlled(), q=ctrl)
@@ -492,8 +492,7 @@ class QDRIFT(Bloq):
         """Compute call graph for QDRIFT."""
         # Calculate a Counter that counts the frequency of each index in the sampled
         # configuration.
-        sampled_indices = self.sample_term_indices()
-        index_counts = Counter(sampled_indices)
+        index_counts = Counter(self.sampled_indices)
 
         bloq_counts = {}
         # For each index in the Counter, add the relevant bloq to the count.
@@ -509,7 +508,7 @@ class QDRIFT(Bloq):
             bloq_counts[gate.controlled() if self.is_controlled else gate] = count
 
         # Add the global phase.
-        phase = GlobalPhase(exponent=-self.h.identity_coefficient / pi)
+        phase = GlobalPhase(exponent=-self.h.identity_coefficient * self.t / pi)
         bloq_counts[phase.controlled() if self.is_controlled else phase] = 1
         return bloq_counts
 
@@ -530,7 +529,7 @@ class Trotterisation(Bloq):
             error_msg = "Choose positive n_steps."
             raise ValueError(error_msg)
 
-        if self.t < 0:
+        if self.t <= 0:
             error_msg = "Choose positive evolution time."
             raise ValueError(error_msg)
 
@@ -589,11 +588,6 @@ class Trotterisation(Bloq):
             # So only the data and control qubits are counted here.
             return self.n_qubits + self.n_controls
         return NotImplemented
-
-    @property
-    def _trotter_error_bound(self) -> float:
-        """Compute an error bound. The total error is trotter_error_bound * t^{p+1}."""
-        return self.h.lam ** (self.order + 1.0)
 
     @property
     def n_qubits(self) -> int:
@@ -713,9 +707,7 @@ class Trotterisation(Bloq):
         bloq_counts = {}
 
         # For each index in the Counter, add the relevant bloq to the count.
-        for joint_coeff_idx, count in index_counts.items():
-            coeff = joint_coeff_idx[0]
-            idx = joint_coeff_idx[1]
+        for (coeff, idx), count in index_counts.items():
             word = self.h.terms[idx]
             angle = coeff * self.h.coefficients[idx] * self.dt
 

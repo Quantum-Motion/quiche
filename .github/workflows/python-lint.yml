@@ -30,7 +30,7 @@ jobs:
           enable-cache: true
 
       - name: Install lint dependencies
-        run: uv sync --only-group lint
+        run: uv sync --locked --only-group lint
 
       - name: Run ruff check
         run: uv run --no-sync ruff check --output-format=github
