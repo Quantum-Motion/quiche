@@ -12,7 +12,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `PauliSum.has_identity`, `PauliSum.n_terms_with_identity`, `PauliSum.without_identity()` and `PauliSum.split_identity()`.
 - Added `SecondQuantisedHamiltonian` to `quiche.core` for electronic integrals.
 - Added `quiche.io.fcidump` for reading FCIDUMP integral files.
-- Added `openfermion` as a runtime dependency.
+- Added `openfermion` as a dependency.
 
 ### Changed
 - Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
