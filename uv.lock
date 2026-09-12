@@ -819,6 +819,18 @@ wheels = [
 ]
 
 [[package]]
+name = "deprecation"
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5a/d3/8ae2869247df154b64c1884d7346d412fed0c49df84db635aab2d1c40e62/deprecation-2.1.0.tar.gz", hash = "sha256:72b3bde64e5d778694b0cf68178aed03d15e15477116add3fb773e581f9518ff", size = 173788, upload-time = "2020-04-20T14:23:38.738Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/02/c3/253a89ee03fc9b9682f1541728eb66db7db22148cd94f89ab22528cd1e1b/deprecation-2.1.0-py2.py3-none-any.whl", hash = "sha256:a10811591210e1fb0e768a8c25517cabeabcba6f0bf96564f8ff45189f90b14a", size = 11178, upload-time = "2020-04-20T14:23:36.581Z" },
+]
+
+[[package]]
 name = "diastatic-malt"
 version = "2.15.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1966,6 +1978,25 @@ wheels = [
 ]
 
 [[package]]
+name = "openfermion"
+version = "1.8.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cirq-core" },
+    { name = "deprecation" },
+    { name = "h5py" },
+    { name = "networkx" },
+    { name = "numpy" },
+    { name = "pubchempy" },
+    { name = "requests" },
+    { name = "scipy" },
+    { name = "sympy" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e2/64/14780633d9bafe69a485b67739e228b925c74d32e46e0da15d70a2aed7ba/openfermion-1.8.1-py3-none-any.whl", hash = "sha256:b3768d3d885d95789db7872e07b5164861689696d1b053cd8684c145cc0a0661", size = 44736718, upload-time = "2026-07-17T05:38:26.272Z" },
+]
+
+[[package]]
 name = "packaging"
 version = "26.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2302,6 +2333,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/20/e5/16ff212c1e452235a90aeb09066144d0c5a6a8c0834397e03f5224495c4e/ptyprocess-0.7.0.tar.gz", hash = "sha256:5c5d0a3b48ceee0b48485e0c26037c0acd7d29765ca3fbb5cb3831d347423220", size = 70762, upload-time = "2020-12-28T15:15:30.155Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/22/a6/858897256d0deac81a172289110f31629fc4cee19b6f01283303e18c8db3/ptyprocess-0.7.0-py2.py3-none-any.whl", hash = "sha256:4b41f3967fce3af57cc7e94b888626c18bf37a083e3651ca8feeb66d492fef35", size = 13993, upload-time = "2020-12-28T15:15:28.35Z" },
+]
+
+[[package]]
+name = "pubchempy"
+version = "1.0.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/30/a1/1b63d717a315b5fdc281e312bd02e9069e22ed8aa63a56d79f8dae95a1f2/pubchempy-1.0.5.tar.gz", hash = "sha256:08f0b2a82a5caa5d61e14935d655da554602d7b5686fe661ab584c882ffff623", size = 26814, upload-time = "2025-09-08T20:53:01.971Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6b/e3/2c887645f21b94d992a16775bcf81cdf6dcc36cf1606782cb2a3c86e9a35/pubchempy-1.0.5-py3-none-any.whl", hash = "sha256:e936cfed31fa194042ad463be3c803dde5b12ef2f795caf336e3114127c34fa0", size = 21355, upload-time = "2025-09-08T20:53:00.831Z" },
 ]
 
 [[package]]
@@ -2727,6 +2767,7 @@ dependencies = [
     { name = "cirq-core" },
     { name = "h5py" },
     { name = "numpy" },
+    { name = "openfermion" },
     { name = "pydantic" },
     { name = "qualtran" },
     { name = "sympy" },
@@ -2753,6 +2794,7 @@ requires-dist = [
     { name = "cirq-core", specifier = ">=1.3" },
     { name = "h5py", specifier = ">=3.12" },
     { name = "numpy", specifier = ">=2.1,<=2.4" },
+    { name = "openfermion", specifier = ">=1.8" },
     { name = "pydantic", specifier = ">=2.11" },
     { name = "qualtran", specifier = ">=0.6" },
     { name = "sympy", specifier = ">=1.12.0" },
