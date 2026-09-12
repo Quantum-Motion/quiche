@@ -181,15 +181,13 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
         # COMPUTE BLOQ
         #############
         terms = [u.to_cirq(h.n_qubits) for u in h.terms]
-        nterms = h.n_terms
+        nterms = h.n_terms_with_identity
         lam = h.lam
         coeffs = np.array(h.coefficients, dtype=complex)
 
         # Add the identity term in the Hamiltonian, if needed
-        if h.identity_coefficient != 0.0:
+        if h.has_identity:
             terms.append(DensePauliString.eye(h.n_qubits))
-            nterms += 1
-            lam += abs(h.identity_coefficient)
             coeffs = np.append(coeffs, [h.identity_coefficient])
 
         prep_coeffs = np.sqrt(np.array(coeffs, dtype=complex) / lam)
@@ -418,6 +416,7 @@ class QDRIFT(Bloq):
     @property
     def positive_coefficients(self) -> tuple[float, ...]:
         """Get absolute value of the coefficients."""
+        # Note identity deliberately not included (applied as a global phase)
         return tuple(map(abs, self.h.coefficients))
 
     @property
@@ -589,11 +588,6 @@ class Trotterisation(Bloq):
             # So only the data and control qubits are counted here.
             return self.n_qubits + self.n_controls
         return NotImplemented
-
-    @property
-    def _trotter_error_bound(self) -> float:
-        """Compute an error bound. The total error is trotter_error_bound * t^{p+1}."""
-        return self.h.lam ** (self.order + 1.0)
 
     @property
     def n_qubits(self) -> int:
