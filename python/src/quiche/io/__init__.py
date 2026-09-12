@@ -12,21 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Core data structures for quantum primites, routines and errors."""
+"""Readers and parsers for external Hamiltonian file formats."""
 
-from .algorithms import Mapping, PhaseEstimation, Simulation
-from .electronic import ElectronicHamiltonian, SecondQuantisedHamiltonian
-from .errors import Errors
-from .paulis import Pauli, PauliSum, PauliWord
+from . import fcidump, hamlib
 
-__all__ = [
-    "ElectronicHamiltonian",
-    "Errors",
-    "Mapping",
-    "Pauli",
-    "PauliSum",
-    "PauliWord",
-    "PhaseEstimation",
-    "SecondQuantisedHamiltonian",
-    "Simulation",
-]
+__all__ = ["fcidump", "hamlib"]

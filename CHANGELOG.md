@@ -10,6 +10,9 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `qpe::getEnergyFromTrotterPhase` and `qpe::getEnergyFromQubitisationPhase` functions for converting a QPE phase to an energy.
 - Added `logical_rotations_to_tgates` to `quiche.resources` exports.
 - Added `PauliSum.has_identity`, `PauliSum.n_terms_with_identity`, `PauliSum.without_identity()` and `PauliSum.split_identity()`.
+- Added `SecondQuantisedHamiltonian` to `quiche.core` for electronic integrals.
+- Added `quiche.io.fcidump` for reading FCIDUMP integral files.
+- Added `openfermion` as a dependency.
 
 ### Changed
 - Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
@@ -36,6 +39,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - `QPESpec` now takes `seed` as a field rather than an `extras` entry (required when simulating with `QDRIFT`).
 - `PrepareFromStatePrep` now exposes the phase gradient as a junk register, adding a `phase_gradient` register to the block encoding signature.
 - `QDRIFT` and `Trotterisation` now reject a zero evolution time.
+- Moved `quiche.hamlib` into the new `quiche.io` subpackage.
+- Renamed `hamlib.get_dataset` and `hamlib.parse_hamiltonian` to `hamlib.read_dataset` and `hamlib.parse`.
 
 ### Deprecated
 
