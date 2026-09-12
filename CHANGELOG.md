@@ -9,6 +9,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `py.typed` marker for type checkers.
 - Added `qpe::getEnergyFromTrotterPhase` and `qpe::getEnergyFromQubitisationPhase` functions for converting a QPE phase to an energy.
 - Added `logical_rotations_to_tgates` to `quiche.resources` exports.
+- Added `PauliSum.has_identity`, `PauliSum.n_terms_with_identity`, `PauliSum.without_identity()` and `PauliSum.split_identity()`.
 
 ### Changed
 - Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
@@ -28,6 +29,9 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Made `cloneWithoutIdentity` reject `PauliStrSum`s containing only identity terms.
 - Renamed the `QuESTEnv` binding methods `syncQuESTEnv` and `isQuESTEnvInit` to `sync` and `isInit`.
 - Added missing `const` qualifiers to the control arguments of `applyMultiControlledCoeffsPrep` and `applyMultiControlledPauliStrSumPrep`.
+- `PauliSum.identity_coefficient` now defaults to `0.0`.
+- `PauliSum.lam` is now the 1-norm of the whole operator (including the identity coefficient).
+- `PauliSum.to_quest()` now includes the identity term rather than dropping it. Call `PauliSum.without_identity()` first to recover the previous behaviour.
 - Changed `QDRIFT` sampling to use its own `numpy` generator, requiring an explicit integer `seed` (sampled terms will differ for a given seed from previous sampling).
 - `QPESpec` now takes `seed` as a field rather than an `extras` entry (required when simulating with `QDRIFT`).
 - `PrepareFromStatePrep` now exposes the phase gradient as a junk register, adding a `phase_gradient` register to the block encoding signature.

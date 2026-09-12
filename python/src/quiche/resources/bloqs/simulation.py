@@ -174,15 +174,13 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
             raise ValueError(error_msg)
 
         terms = [u.to_cirq(h.n_qubits) for u in h.terms]
-        nterms = h.n_terms
+        nterms = h.n_terms_with_identity
         lam = h.lam
         coeffs = np.array(h.coefficients)
 
         # Add the identity term in the Hamiltonian, if needed
-        if h.identity_coefficient != 0.0:
+        if h.has_identity:
             terms.append(DensePauliString.eye(h.n_qubits))
-            nterms += 1
-            lam += abs(h.identity_coefficient)
             coeffs = np.append(coeffs, [h.identity_coefficient])
 
         terms = [
@@ -418,6 +416,7 @@ class QDRIFT(Bloq):
     @property
     def positive_coefficients(self) -> tuple[float, ...]:
         """Get absolute value of the coefficients."""
+        # Note identity deliberately not included (applied as a global phase)
         return tuple(map(abs, self.h.coefficients))
 
     @property

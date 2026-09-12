@@ -96,7 +96,7 @@ class TestLCUBlockEncodingWrapper:
 
     @pytest.fixture
     def blockencoding(self, h2: PauliSum, budget: Errors) -> LCUBlockEncodingWrapper:
-        select_nqubits = ceil(log2(h2.n_terms))
+        select_nqubits = ceil(log2(h2.n_terms_with_identity))
         phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
         return LCUBlockEncodingWrapper.from_hamiltonian(h2, phase_bitsize)
 
@@ -104,7 +104,7 @@ class TestLCUBlockEncodingWrapper:
         self, blockencoding: LCUBlockEncodingWrapper, h2: PauliSum, budget: Errors
     ):
         """Check bloq signature."""
-        select_nqubits = ceil(log2(h2.n_terms))
+        select_nqubits = ceil(log2(h2.n_terms_with_identity))
         phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
         sig = blockencoding.signature
         assert len(sig) == 3
@@ -136,11 +136,13 @@ class TestLCUBlockEncodingWrapper:
         prep_coeffs = blockencoding.prepare.stateprep.state_coefficients
         # The block encoding pads the coefficients to a power of two. All coefficients
         # beyond the ones needed for the Hamiltonian should be zero and have no effect.
-        # There are a total of h2.n_terms + 1 non-zero coefficients because the
-        # identity coefficient is non-zero. Test that these are indeed non-zero and all
-        # others are zero.
-        np.testing.assert_equal(prep_coeffs[: h2.n_terms + 1] != 0, desired=True)
-        np.testing.assert_allclose(prep_coeffs[h2.n_terms + 1 :], 0.0)
+        # There are a total of h2.n_terms_with_identity non-zero coefficients because
+        # the identity coefficient is non-zero. Test that these are indeed non-zero and
+        # all others are zero.
+        np.testing.assert_equal(
+            prep_coeffs[: h2.n_terms_with_identity] != 0, desired=True
+        )
+        np.testing.assert_allclose(prep_coeffs[h2.n_terms_with_identity :], 0.0)
 
     def test_selectunitaries(
         self, blockencoding: LCUBlockEncodingWrapper, h2: PauliSum
@@ -152,18 +154,16 @@ class TestLCUBlockEncodingWrapper:
             blockencoding.prepare.stateprep.state_coefficients, dtype=complex
         )
         # Truncate to the non-zero terms. All truncated coefficients are zero, which is
-        # tested separately in test_zerocoefficients. Truncate after h2.n_terms+1 in
-        # order to count the identity contribution.
-        true_unitaries = true_unitaries[: h2.n_terms + 1]
-        true_prep_coeffs = true_prep_coeffs[: h2.n_terms + 1]
+        # tested separately in test_zerocoefficients. Truncate after
+        # h2.n_terms_with_identity in order to count the identity contribution.
+        true_unitaries = true_unitaries[: h2.n_terms_with_identity]
+        true_prep_coeffs = true_prep_coeffs[: h2.n_terms_with_identity]
 
         # Set the target unitaries and coefficients
         target_unitaries = [u.to_cirq(h2.n_qubits) for u in h2.terms] + [
             cirq.DensePauliString.eye(h2.n_qubits)
         ]
         target_coefficients = [*h2.coefficients, h2.identity_coefficient]
-        # Add the identity coefficient to the 1-norm
-        lam = h2.lam + abs(h2.identity_coefficient)
 
         # Assert the unitaries (and signs)
         for ii in range(len(target_unitaries)):
@@ -176,7 +176,7 @@ class TestLCUBlockEncodingWrapper:
 
         # Assert the coefficients
         np.testing.assert_allclose(
-            lam * true_prep_coeffs**2, np.abs(target_coefficients)
+            h2.lam * true_prep_coeffs**2, np.abs(target_coefficients)
         )
 
     @pytest.mark.parametrize("controlled", [False, True])

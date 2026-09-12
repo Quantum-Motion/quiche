@@ -106,6 +106,14 @@ class TestPauliSum:
         with pytest.raises(ValueError, match=error_msg):
             PauliSum(coefficients=coeffs, terms=(word1, word2), identity_coefficient=0)
 
+    def test_without_identity(self, h2: PauliSum):
+        filtered = h2.without_identity()
+        assert filtered.identity_coefficient == 0.0
+        assert filtered.terms == h2.terms
+        assert filtered.coefficients == h2.coefficients
+        assert filtered.n_terms_with_identity == filtered.n_terms
+        assert filtered.lam == pytest.approx(h2.lam - abs(h2.identity_coefficient))
+
     def test_to_matrix(self):
         word1 = PauliWord(terms=(Pauli.X, Pauli.Z), qubits=(0, 2))
         word2 = PauliWord(terms=(Pauli.Z, Pauli.Y), qubits=(0, 1))
