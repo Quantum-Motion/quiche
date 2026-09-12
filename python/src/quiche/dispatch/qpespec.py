@@ -80,6 +80,7 @@ class QPESpec:
     algorithm: PhaseEstimation
     simulation: Simulation
     error_budget: Errors
+    seed: int | None = None
     extras: dict = Field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -116,6 +117,10 @@ class QPESpec:
 
         match self.simulation:
             case Simulation.QDRIFT:
+                if self.seed is None:
+                    err_msg = "QDRIFT requires a seed."
+                    raise ValueError(err_msg)
+
                 self.time, self.reps = get_qdrift_params(
                     self.hamiltonian.paulis,
                     self.error_budget,
@@ -133,9 +138,6 @@ class QPESpec:
                     self.hamiltonian.paulis,
                     self.error_budget,
                 )
-
-        # Returns None if missing
-        self.seed = self.extras.get("seed")
 
         self.num_data = self.hamiltonian.paulis.n_qubits
         self.num_simulation_ancillas = self.num_index_ancillas + self.num_phase_ancillas
