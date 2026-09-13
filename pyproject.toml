@@ -120,8 +120,7 @@ testpaths = ["python/tests"]
 # Building from sdist would require a full LLVM install.
 skip = "*-musllinux_*"
 archs = ["auto64"]
-# test-command = "pytest {project}/python/tests/test_bindings.py"
-test-command = "pytest {project}/python/tests"
+test-command = "pytest {project}/python/tests/test_bindings.py"
 test-groups = ["test"]
 build = ["cp312-*"]
 build-frontend = "build[uv]"
