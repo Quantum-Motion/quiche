@@ -3,9 +3,6 @@ name: Publish wheels and sdist to PyPI
 on:
   workflow_dispatch:
   push:
-    # TODO: remove this branch before merging.
-    branches:
-      - build/wheels
     tags:
       - "v*"
 
@@ -24,7 +21,7 @@ jobs:
     timeout-minutes: 15
 
     environment:
-      name: testpypi
+      name: pypi
 
     permissions:
       id-token: write
@@ -37,8 +34,5 @@ jobs:
           path: dist
           merge-multiple: true
 
-      # TODO: switch to PyPI by removing repository-url once finished testing
-      - name: Publish to TestPyPI
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
