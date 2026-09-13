@@ -5,5 +5,4 @@ target_sources(quiche
     qpe.cpp
     qubitisation.cpp
     quest-patches.cpp
-    utils.cpp
 )

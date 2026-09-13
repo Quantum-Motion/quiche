@@ -17,7 +17,7 @@
 import abc
 import numbers
 from collections.abc import Callable
-from typing import Self
+from typing import Literal
 
 import attrs
 import sympy
@@ -33,7 +33,7 @@ from qualtran import (
     SoquetT,
 )
 from qualtran.bloqs.basic_gates import Hadamard, Power, Rz, SGate
-from qualtran.bloqs.bookkeeping import Allocate, Free
+from qualtran.bloqs.bookkeeping import Allocate, Free, Partition
 from qualtran.bloqs.phase_estimation import RectangularWindowState
 from qualtran.bloqs.qft import QFTTextBook
 from qualtran.bloqs.qubitization.qubitization_walk_operator import (
@@ -78,9 +78,9 @@ class _SingleAncillaQPE(Bloq):
     """
 
     simulation: Bloq
-    mode: str
+    mode: Literal["re", "im"]
 
-    def __attrs_post_init__(self) -> Self:
+    def __attrs_post_init__(self) -> None:
         """Input validator."""
         if not isinstance(self.exponent, numbers.Integral) or self.exponent < 1:
             err_msg = "Exponent must be positive integer."
@@ -88,8 +88,6 @@ class _SingleAncillaQPE(Bloq):
         if self.mode not in ("re", "im"):
             err_msg = "Measurement mode must be either 're' or 'im'."
             raise ValueError(err_msg)
-
-        return self
 
     @property
     @abc.abstractmethod
@@ -115,7 +113,7 @@ class _SingleAncillaQPE(Bloq):
     @property
     def n_simulation_qubits(self) -> int:
         """Return number of qubits used for Hamiltonian simulation."""
-        return self.simulation.signature[0].total_bits()
+        return self.simulation.signature.get_left("simulation").total_bits()
 
     @property
     def n_estimation_bits(self) -> int:
@@ -127,7 +125,7 @@ class _SingleAncillaQPE(Bloq):
         """Define input and/or output registers of the bloq."""
         return Signature([Register("simulation", dtype=QAny(self.n_simulation_qubits))])
 
-    def my_static_costs(self, cost_key: "CostKey") -> int:
+    def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount) and (
             isinstance(self.simulation, (QDRIFT, Trotterisation))
@@ -219,7 +217,7 @@ class NaiveQPE(_SingleAncillaQPE):
     """
 
     simulation: Bloq
-    mode: str
+    mode: Literal["re", "im"]
 
     @property
     def exponent(self) -> int:
@@ -273,7 +271,7 @@ class KitaevQPE(_SingleAncillaQPE):
 
     simulation: Bloq
     k: int
-    mode: str
+    mode: Literal["re", "im"]
 
     @property
     def exponent(self) -> int:
@@ -328,7 +326,7 @@ class IterativeQPE(_SingleAncillaQPE):
 
     simulation: Bloq
     k: int
-    mode: str
+    mode: Literal["re", "im"]
 
     @property
     def exponent(self) -> int:
@@ -351,7 +349,7 @@ class TextbookQPE(Bloq):
     num_qpe_ancillas: int  # ancilla used for phase estimation
     num_other_ancillas: int  # other ancilla used e.g. for block encoding
 
-    def my_static_costs(self, cost_key: "CostKey") -> int:
+    def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         # There are three stages to the QPE:
         # 1. State preparation on simulation and estimation registers
@@ -494,7 +492,7 @@ class TrotterLadder(Bloq):
     num_data: int
     num_qpe_ancillas: int
 
-    def my_static_costs(self, cost_key: "CostKey") -> int:
+    def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount) and (
             isinstance(self.simulation, (Trotterisation, QDRIFT))
@@ -571,8 +569,16 @@ class QubitisationLadder(Bloq):
         """Implement bloq decomposition into sub-bloqs."""
         target = soqs["data"]
         qpe_ancillas = soqs["qpe_ancillas"]
-        selection = soqs["other_ancillas"]
+        be_ancillas = soqs["other_ancillas"]
         qpe_ancilla_qubits = bb.split(qpe_ancillas)
+
+        be = self.walk.block_encoding
+        regs = (
+            Register("selection", QAny(be.select.selection_bitsize)),
+            Register("phase_gradient", QAny(be.prepare.phase_bitsize)),
+        )
+        partition = Partition(n=self.num_selection_ancillas, regs=regs)
+        selection, phase_gradient = bb.add(partition, x=be_ancillas)
 
         reflect_controlled = self.walk.reflect.controlled(ctrl_spec=CtrlSpec(cvs=0))
         walk_controlled = self.walk.controlled()
@@ -587,11 +593,12 @@ class QubitisationLadder(Bloq):
                 selection=selection,
             )
 
-            qpe_ancilla_qubits[0], selection, target = bb.add(
+            qpe_ancilla_qubits[0], selection, target, phase_gradient = bb.add(
                 walk_controlled,
                 ctrl=qpe_ancilla_qubits[0],
                 selection=selection,
                 target=target,
+                phase_gradient=phase_gradient,
             )
 
         else:
@@ -601,10 +608,11 @@ class QubitisationLadder(Bloq):
                 selection=selection,
             )
 
-            selection, target = bb.add(
+            selection, target, phase_gradient = bb.add(
                 Power(self.walk, 2 ** (self.index - 1)),
                 selection=selection,
                 target=target,
+                phase_gradient=phase_gradient,
             )
 
             qpe_ancilla_qubits[self.index], selection = bb.add(
@@ -613,10 +621,16 @@ class QubitisationLadder(Bloq):
                 selection=selection,
             )
 
+        be_ancillas = bb.add(
+            partition.adjoint(),
+            selection=selection,
+            phase_gradient=phase_gradient,
+        )
+
         return {
             "data": target,
             "qpe_ancillas": bb.join(qpe_ancilla_qubits),
-            "other_ancillas": selection,
+            "other_ancillas": be_ancillas,
         }
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002

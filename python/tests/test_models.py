@@ -55,6 +55,11 @@ class TestPauliWord:
         with pytest.raises(ValueError, match=error_msg):
             PauliWord(terms=(Pauli.X, Pauli.Y), qubits=(1,))
 
+    def test_duplicate_qubits(self):
+        error_msg = "The target qubits of the PauliWord must be unique."
+        with pytest.raises(ValueError, match=error_msg):
+            PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 1, 0))
+
     def test_invalid_qubit(self):
         err_msg = "Input should be a valid integer, got a number with a fractional part"
         with pytest.raises(ValueError, match=err_msg):
@@ -87,6 +92,11 @@ class TestPauliWord:
 class TestPauliSum:
     """Test PauliSum class."""
 
+    def test_no_terms(self):
+        error_msg = "The number of terms of the PauliSum must be nonzero."
+        with pytest.raises(ValueError, match=error_msg):
+            PauliSum(coefficients=(), terms=(), identity_coefficient=10.0)
+
     def test_length_mismatch(self):
         word1 = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
         word2 = PauliWord(terms=(Pauli.Y, Pauli.Z, Pauli.X), qubits=(1, 2, 3))
@@ -95,6 +105,14 @@ class TestPauliSum:
         error_msg = "The coefficients and terms of the PauliSum must be the same length"
         with pytest.raises(ValueError, match=error_msg):
             PauliSum(coefficients=coeffs, terms=(word1, word2), identity_coefficient=0)
+
+    def test_without_identity(self, h2: PauliSum):
+        filtered = h2.without_identity()
+        assert filtered.identity_coefficient == 0.0
+        assert filtered.terms == h2.terms
+        assert filtered.coefficients == h2.coefficients
+        assert filtered.n_terms_with_identity == filtered.n_terms
+        assert filtered.lam == pytest.approx(h2.lam - abs(h2.identity_coefficient))
 
     def test_to_matrix(self):
         word1 = PauliWord(terms=(Pauli.X, Pauli.Z), qubits=(0, 2))

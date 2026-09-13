@@ -39,13 +39,13 @@ class Pauli(StrEnum):
     Z = "Z"
 
     def _to_matrix(self) -> NDArray:
-        if self is Pauli.X:
-            return np.array([[0, 1], [1, 0]])
-        if self is Pauli.Y:
-            return np.array([[0, -1j], [1j, 0]])
-        if self is Pauli.Z:
-            return np.array([[1, 0], [0, -1]])
-        return None
+        match self:
+            case Pauli.X:
+                return np.array([[0, 1], [1, 0]])
+            case Pauli.Y:
+                return np.array([[0, -1j], [1j, 0]])
+            case Pauli.Z:
+                return np.array([[1, 0], [0, -1]])
 
 
 class PauliWord(BaseModel):
@@ -73,6 +73,14 @@ class PauliWord(BaseModel):
         """Validate number of terms and number of qubits."""
         if len(self.terms) != len(self.qubits):
             error_msg = "The terms and qubits of the PauliWord must be the same length"
+            raise ValueError(error_msg)
+        return self
+
+    @model_validator(mode="after")
+    def check_qubits_unique(self) -> Self:
+        """Validate each target qubit appears at most once."""
+        if len(set(self.qubits)) != len(self.qubits):
+            error_msg = "The target qubits of the PauliWord must be unique."
             raise ValueError(error_msg)
         return self
 
@@ -155,7 +163,16 @@ class PauliSum(BaseModel):
 
     coefficients: tuple[float, ...]
     terms: tuple[PauliWord, ...]
-    identity_coefficient: float
+    identity_coefficient: float = 0.0
+
+    @model_validator(mode="after")
+    def check_nonzero_lengths(self) -> Self:
+        """Validate number of terms is nonzero."""
+        if len(self.terms) == 0:
+            error_msg = "The number of terms of the PauliSum must be nonzero."
+            raise ValueError(error_msg)
+
+        return self
 
     @model_validator(mode="after")
     def check_lengths_match(self) -> Self:
@@ -184,15 +201,27 @@ class PauliSum(BaseModel):
 
     @computed_field
     @cached_property
+    def has_identity(self) -> bool:
+        """Whether the identity term contributes to the operator."""
+        return bool(self.identity_coefficient)
+
+    @computed_field
+    @cached_property
     def n_terms(self) -> int:
         """Get number of terms in linear combination."""
         return len(self.terms)
 
     @computed_field
     @cached_property
+    def n_terms_with_identity(self) -> int:
+        """Get the number of terms including the identity if non-zero."""
+        return self.n_terms + (1 if self.has_identity else 0)
+
+    @computed_field
+    @cached_property
     def lam(self) -> float:
-        """Get the 1-norm of the coefficients."""
-        return sum(map(abs, self.coefficients))
+        """Get the 1-norm of the operator."""
+        return sum(map(abs, self.coefficients)) + abs(self.identity_coefficient)
 
     def __str__(self) -> str:
         """Define printing for PauliSum class."""
@@ -212,6 +241,18 @@ class PauliSum(BaseModel):
             msg += "\n"
         return msg
 
+    def without_identity(self) -> PauliSum:
+        """Get a copy of the PauliSum with the identity coefficient zeroed."""
+        return PauliSum(
+            coefficients=self.coefficients,
+            terms=self.terms,
+            identity_coefficient=0.0,
+        )
+
+    def split_identity(self) -> tuple[float, PauliSum]:
+        """Get the identity coefficient and the remaining terms separately."""
+        return (self.identity_coefficient, self.without_identity())
+
     def to_quest(self) -> PauliStrSum:
         """
         Get the QuEST representation of a PauliSum.
@@ -219,7 +260,13 @@ class PauliSum(BaseModel):
         Will raise if called outside of a QuESTEnv.
         """
         strings = [word.to_quest(self.n_qubits) for word in self.terms]
-        return PauliStrSum(strings, self.coefficients)
+        coefficients = list(self.coefficients)
+
+        if self.has_identity:
+            strings.append(PauliStr("I" * self.n_qubits))
+            coefficients.append(self.identity_coefficient)
+
+        return PauliStrSum(strings, coefficients)
 
     def _to_matrix(self) -> NDArray:
         total = self.identity_coefficient * np.identity(2**self.n_qubits, dtype=complex)

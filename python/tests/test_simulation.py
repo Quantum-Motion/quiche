@@ -27,7 +27,7 @@ from qualtran.resource_counting.generalizers import ignore_split_join
 from qualtran.testing import (
     assert_equivalent_bloq_counts,
 )
-from scipy.linalg import expm
+from scipy.linalg import block_diag, expm
 
 from quiche.core import Errors, Pauli, PauliSum, PauliWord
 from quiche.resources import logical_qubit_resources
@@ -38,6 +38,16 @@ from quiche.resources.bloqs import (
     SelectPauliLCUWrapper,
     Trotterisation,
 )
+
+
+@pytest.fixture
+def h_single() -> PauliSum:
+    """Single Pauli Hamiltonian with nonzero identity for QDRIFT testing."""
+    return PauliSum(
+        coefficients=(1.0,),
+        terms=(PauliWord(terms=(Pauli.X,), qubits=(0,)),),
+        identity_coefficient=0.3,
+    )
 
 
 def _flatten_trotterizedunitary(bloq_counts: dict) -> dict:
@@ -86,7 +96,7 @@ class TestLCUBlockEncodingWrapper:
 
     @pytest.fixture
     def blockencoding(self, h2: PauliSum, budget: Errors) -> LCUBlockEncodingWrapper:
-        select_nqubits = ceil(log2(h2.n_terms))
+        select_nqubits = ceil(log2(h2.n_terms_with_identity))
         phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
         return LCUBlockEncodingWrapper.from_hamiltonian(h2, phase_bitsize)
 
@@ -94,17 +104,22 @@ class TestLCUBlockEncodingWrapper:
         self, blockencoding: LCUBlockEncodingWrapper, h2: PauliSum, budget: Errors
     ):
         """Check bloq signature."""
-        select_nqubits = ceil(log2(h2.n_terms))
+        select_nqubits = ceil(log2(h2.n_terms_with_identity))
         phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
         sig = blockencoding.signature
-        assert len(sig) == 2
+        assert len(sig) == 3
 
         reg = sig[0]
         assert reg.name == "selection"
-        assert reg.dtype == QAny(select_nqubits + phase_bitsize)
+        assert reg.dtype == QAny(select_nqubits)
         assert reg.side == Side.THRU
 
         reg = sig[1]
+        assert reg.name == "phase_gradient"
+        assert reg.dtype == QAny(phase_bitsize)
+        assert reg.side == Side.THRU
+
+        reg = sig[2]
         assert reg.name == "target"
         assert reg.dtype == QAny(h2.n_qubits)
         assert reg.side == Side.THRU
@@ -121,11 +136,13 @@ class TestLCUBlockEncodingWrapper:
         prep_coeffs = blockencoding.prepare.stateprep.state_coefficients
         # The block encoding pads the coefficients to a power of two. All coefficients
         # beyond the ones needed for the Hamiltonian should be zero and have no effect.
-        # There are a total of h2.n_terms + 1 non-zero coefficients because the
-        # identity coefficient is non-zero. Test that these are indeed non-zero and all
-        # others are zero.
-        np.testing.assert_equal(prep_coeffs[: h2.n_terms + 1] != 0, desired=True)
-        np.testing.assert_allclose(prep_coeffs[h2.n_terms + 1 :], 0.0)
+        # There are a total of h2.n_terms_with_identity non-zero coefficients because
+        # the identity coefficient is non-zero. Test that these are indeed non-zero and
+        # all others are zero.
+        np.testing.assert_equal(
+            prep_coeffs[: h2.n_terms_with_identity] != 0, desired=True
+        )
+        np.testing.assert_allclose(prep_coeffs[h2.n_terms_with_identity :], 0.0)
 
     def test_selectunitaries(
         self, blockencoding: LCUBlockEncodingWrapper, h2: PauliSum
@@ -137,29 +154,30 @@ class TestLCUBlockEncodingWrapper:
             blockencoding.prepare.stateprep.state_coefficients, dtype=complex
         )
         # Truncate to the non-zero terms. All truncated coefficients are zero, which is
-        # tested separately in test_zerocoefficients. Truncate after h2.n_terms+1 in
-        # order to count the identity contribution.
-        true_unitaries = true_unitaries[: h2.n_terms + 1]
-        true_prep_coeffs = true_prep_coeffs[: h2.n_terms + 1]
+        # tested separately in test_zerocoefficients. Truncate after
+        # h2.n_terms_with_identity in order to count the identity contribution.
+        true_unitaries = true_unitaries[: h2.n_terms_with_identity]
+        true_prep_coeffs = true_prep_coeffs[: h2.n_terms_with_identity]
 
         # Set the target unitaries and coefficients
         target_unitaries = [u.to_cirq(h2.n_qubits) for u in h2.terms] + [
             cirq.DensePauliString.eye(h2.n_qubits)
         ]
         target_coefficients = [*h2.coefficients, h2.identity_coefficient]
-        # Add the identity coefficient to the 1-norm
-        lam = h2.lam + abs(h2.identity_coefficient)
 
-        # Assert the unitaries
+        # Assert the unitaries (and signs)
         for ii in range(len(target_unitaries)):
+            target = target_unitaries[ii] * np.sign(target_coefficients[ii])
             err_msg = (
                 f"Unitaries at index {ii} do not agree: "
-                f"{true_unitaries[ii]} vs {target_unitaries[ii]}."
+                f"{true_unitaries[ii]} vs {target}."
             )
-            assert true_unitaries[ii] == target_unitaries[ii], err_msg
+            assert true_unitaries[ii] == target, err_msg
 
         # Assert the coefficients
-        np.testing.assert_allclose(lam * true_prep_coeffs**2, target_coefficients)
+        np.testing.assert_allclose(
+            h2.lam * true_prep_coeffs**2, np.abs(target_coefficients)
+        )
 
     @pytest.mark.parametrize("controlled", [False, True])
     def test_bloq_counts(
@@ -232,11 +250,11 @@ class TestQDRIFT:
 
     def test_invalid_negative_nterms(self, h2: PauliSum):
         with pytest.raises(ValueError, match="Choose positive n_terms"):
-            QDRIFT(h2, t=5, n_terms=-10)
+            QDRIFT(h2, t=5, n_terms=-10, seed=1024)
 
     def test_invalid_negative_time(self, h2: PauliSum):
         with pytest.raises(ValueError, match="Choose positive evolution time"):
-            QDRIFT(h2, t=-5, n_terms=4)
+            QDRIFT(h2, t=-5, n_terms=4, seed=1024)
 
     @pytest.mark.parametrize("controlled", [False, True])
     def test_bloq_counts(self, qdrift: QDRIFT, *, controlled: bool):
@@ -254,6 +272,35 @@ class TestQDRIFT:
         manual_counts = logical_qubit_resources(bloq)
         decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
         assert manual_counts == decomp_counts
+
+    @pytest.mark.parametrize("t", [0.5, 5.0])
+    @pytest.mark.parametrize("controlled", [False, True])
+    def test_analytic(self, h_single: PauliSum, t: float, *, controlled: bool):
+        """Check QDRIFT against the exact matrix exponential."""
+        qdrift = QDRIFT(h_single, t=t, n_terms=3, seed=1024)
+        bloq = qdrift.controlled() if controlled else qdrift
+        actual = bloq.tensor_contract()
+
+        exponential = expm(-1j * t * h_single._to_matrix())
+        expected = (
+            block_diag(np.eye(len(exponential)), exponential)
+            if controlled
+            else exponential
+        )
+
+        np.testing.assert_allclose(actual, expected, atol=1e-12)
+
+    @pytest.mark.parametrize("t", [0.5, 5.0])
+    def test_trotter(self, h_single: PauliSum, t: float):
+        """Check QDRIFT against Trotterisation."""
+        qdrift = QDRIFT(h_single, t=t, n_terms=3, seed=1024)
+        trotter = Trotterisation(h_single, t=t, n_steps=1, order=1)
+
+        np.testing.assert_allclose(
+            qdrift.tensor_contract(),
+            trotter.tensor_contract(),
+            atol=1e-12,
+        )
 
 
 class TestTrotterisation:

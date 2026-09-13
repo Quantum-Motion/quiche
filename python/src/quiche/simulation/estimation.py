@@ -14,7 +14,8 @@
 
 """Wrappers for phase estimation methods in the QuEST backend."""
 
-# ruff: noqa: PLR0913, N802
+# Wrapper names and signatures mirror the C++ bindings
+# ruff: noqa: PLR0913, PLR0917, N802
 
 from collections.abc import Sequence
 
