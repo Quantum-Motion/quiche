@@ -2505,6 +2505,63 @@ wheels = [
 ]
 
 [[package]]
+name = "pyquiche"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "cirq-core" },
+    { name = "h5py" },
+    { name = "numpy" },
+    { name = "openfermion" },
+    { name = "pydantic" },
+    { name = "qualtran" },
+    { name = "sympy" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "clang-format" },
+    { name = "pytest" },
+    { name = "ruff" },
+    { name = "scipy" },
+]
+lint = [
+    { name = "clang-format" },
+    { name = "ruff" },
+]
+test = [
+    { name = "pytest" },
+    { name = "scipy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cirq-core", specifier = ">=1.3" },
+    { name = "h5py", specifier = ">=3.12" },
+    { name = "numpy", specifier = ">=2.1,<=2.4" },
+    { name = "openfermion", specifier = ">=1.8" },
+    { name = "pydantic", specifier = ">=2.11" },
+    { name = "qualtran", specifier = ">=0.6" },
+    { name = "sympy", specifier = ">=1.12.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "clang-format", specifier = "==23.1.*" },
+    { name = "pytest", specifier = ">=9.0" },
+    { name = "ruff", specifier = ">=0.15" },
+    { name = "scipy", specifier = ">=1.15" },
+]
+lint = [
+    { name = "clang-format", specifier = "==23.1.*" },
+    { name = "ruff", specifier = ">=0.15" },
+]
+test = [
+    { name = "pytest", specifier = ">=9.0" },
+    { name = "scipy", specifier = ">=1.15" },
+]
+
+[[package]]
 name = "pytest"
 version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2757,63 +2814,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1b/1f/e2ae2886a71cea7b561148eee3f8c434f0ae0a546c51a53d0505f3095cc8/qualtran-0.7.0.tar.gz", hash = "sha256:0a55a3493ec6154c76e5cde8553715f4065052e3432836a628a55a6cbccb1a38", size = 793161, upload-time = "2026-01-22T23:39:45.688Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e9/5e/891f81810631d7492f302dd7ae93fe0489eb4d86316d008e1544074d357f/qualtran-0.7.0-py3-none-any.whl", hash = "sha256:189245909302ac8bfca6cbef621222b30436a286b71d29e42cba1cc610083adf", size = 1314275, upload-time = "2026-01-22T23:39:42.986Z" },
-]
-
-[[package]]
-name = "quiche"
-version = "0.0.1"
-source = { editable = "." }
-dependencies = [
-    { name = "cirq-core" },
-    { name = "h5py" },
-    { name = "numpy" },
-    { name = "openfermion" },
-    { name = "pydantic" },
-    { name = "qualtran" },
-    { name = "sympy" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "clang-format" },
-    { name = "pytest" },
-    { name = "ruff" },
-    { name = "scipy" },
-]
-lint = [
-    { name = "clang-format" },
-    { name = "ruff" },
-]
-test = [
-    { name = "pytest" },
-    { name = "scipy" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "cirq-core", specifier = ">=1.3" },
-    { name = "h5py", specifier = ">=3.12" },
-    { name = "numpy", specifier = ">=2.1,<=2.4" },
-    { name = "openfermion", specifier = ">=1.8" },
-    { name = "pydantic", specifier = ">=2.11" },
-    { name = "qualtran", specifier = ">=0.6" },
-    { name = "sympy", specifier = ">=1.12.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "clang-format", specifier = "==23.1.*" },
-    { name = "pytest", specifier = ">=9.0" },
-    { name = "ruff", specifier = ">=0.15" },
-    { name = "scipy", specifier = ">=1.15" },
-]
-lint = [
-    { name = "clang-format", specifier = "==23.1.*" },
-    { name = "ruff", specifier = ">=0.15" },
-]
-test = [
-    { name = "pytest", specifier = ">=9.0" },
-    { name = "scipy", specifier = ">=1.15" },
 ]
 
 [[package]]

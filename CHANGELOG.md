@@ -6,6 +6,21 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+
+## [0.1.0] - 2026-09-13
+
+### Added
 - Added `py.typed` marker for type checkers.
 - Added `qpe::getEnergyFromTrotterPhase` and `qpe::getEnergyFromQubitisationPhase` functions for converting a QPE phase to an energy.
 - Added `logical_rotations_to_tgates` to `quiche.resources` exports.
@@ -13,6 +28,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `SecondQuantisedHamiltonian` to `quiche.core` for electronic integrals.
 - Added `quiche.io.fcidump` for reading FCIDUMP integral files.
 - Added `openfermion` as a dependency.
+- Added `pyquiche` package to PyPI, with prebuilt, multithreaded wheels for Linux, macOS and Windows (GPU, MPI and single/quad precision builds still require building from source).
 
 ### Changed
 - Renamed `applyMultiStateControlledPhaseShift` to `applyMultiQubitStatePhaseShift` and `applyMultiStateControlledQubitPhaseFlip` to `applyMultiQubitStatePhaseFlip`.
@@ -41,8 +57,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - `QDRIFT` and `Trotterisation` now reject a zero evolution time.
 - Moved `quiche.hamlib` into the new `quiche.io` subpackage.
 - Renamed `hamlib.get_dataset` and `hamlib.parse_hamiltonian` to `hamlib.read_dataset` and `hamlib.parse`.
-
-### Deprecated
+- Renamed the package from `quiche` to `pyquiche` to avoid PyPI clash (the import name `quiche` is unchanged).
 
 ### Removed
 - Removed the C++ Hamlib module (keeping just the Python one), along with the corresponding example and unit tests.
@@ -65,7 +80,6 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Fixed `LCUBlockEncodingWrapper` discarding the signs of negative coefficients.
 - Fixed `LCUBlockEncodingWrapper` including the phase gradient qubits in the index register for SELECT.
 
-### Security
 
 ## [0.0.1] - 2026-06-30
 

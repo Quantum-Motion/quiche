@@ -1,0 +1,38 @@
+name: Publish wheels and sdist to PyPI
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+
+  build:
+    uses: ./.github/workflows/build-wheels.yml
+
+    permissions:
+      contents: read
+
+  pypi-publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    environment:
+      name: pypi
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download wheel and sdist artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "dist-{wheels-*,sdist}"
+          path: dist
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
