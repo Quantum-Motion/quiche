@@ -16,7 +16,7 @@ QUICHE (QUantum Integrated CHEmistry) is a toolkit for studying quantum computin
 
 ## Installation
 
-QUICHE is available on PyPI as `pyquiche`, so for a simple install just
+QUICHE is available on PyPI as `pyquiche`. For a basic install, execute
 ```bash
 pip install pyquiche
 ```
@@ -54,11 +54,9 @@ cd quiche
 pip install .
 ```
 
-See the [QuEST docs](https://quest-kit.github.io/QuEST/) for the available simulation flags.
-
 ### C++ backend only
 
-To build just the C++ simulator backend, along with the examples, simply execute
+To build only the C++ simulator backend, along with the examples, execute
 ```bash
 cd quiche
 cmake -B build -D QUICHE_BUILD_EXAMPLES=ON
@@ -70,7 +68,7 @@ Then execute an example (e.g. the Textbook QPE example)
 ./build/cpp/examples/qpe-textbook
 ```
 
-The other C++ configuration flags can be similarly toggled `ON` and `OFF`.
+Other C++ configuration flags can be similarly toggled `ON` and `OFF`. See also the [QuEST docs](https://quest-kit.github.io/QuEST/) for the available simulation flags.
 
 
 ## Usage
