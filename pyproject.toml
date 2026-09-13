@@ -18,6 +18,7 @@ dependencies = [
     "cirq-core>=1.3",
     "h5py>=3.12",
     "numpy>=2.1, <=2.4",    # required for transitive dependencies
+    "openfermion>=1.8",
     "pydantic>=2.11",
     "qualtran>=0.6",
     "sympy>=1.12.0",
