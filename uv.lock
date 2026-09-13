@@ -2506,7 +2506,7 @@ wheels = [
 
 [[package]]
 name = "pyquiche"
-version = "0.0.1.dev2"
+version = "0.1.0rc1"
 source = { editable = "." }
 dependencies = [
     { name = "cirq-core" },

@@ -1,7 +1,6 @@
 [project]
 name = "pyquiche"
-# TODO: update before merging
-version = "0.0.1.dev2"
+version = "0.1.0.rc1"
 description = "QUantum Integrated CHEmistry toolkit."
 authors = [
     { name = "Thomas Bromley", email = "thomas@quantummotion.tech"},

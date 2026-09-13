@@ -6,6 +6,21 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+
+## [0.1.0] - 2026-09-13
+
+### Added
 - Added `py.typed` marker for type checkers.
 - Added `qpe::getEnergyFromTrotterPhase` and `qpe::getEnergyFromQubitisationPhase` functions for converting a QPE phase to an energy.
 - Added `logical_rotations_to_tgates` to `quiche.resources` exports.
@@ -44,8 +59,6 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Renamed `hamlib.get_dataset` and `hamlib.parse_hamiltonian` to `hamlib.read_dataset` and `hamlib.parse`.
 - Renamed the package from `quiche` to `pyquiche` to avoid PyPI clash (the import name `quiche` is unchanged).
 
-### Deprecated
-
 ### Removed
 - Removed the C++ Hamlib module (keeping just the Python one), along with the corresponding example and unit tests.
 - Removed the `QUICHE_BUILD_HAMLIB` build flag and the HDF5 dependency for the C++ backend.
@@ -67,7 +80,6 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Fixed `LCUBlockEncodingWrapper` discarding the signs of negative coefficients.
 - Fixed `LCUBlockEncodingWrapper` including the phase gradient qubits in the index register for SELECT.
 
-### Security
 
 ## [0.0.1] - 2026-06-30
 
