@@ -1,7 +1,18 @@
 cmake_minimum_required(VERSION 3.26)
 
+# Read project version file and re-run CMake if updated
+set(QUICHE_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${QUICHE_VERSION_FILE}")
+file(STRINGS "${QUICHE_VERSION_FILE}" QUICHE_RAW_VERSION)
+
+# Require major.minor.patch versioning, strip CMake-unsupported suffixes
+string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" QUICHE_VERSION "${QUICHE_RAW_VERSION}")
+if(NOT QUICHE_VERSION)
+    message(FATAL_ERROR "Invalid QUICHE version: '${QUICHE_RAW_VERSION}'.")
+endif()
+
 project(QuicheProject
-    VERSION 0.1.0
+    VERSION ${QUICHE_VERSION}
     DESCRIPTION "QUantum Integrated CHEmistry toolkit"
     LANGUAGES CXX C # QUICHE itself only uses C++ but QuEST requires C
 )
