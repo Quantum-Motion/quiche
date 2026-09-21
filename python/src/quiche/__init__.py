@@ -15,10 +15,19 @@
 """QUICHE - A library for QUantum Integrated CHEmistry."""
 
 import importlib
-from types import ModuleType
 from typing import TYPE_CHECKING
 
 __all__ = [
+    "ElectronicHamiltonian",
+    "Errors",
+    "Mapping",
+    "Pauli",
+    "PauliSum",
+    "PauliWord",
+    "PhaseEstimation",
+    "QPESpec",
+    "SecondQuantisedHamiltonian",
+    "Simulation",
     "bindings",
     "chemistry",
     "core",
@@ -27,6 +36,19 @@ __all__ = [
     "resources",
     "simulation",
 ]
+
+_REEXPORTS = {
+    "ElectronicHamiltonian": ".core.electronic",
+    "Errors": ".core.errors",
+    "Mapping": ".core.algorithms",
+    "Pauli": ".core.paulis",
+    "PauliSum": ".core.paulis",
+    "PauliWord": ".core.paulis",
+    "PhaseEstimation": ".core.algorithms",
+    "QPESpec": ".dispatch.qpespec",
+    "SecondQuantisedHamiltonian": ".core.electronic",
+    "Simulation": ".core.algorithms",
+}
 
 if TYPE_CHECKING:
     from . import (
@@ -38,10 +60,19 @@ if TYPE_CHECKING:
         resources,
         simulation,
     )
+    from .core.algorithms import Mapping, PhaseEstimation, Simulation
+    from .core.electronic import ElectronicHamiltonian, SecondQuantisedHamiltonian
+    from .core.errors import Errors
+    from .core.paulis import Pauli, PauliSum, PauliWord
+    from .dispatch import QPESpec
 
 
-def __getattr__(name: str) -> ModuleType:
-    """Import submodules on first access."""
+def __getattr__(name: str) -> object:
+    """Import submodules and re-exported names on first access."""
+    if (module_path := _REEXPORTS.get(name)) is not None:
+        module = importlib.import_module(module_path, __name__)
+        return getattr(module, name)
+
     if name in __all__:
         return importlib.import_module(f".{name}", __name__)
 
