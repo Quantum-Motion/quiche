@@ -67,6 +67,21 @@ clang-format --dry-run --Werror some_file.cpp
 
 `.clang-tidy` is provided as a general reference for static analysis; it isn't currently enforced.
 
+## Pre-commit hooks
+
+Basic hygiene and secret-scanning checks are handled using pre-commit hooks, configured in `.pre-commit-config.yaml`.
+The checks can be run with [`pre-commit`](https://github.com/pre-commit/pre-commit) or [`prek`](https://github.com/j178/prek).
+
+To install the hooks so they run automatically on `git commit`
+```bash
+prek install
+```
+
+To run the hooks on currently staged files
+```bash
+prek run
+```
+
 ## Continuous integration
 
 Every pull request and push to `main` runs:
