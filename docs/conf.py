@@ -38,9 +38,9 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
-    "myst_nb",
     "sphinx_copybutton",
     "sphinx_design",
+    "myst_parser",
 ]
 
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "README.md"]
