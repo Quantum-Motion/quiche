@@ -14,16 +14,11 @@
 
 """Sphinx configuration for the QUICHE documentation."""
 
-import sys
 import tomllib
 from pathlib import Path
 
 DOCS_DIR = Path(__file__).parent.resolve()
 REPO_ROOT = DOCS_DIR.parent
-PACKAGE_SRC = REPO_ROOT / "python" / "src"
-
-# Document the in-tree package, so that the docs can be built without installing it.
-sys.path.insert(0, str(PACKAGE_SRC))
 
 # -- Project information -----------------------------------------------------
 
@@ -59,16 +54,6 @@ autodoc_default_options = {
 }
 autodoc_typehints = "description"
 autodoc_typehints_description_target = "documented_params"
-
-# The QuEST/QUICHE bindings are a compiled extension module built by CMake. When the
-# docs are built against a source checkout that has not been compiled (the default in
-# CI, which needs no C++ toolchain) the bindings are mocked so that the pure-Python
-# modules can still be imported and documented.
-try:
-    import quiche.bindings.quest_bindings  # noqa: F401
-except ImportError:
-    autodoc_mock_imports = ["quiche.bindings"]
-    print("NOTE: compiled bindings not importable, mocking 'quiche.bindings'.")
 
 # -- Napoleon ----------------------------------------------------------------
 
