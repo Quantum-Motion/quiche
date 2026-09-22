@@ -49,7 +49,7 @@ def get_trotter_params(paulis: PauliSum, errors: Errors) -> tuple[float, int, in
 
 def get_qubitisation_ancillas(paulis: PauliSum, errors: Errors) -> tuple[int, int]:
     """Get the Qubitisation settings to simulate a given PauliSum within a set Error."""
-    num_index_ancillas = ceil(log2(paulis.n_terms))
+    num_index_ancillas = ceil(log2(paulis.n_terms_with_identity))
     num_phase_ancillas = max(
         ceil(log2(2.0 * num_index_ancillas / errors.state_prep)),
         2,

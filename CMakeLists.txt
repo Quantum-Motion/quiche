@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.26)
 
 project(QuicheProject
-    VERSION 0.0.1
+    VERSION 0.1.0
     DESCRIPTION "QUantum Integrated CHEmistry toolkit"
     LANGUAGES CXX C # QUICHE itself only uses C++ but QuEST requires C
 )

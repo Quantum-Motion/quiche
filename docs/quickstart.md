@@ -14,10 +14,10 @@ QUICHE can read a Hamiltonians from the [Hamlib](https://portal.nersc.gov/cfs/m8
 HDF5 library and parses into a {py:class}`~quiche.core.paulis.PauliSum`:
 
 ```python
-from quiche import hamlib
+from quiche.io import hamlib
 
-raw_data = hamlib.get_dataset("H2.hdf5", "ham_JW-4")
-paulis = hamlib.parse_hamiltonian(raw_data)
+raw_data = hamlib.read_dataset("H2.hdf5", "ham_JW-4")
+paulis = hamlib.parse(raw_data)
 
 print(paulis.n_qubits, paulis.n_terms, paulis.lam)
 ```
@@ -27,7 +27,7 @@ print(paulis.n_qubits, paulis.n_terms, paulis.lam)
 ```
 
 A `PauliSum` is a linear combination of Pauli words plus an identity coefficient. Its
-`lam` property — the 1-norm of the coefficients — is what sets the simulation time and
+`lam` property — the 1-norm of the operator — is what sets the simulation time and
 the cost of qubitisation.
 
 Pairing the operator with the electron count and the fermion-to-qubit mapping it was
@@ -167,7 +167,7 @@ with QuESTEnv():
     results = routine.evaluate(qureg)
 
 phase = results[-1]
-energy = phase * (2 * pi / spec.time) + paulis.identity_coefficient
+energy = phase * (2 * pi / spec.time)
 
 print(f"Phase: {phase:.5f}")
 print(f"Energy: {energy:.5f} Ha")
@@ -180,14 +180,13 @@ Energy: -1.13144 Ha
 
 The routine returns one result per appended operation; the phase is the last one. Because
 the propagator is simulated for a time `spec.time`, the phase is rescaled by
-`2 * pi / spec.time` to recover an energy, and the identity coefficient — which QUICHE
-does not simulate — is added back. Under qubitisation the walk operator's eigenphase
+`2 * pi / spec.time` to recover an energy. Under qubitisation the walk operator's eigenphase
 relates to the energy differently:
 
 ```python
 from math import cos
 
-energy = cos(phase * 2 * pi) * paulis.lam + paulis.identity_coefficient
+energy = cos(phase * 2 * pi) * paulis.lam
 ```
 
 ## Next steps

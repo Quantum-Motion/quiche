@@ -20,14 +20,12 @@ from collections import Counter
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
-
     from numpy.typing import NDArray
 
     from quiche.core.paulis import PauliSum, PauliWord
 
+from functools import cached_property
 from math import ceil, log2, pi
-from random import choices, getstate, seed, setstate
 from typing import Self
 
 import attrs
@@ -41,10 +39,8 @@ from qualtran import (
     QAny,
     QBit,
     Register,
-    Side,
     Signature,
     SoquetT,
-    make_ctrl_system_with_correct_metabloq,
 )
 from qualtran.bloqs.basic_gates import (
     CNOT,
@@ -60,6 +56,9 @@ from qualtran.bloqs.chemistry.trotter.trotterized_unitary import (
     TrotterizedUnitary,
 )
 from qualtran.bloqs.mcmt import And
+from qualtran.bloqs.mcmt.specialized_ctrl import (
+    get_ctrl_system_1bit_cv_from_bloqs,
+)
 from qualtran.bloqs.multiplexers.select_pauli_lcu import SelectPauliLCU
 from qualtran.bloqs.state_preparation.state_preparation_via_rotation import (
     StatePreparationViaRotations,
@@ -107,26 +106,6 @@ def _adjoint_pauli_to_z_string(
             qs[q] = bb.add(SGate(), q=qs[q])
 
     return qs
-
-
-def _make_generic_add_controlled(cbloq: Bloq) -> Callable:
-    """Create a generic function to add the custom controlled bloq cbloq."""
-
-    def add_controlled(
-        bb: BloqBuilder, ctrl_soqs: Sequence[SoquetT], in_soqs: dict[str, SoquetT]
-    ) -> tuple[Iterable[SoquetT], Iterable[SoquetT]]:
-        # Combine the ctrl soquets with the input soquets
-        in_soqs |= {"ctrl": ctrl_soqs}
-        # Add the given controlled bloq using the BloqBuilder
-        new_out_d = bb.add_d(cbloq, **in_soqs)
-        # Extract the ctrl soquets from the resulting soquets. Using .pop()
-        # simultaneously modifies the soquet register new_out_d such that only the
-        # non-control soquets remain.
-        ctrl_soqs = tuple(new_out_d.pop(creg_name) for creg_name in ["ctrl"])
-        # return the control soquets and the non-control soquets
-        return ctrl_soqs, new_out_d.values()
-
-    return add_controlled
 
 
 @attrs.frozen
@@ -190,30 +169,24 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
     @classmethod
     def from_hamiltonian(cls, h: PauliSum, phase_bitsize: int) -> Self:
         """Process the input arguments and return an LCU block encoding."""
-        #############
-        # VALIDATION
-        #############
-        # Check phase_bitsize large enough.
         if phase_bitsize < 2:
             error_msg = "Choose phase_bitsize at least 2."
             raise ValueError(error_msg)
 
-        #############
-        # COMPUTE BLOQ
-        #############
         terms = [u.to_cirq(h.n_qubits) for u in h.terms]
-        nterms = h.n_terms
+        nterms = h.n_terms_with_identity
         lam = h.lam
-        coeffs = np.array(h.coefficients, dtype=complex)
+        coeffs = np.array(h.coefficients)
 
         # Add the identity term in the Hamiltonian, if needed
-        if h.identity_coefficient != 0.0:
+        if h.has_identity:
             terms.append(DensePauliString.eye(h.n_qubits))
-            nterms += 1
-            lam += abs(h.identity_coefficient)
             coeffs = np.append(coeffs, [h.identity_coefficient])
 
-        prep_coeffs = np.sqrt(np.array(coeffs, dtype=complex) / lam)
+        terms = [
+            term if c >= 0 else -term for term, c in zip(terms, coeffs, strict=True)
+        ]
+        prep_coeffs = np.sqrt(np.abs(coeffs) / lam)
 
         # find the number of select qubits
         select_nqubits = ceil(log2(nterms))
@@ -225,9 +198,8 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
             terms += [id_string] * nadd
             prep_coeffs = np.append(prep_coeffs, np.zeros(nadd, dtype=np.float64))
 
-        # create SELECT and PREP operators
         select = SelectPauliLCUWrapper(
-            selection_bitsize=select_nqubits + phase_bitsize,
+            selection_bitsize=select_nqubits,
             target_bitsize=h.n_qubits,
             select_unitaries=terms,
         )
@@ -260,6 +232,47 @@ class PauliWordRotation(Bloq):
     word: PauliWord
     angle: float
     n_qubits: int
+    is_controlled: bool = False
+
+    def __attrs_post_init__(self) -> None:
+        """Validate attributes."""
+        if self.word.greatest_qubit >= self.n_qubits:
+            message = (
+                f"Target qubit {self.word.greatest_qubit} is out of range for a "
+                f"{self.n_qubits} qubit register."
+            )
+            raise ValueError(message)
+
+    @property
+    def control_registers(self) -> tuple[Register, ...]:
+        """Registers holding the control qubit, if any."""
+        return (Register("ctrl", dtype=QBit()),) if self.is_controlled else ()
+
+    @property
+    def n_controls(self) -> int:
+        """Number of control qubits (1 if controlled, 0 otherwise)."""
+        return 1 if self.is_controlled else 0
+
+    @property
+    def signature(self) -> Signature:
+        """Define input and/or output registers of the bloq."""
+        return Signature(
+            [*self.control_registers, Register("system", dtype=QAny(self.n_qubits))]
+        )
+
+    def __str__(self) -> str:
+        """Get human-readable representation."""
+        return "C[PauliWordRotation]" if self.is_controlled else "PauliWordRotation"
+
+    def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
+        """Override function to get controlled bloq."""
+        return get_ctrl_system_1bit_cv_from_bloqs(
+            self,
+            ctrl_spec,
+            current_ctrl_bit=1 if self.is_controlled else None,
+            bloq_with_ctrl=attrs.evolve(self, is_controlled=True),
+            ctrl_reg_name="ctrl",
+        )
 
     def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
@@ -267,14 +280,9 @@ class PauliWordRotation(Bloq):
             # This bloq needs a rotation gate, which may require ancilla qubits. But
             # the rotation gate is counted separately and the number of ancilla qubits
             # is calculated in post-processing.
-            # So only the data qubits are counted here.
-            return self.n_qubits
+            # So only the data and control qubits are counted here.
+            return self.n_qubits + self.n_controls
         return NotImplemented
-
-    @property
-    def signature(self) -> Signature:
-        """Define input and/or output registers of the bloq."""
-        return Signature.build(system=self.n_qubits)
 
     def build_composite_bloq(
         self,
@@ -282,13 +290,6 @@ class PauliWordRotation(Bloq):
         **soqs: SoquetT,
     ) -> dict[str, SoquetT]:
         """Implement bloq decomposition into sub-bloqs."""
-        if max(self.word.qubits) >= self.n_qubits:
-            message = (
-                f"Target qubit {max(self.word.qubits)} is out of range for a "
-                f"{self.n_qubits} qubit register."
-            )
-            raise ValueError(message)
-
         qs = bb.split(soqs["system"])
 
         qs = _pauli_to_z_string(self.word, bb, qs)
@@ -300,7 +301,11 @@ class PauliWordRotation(Bloq):
                 qs[q], qs[gw] = bb.add(CNOT(), ctrl=qs[q], target=qs[gw])
 
         # Rz assumes that self.angle contains any necessary scaling factors
-        qs[gw] = bb.add(Rz(self.angle), q=qs[gw])
+        if self.is_controlled:
+            ctrl = soqs["ctrl"]
+            ctrl, qs[gw] = bb.add(CRz(self.angle), ctrl=ctrl, q=qs[gw])
+        else:
+            qs[gw] = bb.add(Rz(self.angle), q=qs[gw])
 
         # Note that the order of CNOTs doesn't matter since they commute
         for q in self.word.qubits:
@@ -309,120 +314,22 @@ class PauliWordRotation(Bloq):
 
         qs = _adjoint_pauli_to_z_string(self.word, bb, qs)
 
+        if self.is_controlled:
+            return {"ctrl": ctrl, "system": bb.join(qs)}
         return {"system": bb.join(qs)}
 
-    def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
-        """Override function to get controlled bloq."""
-        cbloq = CTRLPauliWordRotation.from_pauliwordrotation(self)
-
-        if ctrl_spec == CtrlSpec():
-            add_controlled = _make_generic_add_controlled(cbloq)
-            return cbloq, add_controlled
-
-        return make_ctrl_system_with_correct_metabloq(self, ctrl_spec=ctrl_spec)
-
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
-        """Build call graph for PauliWorldRotation."""
-        n_x = sum(term == Pauli.X for term in self.word.terms)
-        n_y = sum(term == Pauli.Y for term in self.word.terms)
+        """Build call graph for PauliWordRotation."""
+        n_x = sum(term is Pauli.X for term in self.word.terms)
+        n_y = sum(term is Pauli.Y for term in self.word.terms)
         n_cnot = 2 * (len(self.word.terms) - 1)
 
-        bloq_counts = {
-            Rz(self.angle): 1,
-        }
+        bloq_counts = {}
 
-        if n_cnot > 0:
-            bloq_counts[CNOT()] = n_cnot
-
-        if n_y:
-            bloq_counts[SGate(is_adjoint=True)] = n_y
-            bloq_counts[SGate()] = n_y
-
-        if n_x + n_y:
-            bloq_counts[Hadamard()] = 2 * (n_x + n_y)
-
-        return bloq_counts
-
-
-@attrs.frozen
-class CTRLPauliWordRotation(Bloq):
-    """Routine constructing the controlled Pauli phasor for a given Pauli."""
-
-    word: PauliWord
-    angle: float
-    n_qubits: int
-    n_controls: int
-
-    @classmethod
-    def from_pauliwordrotation(cls, rotation: PauliWordRotation) -> Self:
-        """Initialise instance from PauliWordRotation."""
-        return cls(rotation.word, rotation.angle, rotation.n_qubits, n_controls=1)
-
-    def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
-        if isinstance(cost_key, QubitCount):
-            # This bloq needs a rotation gate, which may require ancilla qubits. But
-            # the rotation gate is counted separately and the number of ancilla qubits
-            # is calculated in post-processing.
-            # So only the data qubits and controls are counted here.
-            return self.n_qubits + self.n_controls
-        return NotImplemented
-
-    @property
-    def signature(self) -> Signature:
-        """Define input and/or output registers of the bloq."""
-        return Signature(
-            [
-                Register("ctrl", dtype=QBit(), side=Side.THRU),
-                Register("system", dtype=QAny(self.n_qubits), side=Side.THRU),
-            ]
-        )
-
-    def build_composite_bloq(
-        self,
-        bb: BloqBuilder,
-        **soqs: SoquetT,
-    ) -> dict[str, SoquetT]:
-        """Implement bloq decomposition into sub-bloqs."""
-        if max(self.word.qubits) >= self.n_qubits:
-            message = (
-                f"Target qubit {max(self.word.qubits)} is out of range for a "
-                f"{self.n_qubits} qubit register."
-            )
-            raise ValueError(message)
-
-        ctrl = soqs["ctrl"]
-        qs = bb.split(soqs["system"])
-
-        qs = _pauli_to_z_string(self.word, bb, qs)
-
-        gw = self.word.greatest_qubit
-
-        for q in self.word.qubits:
-            if q < gw:
-                qs[q], qs[gw] = bb.add(CNOT(), ctrl=qs[q], target=qs[gw])
-
-        # CRz assumes that self.angle contains any necessary scaling factors
-        ctrl, qs[gw] = bb.add(CRz(self.angle), ctrl=ctrl, q=qs[gw])
-
-        # Note that the order of CNOTs doesn't matter since they commute
-        for q in self.word.qubits:
-            if q < gw:
-                qs[q], qs[gw] = bb.add(CNOT(), ctrl=qs[q], target=qs[gw])
-
-        qs = _adjoint_pauli_to_z_string(self.word, bb, qs)
-
-        return {"ctrl": ctrl, "system": bb.join(qs)}
-
-    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
-        """Build call graph for CTRLPauliWorldRotation."""
-        n_x = sum(term == Pauli.X for term in self.word.terms)
-        n_y = sum(term == Pauli.Y for term in self.word.terms)
-        n_cnot = 2 * (len(self.word.terms) - 1)
-
-        bloq_counts = {
-            CRz(self.angle): 1,
-        }
+        if self.is_controlled:
+            bloq_counts[CRz(self.angle)] = 1
+        else:
+            bloq_counts[Rz(self.angle)] = 1
 
         if n_cnot > 0:
             bloq_counts[CNOT()] = n_cnot
@@ -444,44 +351,72 @@ class QDRIFT(Bloq):
     h: PauliSum
     t: float
     n_terms: int
-    seed: int | float | str | bytes | bytearray | None = None
+    seed: int = attrs.field(
+        validator=[
+            attrs.validators.instance_of((int, np.integer)),
+            attrs.validators.ge(0),
+        ]
+    )
+    is_controlled: bool = False
 
-    def __attrs_post_init__(self) -> Self:
+    def __attrs_post_init__(self) -> None:
         """Validate attributes."""
         if self.n_terms < 1:
             error_msg = "Choose positive n_terms."
             raise ValueError(error_msg)
 
-        if self.t < 0:
+        if self.t <= 0:
             error_msg = "Choose positive evolution time."
             raise ValueError(error_msg)
 
-        return self
+    @property
+    def control_registers(self) -> tuple[Register, ...]:
+        """Registers holding the control qubit, if any."""
+        return (Register("ctrl", dtype=QBit()),) if self.is_controlled else ()
 
-    def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
-        if isinstance(cost_key, QubitCount):
-            # This bloq needs a number of rotation gates, which may require ancilla
-            # qubits. However, the rotation gates are counted separately and the number
-            # of ancilla qubits is calculated in post-processing.
-            # So only the data qubits are counted.
-            return self.n_qubits
-        return NotImplemented
+    @property
+    def n_controls(self) -> int:
+        """Number of control qubits (1 if controlled, 0 otherwise)."""
+        return 1 if self.is_controlled else 0
 
     @property
     def signature(self) -> Signature:
         """Define input and/or output registers of the bloq."""
-        return Signature.build(simulation=self.h.n_qubits)
+        return Signature(
+            [*self.control_registers, Register("simulation", dtype=QAny(self.n_qubits))]
+        )
 
     def __str__(self) -> str:
         """Get human-readable representation."""
-        return f"QDRIFT(h, t={self.t}, n_terms={self.n_terms}, seed={self.seed})"
+        name = "C[QDRIFT]" if self.is_controlled else "QDRIFT"
+        return f"{name}(h, t={self.t}, n_terms={self.n_terms}, seed={self.seed})"
 
     __repr__ = __str__
+
+    def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
+        """Override function to get controlled bloq."""
+        return get_ctrl_system_1bit_cv_from_bloqs(
+            self,
+            ctrl_spec,
+            current_ctrl_bit=1 if self.is_controlled else None,
+            bloq_with_ctrl=attrs.evolve(self, is_controlled=True),
+            ctrl_reg_name="ctrl",
+        )
+
+    def my_static_costs(self, cost_key: CostKey) -> int:
+        """Return hard-coded qubit counts."""
+        if isinstance(cost_key, QubitCount):
+            # This bloq needs a rotation gate, which may require ancilla qubits. But
+            # the rotation gate is counted separately and the number of ancilla qubits
+            # is calculated in post-processing.
+            # So only the data and control qubits are counted here.
+            return self.n_qubits + self.n_controls
+        return NotImplemented
 
     @property
     def positive_coefficients(self) -> tuple[float, ...]:
         """Get absolute value of the coefficients."""
+        # Note identity deliberately not included (applied as a global phase)
         return tuple(map(abs, self.h.coefficients))
 
     @property
@@ -499,14 +434,14 @@ class QDRIFT(Bloq):
         """Get timestep for each operator."""
         return self.t * self.lam / self.n_terms
 
-    def sample_term_indices(self) -> tuple[int, ...]:
-        """Generate random sequence for Hamiltonian sampling."""
-        rng_state = getstate()
-        if self.seed is not None:
-            seed(self.seed)
-        c = choices(range(self.h.n_terms), self.positive_coefficients, k=self.n_terms)  # noqa: S311
-        setstate(rng_state)
-        return tuple(c)
+    @cached_property
+    def sampled_indices(self) -> tuple[int, ...]:
+        """Random sequence of indices for Hamiltonian sampling."""
+        rng = np.random.default_rng(self.seed)
+        probabilities = np.asarray(self.positive_coefficients) / self.lam
+        return tuple(
+            rng.choice(self.h.n_terms, size=self.n_terms, p=probabilities).tolist()
+        )
 
     def build_composite_bloq(
         self,
@@ -517,39 +452,47 @@ class QDRIFT(Bloq):
         simulation = soqs["simulation"]
 
         # Build the PauliWordRotation for each term in the Hamiltonian.
-        bloqs = tuple(
-            PauliWordRotation(t, self.dt, self.n_qubits) for t in self.h.terms
-        )
-        indices = self.sample_term_indices()
+        if self.is_controlled:
+            bloqs = tuple(
+                PauliWordRotation(t, self.dt, self.n_qubits).controlled()
+                for t in self.h.terms
+            )
+        else:
+            bloqs = tuple(
+                PauliWordRotation(t, self.dt, self.n_qubits) for t in self.h.terms
+            )
         # The frequency with which indices are sampled already accounts for the term's
         # coefficient in the Hamiltonian, so only need to record the sign of the
         # coefficient.
-        coeffs = tuple(-1 if self.h.coefficients[i] < 0 else 1 for i in indices)
+        coeffs = tuple(
+            -1 if self.h.coefficients[i] < 0 else 1 for i in self.sampled_indices
+        )
         # Use the sampled indices and the pre-built individual propagators to build the
         # full propagator.
-        t = TrotterizedUnitary(bloqs, indices, coeffs, self.dt)
-        simulation = bb.add(t, system=simulation)
+        t = TrotterizedUnitary(bloqs, self.sampled_indices, coeffs, self.dt)
+
+        if self.is_controlled:
+            ctrl = soqs["ctrl"]
+            ctrl, simulation = bb.add(t, system=simulation, ctrl=ctrl)
+
+        else:
+            simulation = bb.add(t, system=simulation)
 
         # Add the constant term as a global phase.
-        bb.add(GlobalPhase(exponent=-self.h.identity_coefficient / pi))
+        phase = GlobalPhase(exponent=-self.h.identity_coefficient * self.t / pi)
+
+        if self.is_controlled:
+            ctrl = bb.add(phase.controlled(), q=ctrl)
+            return {"simulation": simulation, "ctrl": ctrl}
+
+        bb.add(phase)
         return {"simulation": simulation}
 
-    def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
-        """Override function to get controlled bloq."""
-        cbloq = CTRLQDRIFT(self)
-
-        if ctrl_spec == CtrlSpec():
-            add_controlled = _make_generic_add_controlled(cbloq)
-            return cbloq, add_controlled
-
-        return make_ctrl_system_with_correct_metabloq(self, ctrl_spec=ctrl_spec)
-
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
-        """Compute call graph for CTRLQDRIFT."""
+        """Compute call graph for QDRIFT."""
         # Calculate a Counter that counts the frequency of each index in the sampled
         # configuration.
-        sampled_indices = self.sample_term_indices()
-        index_counts = Counter(sampled_indices)
+        index_counts = Counter(self.sampled_indices)
 
         bloq_counts = {}
         # For each index in the Counter, add the relevant bloq to the count.
@@ -562,109 +505,11 @@ class QDRIFT(Bloq):
             # convention halves it
             gate = PauliWordRotation(word, angle=2 * angle, n_qubits=self.n_qubits)
 
-            bloq_counts[gate] = count
+            bloq_counts[gate.controlled() if self.is_controlled else gate] = count
 
         # Add the global phase.
-        bloq_counts[GlobalPhase(exponent=-self.h.identity_coefficient / pi)] = 1
-        return bloq_counts
-
-
-@attrs.frozen
-class CTRLQDRIFT(Bloq):
-    """Controlled QDRIFT application."""
-
-    simulation: QDRIFT
-    n_controls: int = 1
-
-    def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
-        if isinstance(cost_key, QubitCount):
-            # This bloq needs a number of rotation gates, which may require ancilla
-            # qubits. However, the rotation gates are counted separately and the number
-            # of ancilla qubits is calculated in post-processing.
-            # So only the data qubits and controls are counted.
-            return self.simulation.n_qubits + self.n_controls
-        return NotImplemented
-
-    @property
-    def signature(self) -> Signature:
-        """Define input and/or output registers of the bloq."""
-        return Signature(
-            [
-                Register(
-                    "ctrl",
-                    dtype=QAny(self.n_controls),
-                    side=Side.THRU,
-                ),
-                Register(
-                    "simulation",
-                    dtype=QAny(self.simulation.n_qubits),
-                    side=Side.THRU,
-                ),
-            ],
-        )
-
-    def build_composite_bloq(
-        self,
-        bb: BloqBuilder,
-        **soqs: SoquetT,
-    ) -> dict[str, SoquetT]:
-        """Implement bloq decomposition into sub-bloqs."""
-        ctrl = soqs["ctrl"]
-        simulation = soqs["simulation"]
-
-        # Build controlled bloqs for each term in the Hamiltonian. Otherwise proceeds
-        # the same as build_composite_bloq in QDRIFT.
-        bloqs = tuple(
-            PauliWordRotation(
-                t,
-                self.simulation.dt,
-                self.simulation.n_qubits,
-            ).controlled()
-            for t in self.simulation.h.terms
-        )
-        indices = self.simulation.sample_term_indices()
-        coeffs = tuple(
-            -1 if self.simulation.h.coefficients[i] < 0 else 1 for i in indices
-        )
-        t = TrotterizedUnitary(bloqs, indices, coeffs, self.simulation.dt)
-        ctrl, simulation = bb.add(t, ctrl=ctrl, system=simulation)
-
-        # Add the constant term as controlled global phase
-        ctrl = bb.add(
-            GlobalPhase(
-                exponent=-self.simulation.h.identity_coefficient / pi
-            ).controlled(),
-            q=ctrl,
-        )
-        return {"ctrl": ctrl, "simulation": simulation}
-
-    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
-        """Compute call graph for CTRLQDRIFT."""
-        # See build_call_graph in QDRIFT for an explanation.
-        sampled_indices = self.simulation.sample_term_indices()
-        index_counts = Counter(sampled_indices)
-
-        bloq_counts = {}
-
-        for idx, count in index_counts.items():
-            word = self.simulation.h.terms[idx]
-            sign = -1 if self.simulation.h.coefficients[idx] < 0 else 1
-            angle = sign * self.simulation.dt
-
-            # Create the corresponding Bloq. Double the angle because Qualtran
-            # convention halves it
-            gate = PauliWordRotation(
-                word, angle=2 * angle, n_qubits=self.simulation.n_qubits
-            ).controlled()
-
-            bloq_counts[gate] = count
-
-        bloq_counts[
-            GlobalPhase(
-                exponent=-self.simulation.h.identity_coefficient / pi
-            ).controlled()
-        ] = 1
+        phase = GlobalPhase(exponent=-self.h.identity_coefficient * self.t / pi)
+        bloq_counts[phase.controlled() if self.is_controlled else phase] = 1
         return bloq_counts
 
 
@@ -676,14 +521,15 @@ class Trotterisation(Bloq):
     t: float  # total evolution time
     n_steps: int
     order: int
+    is_controlled: bool = False
 
-    def __attrs_post_init__(self) -> Self:
+    def __attrs_post_init__(self) -> None:
         """Validate attributes."""
         if self.n_steps < 1:
             error_msg = "Choose positive n_steps."
             raise ValueError(error_msg)
 
-        if self.t < 0:
+        if self.t <= 0:
             error_msg = "Choose positive evolution time."
             raise ValueError(error_msg)
 
@@ -695,37 +541,53 @@ class Trotterisation(Bloq):
             error_msg = "Suzuki-Trotter order must be even."
             raise ValueError(error_msg)
 
-        return self
+    @property
+    def control_registers(self) -> tuple[Register, ...]:
+        """Registers holding the control qubit, if any."""
+        return (Register("ctrl", dtype=QBit()),) if self.is_controlled else ()
 
-    def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
-        if isinstance(cost_key, QubitCount):
-            # This bloq needs a number of rotation gates, which may require ancilla
-            # qubits. However, the rotation gates are counted separately and the number
-            # of ancilla qubits is calculated in post-processing.
-            # So only the data qubits are counted.
-            return self.n_qubits
-        return NotImplemented
+    @property
+    def n_controls(self) -> int:
+        """Number of control qubits (1 if controlled, 0 otherwise)."""
+        return 1 if self.is_controlled else 0
+
+    @property
+    def signature(self) -> Signature:
+        """Define input and/or output registers of the bloq."""
+        return Signature(
+            [*self.control_registers, Register("simulation", dtype=QAny(self.n_qubits))]
+        )
 
     def __str__(self) -> str:
         """Get human-readable representation."""
+        name = "C[Trotterisation]" if self.is_controlled else "Trotterisation"
         method = "lie-trotter" if self.order == 1 else "suzuki-trotter"
         return (
-            f"Trotterisation(h, method={method}, order = {self.order}, t={self.t}, "
+            f"{name}(h, method={method}, order = {self.order}, t={self.t}, "
             f"n_steps={self.n_steps})"
         )
 
     __repr__ = __str__
 
-    @property
-    def signature(self) -> Signature:
-        """Define input and/or output registers of the bloq."""
-        return Signature.build(simulation=self.h.n_qubits)
+    def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
+        """Override function to get controlled bloq."""
+        return get_ctrl_system_1bit_cv_from_bloqs(
+            self,
+            ctrl_spec,
+            current_ctrl_bit=1 if self.is_controlled else None,
+            bloq_with_ctrl=attrs.evolve(self, is_controlled=True),
+            ctrl_reg_name="ctrl",
+        )
 
-    @property
-    def _trotter_error_bound(self) -> float:
-        """Compute an error bound. The total error is trotter_error_bound * t^{p+1}."""
-        return self.h.lam ** (self.order + 1.0)
+    def my_static_costs(self, cost_key: CostKey) -> int:
+        """Return hard-coded qubit counts."""
+        if isinstance(cost_key, QubitCount):
+            # This bloq needs a rotation gate, which may require ancilla qubits. But
+            # the rotation gate is counted separately and the number of ancilla qubits
+            # is calculated in post-processing.
+            # So only the data and control qubits are counted here.
+            return self.n_qubits + self.n_controls
+        return NotImplemented
 
     @property
     def n_qubits(self) -> int:
@@ -790,9 +652,15 @@ class Trotterisation(Bloq):
         simulation = soqs["simulation"]
 
         # Build the PauliWordRotation for each term in the Hamiltonian.
-        bloqs = tuple(
-            PauliWordRotation(t, self.dt, self.n_qubits) for t in self.h.terms
-        )
+        if self.is_controlled:
+            bloqs = tuple(
+                PauliWordRotation(t, self.dt, self.n_qubits).controlled()
+                for t in self.h.terms
+            )
+        else:
+            bloqs = tuple(
+                PauliWordRotation(t, self.dt, self.n_qubits) for t in self.h.terms
+            )
         # Extract coefficients and indices for the given Trotter formula.
         coeffs, indices = self.get_coeffs_indices(self.order)
 
@@ -805,23 +673,27 @@ class Trotterisation(Bloq):
         # Use the sampled indices, the effective coefficients and the pre-built
         # individual propagators to build the full propagator
         u = TrotterizedUnitary(bloqs, indices, coeffs, self.dt)
-        # The Trotter formula is applied self.n_steps times.
-        for _ in range(self.n_steps):
-            simulation = bb.add(u, system=simulation)
+
+        if self.is_controlled:
+            ctrl = soqs["ctrl"]
+            # The Trotter formula is applied self.n_steps times.
+            for _ in range(self.n_steps):
+                ctrl, simulation = bb.add(u, system=simulation, ctrl=ctrl)
+
+        else:
+            # The Trotter formula is applied self.n_steps times.
+            for _ in range(self.n_steps):
+                simulation = bb.add(u, system=simulation)
 
         # Add the constant term as a global phase.
-        bb.add(GlobalPhase(exponent=-self.h.identity_coefficient * self.t / pi))
+        phase = GlobalPhase(exponent=-self.h.identity_coefficient * self.t / pi)
+
+        if self.is_controlled:
+            ctrl = bb.add(phase.controlled(), q=ctrl)
+            return {"simulation": simulation, "ctrl": ctrl}
+
+        bb.add(phase)
         return {"simulation": simulation}
-
-    def get_ctrl_system(self, ctrl_spec: CtrlSpec) -> tuple[Bloq, AddControlledT]:
-        """Override function to get controlled bloq."""
-        cbloq = CTRLTrotterisation(self)
-
-        if ctrl_spec == CtrlSpec():
-            add_controlled = _make_generic_add_controlled(cbloq)
-            return cbloq, add_controlled
-
-        return make_ctrl_system_with_correct_metabloq(self, ctrl_spec=ctrl_spec)
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Compute call graph for Trotterisation."""
@@ -835,9 +707,7 @@ class Trotterisation(Bloq):
         bloq_counts = {}
 
         # For each index in the Counter, add the relevant bloq to the count.
-        for joint_coeff_idx, count in index_counts.items():
-            coeff = joint_coeff_idx[0]
-            idx = joint_coeff_idx[1]
+        for (coeff, idx), count in index_counts.items():
             word = self.h.terms[idx]
             angle = coeff * self.h.coefficients[idx] * self.dt
 
@@ -845,114 +715,11 @@ class Trotterisation(Bloq):
             # convention halves it
             gate = PauliWordRotation(word, angle=2 * angle, n_qubits=self.n_qubits)
 
-            bloq_counts[gate] = count * self.n_steps
+            bloq_counts[gate.controlled() if self.is_controlled else gate] = (
+                count * self.n_steps
+            )
 
         # Add the global phase.
-        bloq_counts[
-            GlobalPhase(exponent=-self.h.identity_coefficient * self.t / pi)
-        ] = 1
-        return bloq_counts
-
-
-@attrs.frozen
-class CTRLTrotterisation(Bloq):
-    """Controlled QDRIFT application."""
-
-    simulation: Trotterisation
-    n_controls: int = 1
-
-    def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
-        if isinstance(cost_key, QubitCount):
-            # This bloq needs a number of rotation gates, which may require ancilla
-            # qubits. However, the rotation gates are counted separately and the number
-            # of ancilla qubits is calculated in post-processing.
-            # So only the data qubits and controls are counted.
-            return self.simulation.n_qubits + self.n_controls
-        return NotImplemented
-
-    @property
-    def signature(self) -> Signature:
-        """Define input and/or output registers of the bloq."""
-        return Signature(
-            [
-                Register(
-                    "ctrl",
-                    dtype=QAny(self.n_controls),
-                    side=Side.THRU,
-                ),
-                Register(
-                    "simulation",
-                    dtype=QAny(self.simulation.n_qubits),
-                    side=Side.THRU,
-                ),
-            ],
-        )
-
-    def build_composite_bloq(
-        self,
-        bb: BloqBuilder,
-        **soqs: SoquetT,
-    ) -> dict[str, SoquetT]:
-        """Implement the decomposition into sub-bloqs."""
-        ctrl = soqs["ctrl"]
-        simulation = soqs["simulation"]
-
-        # Build controlled bloqs for each term in the Hamiltonian. Otherwise proceeds
-        # the same as build_composite_bloq in Trotterisation.
-        bloqs = tuple(
-            PauliWordRotation(
-                t, self.simulation.dt, self.simulation.n_qubits
-            ).controlled()
-            for t in self.simulation.h.terms
-        )
-        coeffs, indices = self.simulation.get_coeffs_indices(self.simulation.order)
-        for i in range(len(indices)):
-            coeffs[i] *= self.simulation.h.coefficients[indices[i]]
-        coeffs, indices = tuple(coeffs), tuple(indices)
-        u = TrotterizedUnitary(bloqs, indices, coeffs, self.simulation.dt)
-        for _ in range(self.simulation.n_steps):
-            ctrl, simulation = bb.add(u, ctrl=ctrl, system=simulation)
-
-        # Add controlled global phase.
-        ctrl = bb.add(
-            GlobalPhase(
-                exponent=-self.simulation.h.identity_coefficient
-                * self.simulation.t
-                / pi
-            ).controlled(),
-            q=ctrl,
-        )
-        return {"ctrl": ctrl, "simulation": simulation}
-
-    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
-        """Compute call graph for CTRLTrotterisation."""
-        # See build_call_graph in Trotterisation for an explanation.
-        coeffs, indices = self.simulation.get_coeffs_indices(self.simulation.order)
-        joint_coeffs_indices = zip(coeffs, indices, strict=True)
-
-        index_counts = Counter(joint_coeffs_indices)
-        bloq_counts = {}
-
-        for joint_coeff_idx, count in index_counts.items():
-            coeff = joint_coeff_idx[0]
-            idx = joint_coeff_idx[1]
-            word = self.simulation.h.terms[idx]
-            angle = coeff * self.simulation.h.coefficients[idx] * self.simulation.dt
-
-            # Create the corresponding Bloq. Double the angle because Qualtran
-            # convention halves it
-            gate = PauliWordRotation(
-                word, angle=2 * angle, n_qubits=self.simulation.n_qubits
-            ).controlled()
-
-            bloq_counts[gate] = count * self.simulation.n_steps
-
-        bloq_counts[
-            GlobalPhase(
-                exponent=-self.simulation.h.identity_coefficient
-                * self.simulation.t
-                / pi
-            ).controlled()
-        ] = 1
+        phase = GlobalPhase(exponent=-self.h.identity_coefficient * self.t / pi)
+        bloq_counts[phase.controlled() if self.is_controlled else phase] = 1
         return bloq_counts

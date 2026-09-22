@@ -23,7 +23,7 @@ __all__ = [
     "chemistry",
     "core",
     "dispatch",
-    "hamlib",
+    "io",
     "resources",
     "simulation",
 ]
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
         chemistry,
         core,
         dispatch,
-        hamlib,
+        io,
         resources,
         simulation,
     )

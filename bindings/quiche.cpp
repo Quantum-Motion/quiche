@@ -30,6 +30,16 @@
 
 namespace nb = nanobind;
 
+namespace {
+std::mt19937_64 rngFromOptionalSeed(std::optional<unsigned int> seed) {
+    if (seed)
+        return std::mt19937_64(*seed);
+
+    std::random_device rd;
+    return std::mt19937_64(rd());
+}
+} // namespace
+
 void init_quiche_bindings(nb::module_ &m) {
 
     nb::module_ quiche = m.def_submodule("quiche_bindings");
@@ -50,15 +60,7 @@ void init_quiche_bindings(nb::module_ &m) {
         "getPhaseTextbookQDRIFT",
         [](Qureg qureg, PauliStrSum hamiltonian, std::vector<int> ancillas, int reps, double t,
            std::optional<unsigned int> seed) {
-            std::mt19937_64 rng;
-
-            if (seed) {
-                rng = std::mt19937_64(*seed);
-            } else {
-                std::random_device rd;
-                rng = std::mt19937_64(rd());
-            }
-
+            auto rng = rngFromOptionalSeed(seed);
             return qpe::getPhaseTextbookQDRIFT(qureg, hamiltonian, ancillas, reps, t, rng);
         },
         nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancillas"), nb::arg("reps"), nb::arg("time"),
@@ -68,15 +70,7 @@ void init_quiche_bindings(nb::module_ &m) {
         "getPhaseKitaevQDRIFT",
         [](Qureg qureg, PauliStrSum hamiltonian, int ancillaIndex, int reps, double t, int numBits,
            std::optional<unsigned int> seed) {
-            std::mt19937_64 rng;
-
-            if (seed) {
-                rng = std::mt19937_64(*seed);
-            } else {
-                std::random_device rd;
-                rng = std::mt19937_64(rd());
-            }
-
+            auto rng = rngFromOptionalSeed(seed);
             return qpe::getPhaseKitaevQDRIFT(qureg, hamiltonian, ancillaIndex, reps, t, numBits, rng);
         },
         nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancilla_index"), nb::arg("reps"), nb::arg("time"),
@@ -92,15 +86,7 @@ void init_quiche_bindings(nb::module_ &m) {
         "getPhaseNaiveQDRIFT",
         [](Qureg qureg, PauliStrSum hamiltonian, int ancillaIndex, int reps, double t,
            std::optional<unsigned int> seed) {
-            std::mt19937_64 rng;
-
-            if (seed) {
-                rng = std::mt19937_64(*seed);
-            } else {
-                std::random_device rd;
-                rng = std::mt19937_64(rd());
-            }
-
+            auto rng = rngFromOptionalSeed(seed);
             return qpe::getPhaseNaiveQDRIFT(qureg, hamiltonian, ancillaIndex, reps, t, rng);
         },
         nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancilla_index"), nb::arg("reps"), nb::arg("time"),
@@ -113,15 +99,7 @@ void init_quiche_bindings(nb::module_ &m) {
         "getPhaseIterativeQDRIFT",
         [](Qureg qureg, PauliStrSum hamiltonian, int ancillaIndex, int reps, double t, int numBits,
            std::optional<unsigned int> seed) {
-            std::mt19937_64 rng;
-
-            if (seed) {
-                rng = std::mt19937_64(*seed);
-            } else {
-                std::random_device rd;
-                rng = std::mt19937_64(rd());
-            }
-
+            auto rng = rngFromOptionalSeed(seed);
             return qpe::getPhaseIterativeQDRIFT(qureg, hamiltonian, ancillaIndex, reps, t, numBits, rng);
         },
         nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancilla_index"), nb::arg("reps"), nb::arg("time"),
@@ -130,6 +108,6 @@ void init_quiche_bindings(nb::module_ &m) {
     quiche.def("getPhaseTextbookQubitisedOptimised", &qpe::getPhaseTextbookQubitisedOptimised, nb::arg("qureg"),
                nb::arg("hamiltonian"), nb::arg("qpe_ancillas"), nb::arg("qubitisation_ancillas"));
 
-    quiche.def("initClassicalState", (void (*)(Qureg, std::vector<int>))(&initClassicalState), nb::arg("qureg"),
+    quiche.def("initClassicalState", nb::overload_cast<Qureg, std::vector<int>>(&initClassicalState), nb::arg("qureg"),
                nb::arg("state"));
 }

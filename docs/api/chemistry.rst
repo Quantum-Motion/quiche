@@ -1,12 +1,7 @@
-quiche.chemistry & quiche.hamlib
-================================
+quiche.chemistry
+================
 
 Chemistry
 ---------
 
 .. automodule:: quiche.chemistry
-
-Hamlib
-------
-
-.. automodule:: quiche.hamlib

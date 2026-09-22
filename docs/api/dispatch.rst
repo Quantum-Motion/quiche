@@ -24,8 +24,3 @@ Hamiltonian simulation parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: quiche.dispatch.budget.simulation
-
-State preparation parameters
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: quiche.dispatch.budget.state_prep
