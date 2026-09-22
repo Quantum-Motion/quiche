@@ -188,7 +188,3 @@ from math import cos
 
 energy = cos(phase * 2 * pi) * paulis.lam
 ```
-
-## Next steps
-
-- [API reference](api/index.rst) — everything the package exposes.
