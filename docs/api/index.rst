@@ -9,6 +9,8 @@ The ``quiche`` package is organised into a small set of subpackages:
 
    * - Subpackage
      - Purpose
+   * - :doc:`bindings <bindings>`
+     - Python bindings to the compiled QuEST simulator and QUICHE backend.
    * - :doc:`core <core>`
      - Data structures for Hamiltonians, Pauli operators, algorithm choices and error
        budgets.
@@ -27,6 +29,7 @@ The ``quiche`` package is organised into a small set of subpackages:
 .. toctree::
    :maxdepth: 2
 
+   bindings
    core
    chemistry
    dispatch
