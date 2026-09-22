@@ -2,13 +2,10 @@
 
 QUICHE (QUantum Integrated CHEmistry) is a toolkit for studying quantum computing algorithms for quantum chemistry, with a focus on quantum phase estimation (QPE). It integrates a resource estimation backend based on [Qualtran](https://github.com/quantumlib/Qualtran), with a [QuEST](https://github.com/QuEST-Kit/QuEST)-powered simulation backend. The two backends can be used in isolation or combined using the Python package capable of dispatching between the two.
 
+**Documentation**: [quantum-motion.github.io/quiche](https://quantum-motion.github.io/quiche/)
+
 > ⚠️ This project is in early active development and should not be considered production-ready.
 > Breaking changes may occur without notice before v1.0.
-
-
-## Documentation
-
-The QUICHE documentation is hosted at [quantum-motion.github.io/quiche](https://quantum-motion.github.io/quiche/), and includes a quickstart, an explanation of the core concepts and a full Python API reference. The sources live in [`docs`](https://github.com/Quantum-Motion/quiche/blob/main/docs) and can be built locally, see the [contributing guide](https://github.com/Quantum-Motion/quiche/blob/main/CONTRIBUTING.md).
 
 
 ## Features
