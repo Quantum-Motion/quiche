@@ -1,5 +1,7 @@
 # Contributing
 
+<!-- contributing-python-start -->
+
 ## Python
 
 ### Installing
@@ -35,6 +37,10 @@ ruff format
 
 The enabled rules are configured in `pyproject.toml` under `[tool.ruff]`.
 
+<!-- contributing-python-end -->
+---
+<!-- contributing-cpp-start -->
+
 ## C++
 
 ### Installing
@@ -67,6 +73,10 @@ clang-format --dry-run --Werror some_file.cpp
 
 `.clang-tidy` is provided as a general reference for static analysis; it isn't currently enforced.
 
+<!-- contributing-cpp-end -->
+---
+<!-- contributing-ci-start -->
+
 ## Continuous integration
 
 Every pull request and push to `main` runs:
@@ -78,6 +88,10 @@ Every pull request and push to `main` runs:
 - Documentation build: using `sphinx-build`
 
 In addition, pushes to `main` build wheels for the Python package using `cibuildwheel`, and the sdist with `uv build --sdist`.
+
+<!-- contributing-ci-end -->
+---
+<!-- contributing-documentation-start -->
 
 ## Documentation
 
@@ -99,6 +113,10 @@ uv run --group docs make html
 
 The resulting build files can be removed using `make clean`.
 
+<!-- contributing-documentation-end -->
+---
+<!-- contributing-styleguide-start -->
+
 ## Styleguide
 
 ### Commit messages
@@ -111,10 +129,14 @@ Changes to the API, behaviour, packaging or build requirements should be recorde
 ### Docstrings
 Python docstrings should follow [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html) (with the addition of `Properties` and `Resources` sections used for Qualtran `bloq`s).
 
+<!-- contributing-styleguide-end -->
+---
+<!-- contributing-releasing-start -->
+
 ## Releasing
 
 1. Open a PR to `main` that:
-    - Renames the `[Unreleased]` section of `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`, and adds a new `[Unreleased]` above it with empty category headings.
+    - Renames the `[Unreleased]` section of `CHANGELOG.md`, adds the release date, and adds a new `[Unreleased]` above it with empty category headings.
     - Bumps `version` in `pyproject.toml`.
     - Bumps `VERSION` in `CMakeLists.txt`.
 2. Once merged, tag the merge commit with the version from step 1 (prefixed with `v`) and push it:
@@ -125,3 +147,5 @@ Python docstrings should follow [numpydoc](https://numpydoc.readthedocs.io/en/la
 3. The `publish-wheels.yml` and `publish-docs.yml` workflows will trigger on the tag, then pause for approval.
 
 > A published version is permanent. A release can be yanked (hidden from dependency resolution) but never replaced or re-uploaded, so fixes require a new version number.
+
+<!-- contributing-releasing-end -->
