@@ -72,7 +72,7 @@ test = [
 provider = "scikit_build_core.metadata.regex"
 field = "version"
 input = "VERSION"
-regex = '(?P<value>\d+\.\d+\.\d+[-+a-zA-Z0-9.]*)'
+regex = '\A(?P<value>\d+\.\d+\.\d+[-+a-zA-Z0-9.]*)'
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"
