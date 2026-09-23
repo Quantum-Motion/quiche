@@ -35,7 +35,13 @@ The main entry point to QUICHE is a `QPESpec` object, which describes the target
 Going from a Hamiltonian to a logical resource estimate:
 ```python
 from quiche.io import hamlib
-from quiche.core import ElectronicHamiltonian, Errors, Mapping, PhaseEstimation, Simulation
+from quiche.core import (
+    ElectronicHamiltonian,
+    Errors,
+    Mapping,
+    PhaseEstimation,
+    Simulation,
+)
 from quiche.chemistry import HartreeFockState
 from quiche.dispatch import QPESpec
 from quiche.resources.logical import logical_gate_resources, logical_qubit_resources
@@ -43,11 +49,21 @@ from quiche.resources.logical import logical_gate_resources, logical_qubit_resou
 paulis = hamlib.parse(hamlib.read_dataset("H2.hdf5", "ham_JW-4"))
 
 spec = QPESpec(
-    hamiltonian=ElectronicHamiltonian(electrons=2, paulis=paulis, mapping=Mapping.JordanWigner),
+    hamiltonian=ElectronicHamiltonian(
+        electrons=2,
+        paulis=paulis,
+        mapping=Mapping.JordanWigner,
+    ),
     state_prep=HartreeFockState.closed_shell(electrons=2, spin_orbitals=4),
     algorithm=PhaseEstimation.Textbook,
     simulation=Simulation.Qubitised,
-    error_budget=Errors(estimation=1e-3, simulation=1e-3, rotations=1e-4, state_prep=1e-4, overlap=0.90),
+    error_budget=Errors(
+        estimation=1e-3,
+        simulation=1e-3,
+        rotations=1e-4,
+        state_prep=1e-4,
+        overlap=0.90,
+    ),
 )
 
 bloq = spec.get_composite_bloq()

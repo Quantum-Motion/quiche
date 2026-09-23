@@ -71,7 +71,7 @@ and the specific algorithms for Hamiltonian simulation and phase estimation can 
 ```python
 from quiche.core import PhaseEstimation, Simulation
 
-phase_estimation= PhaseEstimation.Textbook
+phase_estimation = PhaseEstimation.Textbook
 ham_simulation = Simulation.Qubitised
 ```
 
