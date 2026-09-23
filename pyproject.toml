@@ -64,8 +64,8 @@ lint = [
     "clang-format==23.1.*",
 ]
 docs = [
-    "furo>=2025.7",
-    "myst-parser>=5.0",
+    "myst-parser>=5.1",
+    "shibuya>=2026.7.12",
     "sphinx>=8.2",
     "sphinx-copybutton>=0.5",
     "sphinx-design>=0.6",
