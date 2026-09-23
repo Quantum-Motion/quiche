@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 __all__ = [
     "ElectronicHamiltonian",
     "Errors",
+    "HartreeFockState",
     "Mapping",
     "Pauli",
     "PauliSum",
@@ -40,6 +41,7 @@ __all__ = [
 _REEXPORTS = {
     "ElectronicHamiltonian": ".core.electronic",
     "Errors": ".core.errors",
+    "HartreeFockState": ".chemistry",
     "Mapping": ".core.algorithms",
     "Pauli": ".core.paulis",
     "PauliSum": ".core.paulis",
@@ -60,6 +62,7 @@ if TYPE_CHECKING:
         resources,
         simulation,
     )
+    from .chemistry import HartreeFockState
     from .core.algorithms import Mapping, PhaseEstimation, Simulation
     from .core.electronic import ElectronicHamiltonian, SecondQuantisedHamiltonian
     from .core.errors import Errors

@@ -6,7 +6,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
+- Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
 
 ### Changed
 
