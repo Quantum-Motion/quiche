@@ -10,7 +10,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ---
 <!-- changelog-unreleased-start -->
 
-## [Unreleased]
+## Unreleased
 
 ### Added
 - Added QUICHE documentation site

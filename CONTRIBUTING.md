@@ -146,6 +146,7 @@ Python docstrings should follow [numpydoc](https://numpydoc.readthedocs.io/en/la
     ```
 3. The `publish-wheels.yml` and `publish-docs.yml` workflows will trigger on the tag, then pause for approval.
 
+> [!NOTE]
 > A published version is permanent. A release can be yanked (hidden from dependency resolution) but never replaced or re-uploaded, so fixes require a new version number.
 
 <!-- contributing-releasing-end -->
