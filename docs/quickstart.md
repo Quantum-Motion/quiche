@@ -1,17 +1,19 @@
 # Quickstart
 
-This page walks through a complete QUICHE calculation on the hydrogen molecule: loading
-a Hamiltonian, describing the calculation once, and then dispatching that description to
-both backends.
+This page walks through a complete QUICHE calculation from loading a Hamiltonian, to setting
+the phase estimation calculation, and finally dispatching to both backends.
 
-It uses the `H2.hdf5` [Hamlib](https://arxiv.org/abs/2306.13126) file shipped with the repository in
-[`python/examples/H2`](https://github.com/Quantum-Motion/quiche/tree/main/python/examples/H2),
-so run it from that directory (or adjust the path).
+> [!TIP]
+> This example uses the `H2.hdf5` [Hamlib](https://arxiv.org/abs/2306.13126) dataset.
+> To download and unzip the dataset run:
+> ```bash
+> curl -O https://portal.nersc.gov/cfs/m888/dcamps/hamlib/chemistry/electronic/standard/H2.zip && unzip -n -q H2.zip
+> ```
 
 ## 1. Load a Hamiltonian
 
-QUICHE can read a Hamiltonians from the [Hamlib](https://portal.nersc.gov/cfs/m888/dcamps/hamlib/)
-HDF5 library and parses into a {py:class}`~quiche.core.paulis.PauliSum`:
+QUICHE can open Hamiltonians from the [Hamlib](https://portal.nersc.gov/cfs/m888/dcamps/hamlib/)
+library and parse them into a {py:class}`~quiche.core.paulis.PauliSum`.
 
 ```python
 from quiche.io import hamlib
@@ -23,15 +25,11 @@ print(paulis.n_qubits, paulis.n_terms, paulis.lam)
 ```
 
 ```text
-4 14 1.2336349637769919
+4 14 1.6814325431165813
 ```
 
-A `PauliSum` is a linear combination of Pauli words plus an identity coefficient. Its
-`lam` property — the 1-norm of the operator — is what sets the simulation time and
-the cost of qubitisation.
-
-Pairing the operator with the electron count and the fermion-to-qubit mapping it was
-generated with gives an {py:class}`~quiche.core.electronic.ElectronicHamiltonian`:
+Pairing the sum with the electron count and the relevant fermion-to-qubit mapping one can define
+an {py:class}`~quiche.core.electronic.ElectronicHamiltonian`.
 
 ```python
 from quiche.core import ElectronicHamiltonian, Mapping
@@ -45,39 +43,39 @@ ham = ElectronicHamiltonian(
 
 ## 2. Set an error budget
 
-Every approximation in the calculation draws on an {py:class}`~quiche.core.errors.Errors`
-budget, and QUICHE derives the routine parameters — ancilla counts, Trotter steps, QDRIFT
-repetitions — from it. A deliberately loose budget keeps this example small enough to
-simulate:
+Every approximate method in the calculation draws on an {py:class}`~quiche.core.errors.Errors`
+ budget. Using it, QUICHE derives all relevant parameters, such as ancilla counts, number of Trotter steps, QDRIFT repetitions, and so on.
 
 ```python
 from quiche.core import Errors
 
-eps = 0.5
 error = Errors(
-    estimation=eps,
-    simulation=eps,
-    rotations=eps,
-    state_prep=eps,
-    overlap=eps,
+    estimation=1e-2,
+    simulation=1e-3,
+    rotations=1e-3,
+    state_prep=1e-3,
+    overlap=0.9,
 )
 ```
 
 ## 3. Specify the calculation
 
-The initial state is a Hartree-Fock state, which QUICHE maps into the qubit basis using
-the mapping recorded on the Hamiltonian:
-
+An initial state for the phase estimation calculation, such as a Hartree-Fock state, can be set
 ```python
 from quiche.chemistry import HartreeFockState
 
 hf = HartreeFockState.closed_shell(electrons=2, spin_orbitals=4)
 ```
 
-{py:class}`~quiche.dispatch.qpespec.QPESpec` ties everything together. Constructing it
-gives the recipe to generate the phase estimation circuit to estimate the
-ground state energy:
+and the specific algorithms for Hamiltonian simulation and phase estimation can be picked:
+```python
+from quiche.core import PhaseEstimation, Simulation
 
+phase_estimation= PhaseEstimation.Textbook,
+ham_simulation = Simulation.Qubitised
+```
+
+{py:class}`~quiche.dispatch.qpespec.QPESpec` brings everything together defining the complete phase estimation calculation.
 ```python
 from quiche.core import PhaseEstimation, Simulation
 from quiche.dispatch import QPESpec
@@ -85,25 +83,16 @@ from quiche.dispatch import QPESpec
 spec = QPESpec(
     hamiltonian=ham,
     state_prep=hf,
-    algorithm=PhaseEstimation.Textbook,
-    simulation=Simulation.Qubitised,
+    algorithm=phase_estimation,
+    simulation=ham_simulation,
     error_budget=error,
 )
-
-print("Total qubits:", spec.num_qubits)
-print("QPE ancillas:", spec.num_qpe_ancillas)
-```
-
-```text
-Total qubits: 18
-QPE ancillas: 6
 ```
 
 ## 4. Estimate resources
 
-`get_composite_bloq` compiles the specification into a Qualtran
-[`CompositeBloq`](https://qualtran.readthedocs.io/en/latest/reference/qualtran.CompositeBloq.html),
-which can be costed or drawn:
+`.get_composite_bloq()` compiles the algorithm into a Qualtran
+[`CompositeBloq`](https://qualtran.readthedocs.io/en/latest/reference/qualtran.CompositeBloq.html)  which can be costed:
 
 ```python
 from quiche.resources.logical import logical_gate_resources, logical_qubit_resources
@@ -115,8 +104,8 @@ print("Logical resources:", logical_gate_resources(bloq))
 ```
 
 ```text
-Qubit count: 27
-Logical resources: t: 4, toffoli: 640, and_bloq: 3574, clifford: 16722, rotation: 6, measurement: 3574
+Qubit count: 51
+Logical resources: t: 10, toffoli: 225280, and_bloq: 166021, clifford: 1403494, rotation: 45, measurement: 166021
 ```
 
 Rotations can be converted into T gates at a synthesis cost implied by the budget:
@@ -129,10 +118,10 @@ print(logical_rotations_to_tgates(gates, error, rotation_synthesis="direct"))
 ```
 
 ```text
-t: 64, toffoli: 640, and_bloq: 3574, clifford: 16722, measurement: 3574
+t: 2080, toffoli: 225280, and_bloq: 166021, clifford: 1403494, measurement: 166021
 ```
 
-To inspect the circuit, flatten the bloq one level at a time and draw it:
+To visualise the circuit, flatten the `bloq` one level at a time and draw it:
 
 ```python
 from qualtran.drawing import show_bloq
@@ -142,10 +131,8 @@ show_bloq(bloq.flatten_once())
 
 ## 5. Simulate
 
-The same specification can instead be turned into a
-{py:class}`~quiche.simulation.routine.SimulationRoutine` and executed by QuEST. Not every
-algorithm and simulation method is wired up in both backends yet, so this example
-switches to Kitaev QPE with Trotterisation:
+Similarly, a QPE specification can be used to generate a
+{py:class}`~quiche.simulation.routine.SimulationRoutine` and executed by QuEST.
 
 ```python
 from math import pi
@@ -174,17 +161,10 @@ print(f"Energy: {energy:.5f} Ha")
 ```
 
 ```text
-Phase: -0.27709
-Energy: -1.13144 Ha
+Phase: -0.33646
+Energy: -1.13146 Ha
 ```
 
 The routine returns one result per appended operation; the phase is the last one. Because
 the propagator is simulated for a time `spec.time`, the phase is rescaled by
-`2 * pi / spec.time` to recover an energy. Under qubitisation the walk operator's eigenphase
-relates to the energy differently:
-
-```python
-from math import cos
-
-energy = cos(phase * 2 * pi) * paulis.lam
-```
+`2 * pi / spec.time` to recover an energy.

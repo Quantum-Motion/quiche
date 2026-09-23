@@ -1,15 +1,13 @@
 # Installation
 
-The steps below are shared with the [repository README](https://github.com/Quantum-Motion/quiche#installation).
-
+## Basic install
 ```{include} ../README.md
-:start-after: "## Installation"
-:end-before: "## Building from source"
+:start-after: "### Basic install"
+:end-before: "### Custom install"
 ```
 
-## Building from source
-
+## Custom install
 ```{include} ../README.md
-:start-after: "## Building from source"
-:end-before: "## Usage"
+:start-after: "### Custom install"
+:end-before: "## Contributing"
 ```
