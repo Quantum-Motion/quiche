@@ -1,7 +1,14 @@
 # Changelog
 
+---
+<!-- changelog-intro-start -->
+
 Changelog format based on [Keep a Changelog](https://keepachangelog.com/).
 Versioning based on [Semantic Versioning](https://semver.org/).
+
+<!-- changelog-intro-end -->
+---
+<!-- changelog-unreleased-start -->
 
 ## [Unreleased]
 
@@ -18,8 +25,12 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+<!-- changelog-unreleased-end -->
+---
+<!-- changelog-released-start -->
 
-## [0.1.0] - 2026-09-13
+## 0.1.0
+*Released 2026-09-13.*
 
 ### Added
 - Added `py.typed` marker for type checkers.
@@ -81,9 +92,13 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Fixed `LCUBlockEncodingWrapper` discarding the signs of negative coefficients.
 - Fixed `LCUBlockEncodingWrapper` including the phase gradient qubits in the index register for SELECT.
 
+---
 
-## [0.0.1] - 2026-06-30
+## 0.0.1
+*Released 2026-06-30.*
 
 ### Added
 
 - Initial public release
+
+<!-- changelog-released-end -->
