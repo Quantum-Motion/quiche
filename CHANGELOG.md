@@ -1,12 +1,10 @@
 # Changelog
 
 ---
-<!-- changelog-intro-start -->
 
 Changelog format based on [Keep a Changelog](https://keepachangelog.com/).
 Versioning based on [Semantic Versioning](https://semver.org/).
 
-<!-- changelog-intro-end -->
 ---
 <!-- changelog-unreleased-start -->
 

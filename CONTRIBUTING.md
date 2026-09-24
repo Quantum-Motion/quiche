@@ -1,7 +1,5 @@
 # Contributing
 
-<!-- contributing-python-start -->
-
 ## Python
 
 ### Installing
@@ -37,9 +35,7 @@ ruff format
 
 The enabled rules are configured in `pyproject.toml` under `[tool.ruff]`.
 
-<!-- contributing-python-end -->
 ---
-<!-- contributing-cpp-start -->
 
 ## C++
 
@@ -73,9 +69,7 @@ clang-format --dry-run --Werror some_file.cpp
 
 `.clang-tidy` is provided as a general reference for static analysis; it isn't currently enforced.
 
-<!-- contributing-cpp-end -->
 ---
-<!-- contributing-ci-start -->
 
 ## Continuous integration
 
@@ -89,9 +83,7 @@ Every pull request and push to `main` runs:
 
 In addition, pushes to `main` build wheels for the Python package using `cibuildwheel`, and the sdist with `uv build --sdist`.
 
-<!-- contributing-ci-end -->
 ---
-<!-- contributing-documentation-start -->
 
 ## Documentation
 
@@ -113,9 +105,7 @@ uv run --group docs make html
 
 The resulting build files can be removed using `make clean`.
 
-<!-- contributing-documentation-end -->
 ---
-<!-- contributing-styleguide-start -->
 
 ## Styleguide
 
@@ -129,9 +119,7 @@ Changes to the API, behaviour, packaging or build requirements should be recorde
 ### Docstrings
 Python docstrings should follow [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html) (with the addition of `Properties` and `Resources` sections used for Qualtran `bloq`s).
 
-<!-- contributing-styleguide-end -->
 ---
-<!-- contributing-releasing-start -->
 
 ## Releasing
 
@@ -148,5 +136,3 @@ Python docstrings should follow [numpydoc](https://numpydoc.readthedocs.io/en/la
 
 > [!NOTE]
 > A published version is permanent. A release can be yanked (hidden from dependency resolution) but never replaced or re-uploaded, so fixes require a new version number.
-
-<!-- contributing-releasing-end -->
