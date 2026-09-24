@@ -82,7 +82,6 @@ intersphinx_mapping = {
 # -- HTML output -------------------------------------------------------------
 
 html_theme = "shibuya"
-html_static_path = ["_static"]
 html_theme_options = {
     "nav_socials": [],
     "github_url": "https://github.com/Quantum-Motion/quiche",
