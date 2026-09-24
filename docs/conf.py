@@ -44,6 +44,7 @@ extensions = [
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "README.md"]
 add_module_names = False
 python_use_unqualified_type_names = True
+toc_object_entries_show_parents = "hide"
 
 # -- Autodoc -----------------------------------------------------------------
 
