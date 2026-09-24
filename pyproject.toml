@@ -1,6 +1,6 @@
 [project]
 name = "pyquiche"
-version = "0.1.0"
+dynamic = ["version"]
 description = "QUantum Integrated CHEmistry toolkit."
 authors = [
     { name = "Thomas Bromley", email = "thomas@quantummotion.tech"},
@@ -67,6 +67,12 @@ test = [
     "pytest>=9.0",
     "scipy>=1.15",
 ]
+
+[[tool.dynamic-metadata]]
+provider = "scikit_build_core.metadata.regex"
+field = "version"
+input = "VERSION"
+regex = '\A(?P<value>\d+\.\d+\.\d+[-+a-zA-Z0-9.]*)'
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"
