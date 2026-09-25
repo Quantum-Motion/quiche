@@ -36,15 +36,19 @@ Every public module, class and function in the `quiche` package.
 :::
 ::::
 
-
+## Features
 ```{include} ../README.md
 :start-after: <!-- readme-features-start -->
 :end-before: <!-- readme-features-end -->
 ```
+
+## Usage
 ```{include} ../README.md
 :start-after: <!-- readme-usage-start -->
 :end-before: <!-- readme-usage-end -->
 ```
+
+## Funding
 ```{include} ../README.md
 :start-after: <!-- readme-funding-start -->
 :end-before: <!-- readme-funding-end -->

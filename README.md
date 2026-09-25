@@ -6,7 +6,7 @@
 algorithms for quantum chemistry, with a focus on ground-state energy calculations
 via quantum phase estimation (QPE).
 
-The main entry point to QUICHE is a `QPESpec` object, which describes the target chemical system, phase estimation circuit and Hamiltonian simulation method. `QPESpec` then dispatches to either of two backends:
+The main entry point to QUICHE is a `QPESpec` object, which describes the target chemical system, phase estimation circuit and Hamiltonian simulation method. It then dispatches to either of two backends:
 
 - a **resource estimation** backend built on [Qualtran](https://github.com/quantumlib/Qualtran), which decomposes the calculation into its subroutines and counts the logical qubits and gates it would need
 - a **simulation** backend built on [QuEST](https://github.com/QuEST-Kit/QuEST), which executes the calculation as a state-vector simulation and returns the estimated phase.
@@ -17,9 +17,10 @@ The main entry point to QUICHE is a `QPESpec` object, which describes the target
 
 <!-- readme-intro-end -->
 ---
-<!-- readme-features-start -->
 
 ## Features
+
+<!-- readme-features-start -->
 
 - A range of quantum phase estimation algorithms including single- and multi-ancilla methods.
 - A wide variety of Hamiltonian simulation techniques, such as Suzuki–Trotter, QDRIFT and qubitisation.
@@ -28,9 +29,10 @@ The main entry point to QUICHE is a `QPESpec` object, which describes the target
 
 <!-- readme-features-end -->
 ---
-<!-- readme-usage-start -->
 
 ## Usage
+
+<!-- readme-usage-start -->
 
 Going from a Hamiltonian to a logical resource estimate:
 ```python
@@ -72,11 +74,10 @@ print(logical_qubit_resources(bloq), logical_gate_resources(bloq))
 
 <!-- readme-usage-end -->
 ---
-<!-- readme-installation-start -->
 
 ## Installation
 
-### Basic install
+<!-- readme-installation-start -->
 
 QUICHE is available on PyPI as `pyquiche`. For a basic install, run:
 ```bash
@@ -88,66 +89,23 @@ Then import the package from Python:
 import quiche
 ```
 
-Prebuilt wheels are available for Linux (`x86_64`, `aarch64`), macOS 15+ (`arm64`) and Windows (`x64`), on Python 3.12 or later. They bundle a multithreaded, double-precision build of QuEST. On other platforms, pip falls back to [building from source](#custom-install). That is also needed for custom precision, GPU acceleration or MPI-enabled builds.
+Prebuilt wheels are available for Linux (`x86_64`, `aarch64`), macOS 15+ (`arm64`) and Windows (`x64`), on Python 3.12 or later. They bundle a multithreaded, double-precision build of QuEST.
 
-For an editable development install, see the [contributing guide](https://github.com/Quantum-Motion/quiche/blob/main/CONTRIBUTING.md).
-
-
-### Custom install
-
-Custom installs require building QUICHE from source, which needs CMake, a C++17 compiler and network access to fetch dependencies. MPI- and GPU-enabled builds additionally require the corresponding toolchains, which are not fetched automatically.
-
-QUICHE's compiled extension depends on:
-- [QuEST](https://github.com/QuEST-Kit/QuEST) for simulation. Always built from a pinned source archive, since QUICHE depends on internal headers that are not part of the installed interface.
-- [nanobind](https://github.com/wjakob/nanobind) for Python bindings. Toggled with `QUICHE_BUILD_BINDINGS`.
-- [Catch2](https://github.com/catchorg/Catch2) for testing. Toggled with `QUICHE_BUILD_TESTS`.
-
-nanobind and Catch2 are located with `find_package` and downloaded via `FetchContent` if unavailable.
-
-To build the Python package from the published `sdist`, passing configuration flags through to CMake:
-```bash
-pip install pyquiche --no-binary pyquiche -C cmake.define.ENABLE_DISTRIBUTION=ON
-```
-
-> [!TIP]
-> `--no-binary` is required: without it pip installs the prebuilt wheel and the configuration flags are ignored.
-
-To build from a local clone instead, run:
-```bash
-git clone https://github.com/Quantum-Motion/quiche.git
-cd quiche
-pip install .
-```
-
-### C++-only install
-
-To build only the C++ simulator backend, run:
-```bash
-cd quiche
-cmake -B build
-cmake --build build
-```
-
-Other build options can be customised by passing CMake flags (`-D<OPTION>=<VALUE>`). Visit the [QuEST docs](https://quest-kit.github.io/QuEST/) for detailed information on the available simulator options.
-
-Then install using:
-```bash
-cmake --install build --prefix </path/to/install>
-```
-
+For other platforms, custom precision, GPU acceleration or MPI support, QUICHE must be built from source.
 <!-- readme-installation-end -->
+For more information see, the [install instructions](docs/installation.md).
+
 ---
-<!-- readme-contributing-start -->
 
 ## Contributing
 
 For further information about how you can contribute to QUICHE, see the [contributing guide](https://github.com/Quantum-Motion/quiche/blob/main/CONTRIBUTING.md).
 
-<!-- readme-contributing-end -->
 ---
-<!-- readme-funding-start -->
 
 ## Funding
+
+<!-- readme-funding-start -->
 
 QUICHE is a UK–Germany collaboration between [Quantum Motion](https://quantummotion.com),
 [FACCTs](https://www.faccts.de) (developers of ORCA) and
@@ -158,10 +116,7 @@ for background on its aims.
 
 <!-- readme-funding-end -->
 ---
-<!-- readme-license-start -->
 
 ## License
 
 Copyright 2026 Quantum Motion Technologies Ltd. Licensed under the Apache License, Version 2.0.
-
-<!-- readme-license-end -->
