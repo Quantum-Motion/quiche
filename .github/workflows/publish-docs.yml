@@ -1,0 +1,31 @@
+name: Publish documentation pages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+
+  build-docs:
+    uses: ./.github/workflows/build-docs.yml
+
+  publish-docs:
+    name: Publish docs to GitHub Pages
+    needs: build-docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Publish to GitHub pages
+        id: deployment
+        uses: actions/deploy-pages@v5

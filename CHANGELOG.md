@@ -1,12 +1,18 @@
 # Changelog
 
+---
+
 Changelog format based on [Keep a Changelog](https://keepachangelog.com/).
 Versioning based on [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+---
+<!-- changelog-unreleased-start -->
+
+## Unreleased
 
 ### Added
 - Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
+- Added QUICHE documentation site.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
@@ -19,8 +25,12 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+<!-- changelog-unreleased-end -->
+---
+<!-- changelog-released-start -->
 
-## [0.1.0] - 2026-09-13
+## 0.1.0
+*Released 2026-09-13.*
 
 ### Added
 - Added `py.typed` marker for type checkers.
@@ -82,9 +92,13 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Fixed `LCUBlockEncodingWrapper` discarding the signs of negative coefficients.
 - Fixed `LCUBlockEncodingWrapper` including the phase gradient qubits in the index register for SELECT.
 
+---
 
-## [0.0.1] - 2026-06-30
+## 0.0.1
+*Released 2026-06-30.*
 
 ### Added
 
 - Initial public release
+
+<!-- changelog-released-end -->

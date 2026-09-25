@@ -15,5 +15,8 @@ build
 *.dylib
 *.dll
 
+# Docs
+docs/_build
+
 # Other
 .DS_Store

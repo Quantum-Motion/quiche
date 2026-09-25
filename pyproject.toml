@@ -36,6 +36,7 @@ classifiers = [
 urls.Repository = "https://github.com/Quantum-Motion/quiche"
 urls.Issues = "https://github.com/Quantum-Motion/quiche/issues"
 urls.Changelog = "https://github.com/Quantum-Motion/quiche/blob/main/CHANGELOG.md"
+urls.Documentation = "https://quantum-motion.github.io/quiche/"
 
 # need explicit upper bound due to poetry
 requires-python=">=3.12, <4.0"
@@ -62,6 +63,13 @@ dev = [
 lint = [
     "ruff>=0.15",
     "clang-format==23.1.*",
+]
+docs = [
+    "myst-parser>=5.1",
+    "shibuya>=2026.7.12",
+    "sphinx>=8.2",
+    "sphinx-copybutton>=0.5",
+    "sphinx-design>=0.6",
 ]
 test = [
     "pytest>=9.0",
@@ -108,6 +116,7 @@ lint.ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"docs/conf.py" = ["INP001"] # not applicable
 "python/*.ipynb" = ["CPY001"] # Don't require copyright in notebooks
 "python/tests/*" =[
     "S101",   # asserts are used throughout testing
