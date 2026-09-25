@@ -7,6 +7,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
+- Added `quest_bindings.debug` submodule for QuEST's seeding, validation, reporting and GPU cache functions.
+- Added bindings for `PauliStrSum.sortLexicographic` and `sortMagnitude`; `Qureg.applyMultiQubitMeasurement`, `applyQubitMeasurementAndGetProb`, `applyMultiQubitMeasurementAndGetProb`, `leftapplyMultiQubitProjector`, `rightapplyMultiQubitProjector`, `applyMultiStateControlledS` and `applyMultiStateControlledSqrtSwap`; and `FullStateDiagMatr.createCustom`, `fromPauliStrSum` and `setFromPauliStrSum`.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
@@ -18,8 +20,10 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Removed
 - Removed `applyInverseQuantumFourierTransform` (use `applyQuantumFourierTransform(..., /* inverse = */ true)` instead, now provided by QuEST).
+- Removed incorrectly bound `Qureg.initArbitraryPureState`.
 
 ### Fixed
+- Fixed incorrectly bound `Qureg.applyTrotterizedNoisyTimeEvolution`.
 
 ### Security
 
