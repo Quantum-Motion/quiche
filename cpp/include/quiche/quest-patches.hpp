@@ -27,11 +27,6 @@
 
 #include <quest.h>
 
-// See PR 705 for Inverse QFT patch
-void applyInverseQuantumFourierTransform(Qureg qureg, int *targets, int numTargets);
-
-void applyInverseQuantumFourierTransform(Qureg qureg, std::vector<int> targets);
-
 std::pair<int, qreal> getMostLikelyMultiQubitOutcomeAndProb(Qureg qureg, const std::vector<int> &qubits);
 
 qcomp getIdentityCoeff(PauliStrSum sum);

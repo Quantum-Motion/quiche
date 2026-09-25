@@ -84,9 +84,9 @@ install.components = ["quiche_wheel"]
 [tool.scikit-build.cmake.define]
 QUICHE_BUILD_BINDINGS = "ON"
 BUILD_SHARED_LIBS = "ON"
-FLOAT_PRECISION = "2"
-ENABLE_MULTITHREADING = "ON"
-ENABLE_DISTRIBUTION = "OFF"
+QUEST_FLOAT_PRECISION = "2"
+QUEST_ENABLE_OMP = "ON"
+QUEST_ENABLE_MPI = "OFF"
 
 [tool.uv]
 compile-bytecode = true

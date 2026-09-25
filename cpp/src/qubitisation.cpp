@@ -97,7 +97,7 @@ void applyMultiStateControlledSelect(Qureg qureg, const std::vector<int> &contro
     combinedStates.insert(combinedStates.end(), states.begin(), states.end());
 
     for (int i = 0; i < sum.numTerms; i++) {
-        getBitsFromInteger(combinedStates.data(), i, numQubits);
+        setToBitsOfInteger(combinedStates.data(), i, numQubits);
         applyMultiStateControlledPauliStr(qureg, combinedQubits, combinedStates, sum.strings[i]);
 
         // Handle negative PauliStrSum coefficients
@@ -215,7 +215,7 @@ void applyMultiStateControlledCoeffsPrep(Qureg qureg, const std::vector<int> &co
 
             if (denom > 0.0) {
                 double angle = (inverse ? -1 : 1) * 2.0 * std::acos(std::sqrt(leftSum / denom));
-                getBitsFromInteger(combinedStates.data(), k, j);
+                setToBitsOfInteger(combinedStates.data(), k, j);
                 applyMultiStateControlledRotateY(qureg, combinedQubits, combinedStates, target, angle);
             }
         }

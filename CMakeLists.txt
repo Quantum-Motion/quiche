@@ -68,8 +68,8 @@ endif()
 # Do not add FIND_PACKAGE_ARGS here.
 FetchContent_Declare(
     QuEST
-    URL https://github.com/QuEST-Kit/QuEST/archive/refs/tags/v4.2.0.tar.gz
-    URL_HASH SHA256=2c812a7ec4d727e0947ffd0daf05452963c3f1c10e428c8bc30c35164921fcba
+    URL https://github.com/QuEST-Kit/QuEST/archive/refs/tags/v4.3.0.tar.gz
+    URL_HASH SHA256=8e51fddbbb218de61bbe2a31872ab6c5edcde60ffc604366512be2171a44065d
     OVERRIDE_FIND_PACKAGE
 )
 

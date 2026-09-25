@@ -7,15 +7,23 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
+- Added `quest_bindings.debug` submodule for QuEST's seeding, validation, reporting and GPU cache functions.
+- Added bindings for `PauliStrSum.sortLexicographic` and `sortMagnitude`; `Qureg.applyMultiQubitMeasurement`, `applyQubitMeasurementAndGetProb`, `applyMultiQubitMeasurementAndGetProb`, `leftapplyMultiQubitProjector`, `rightapplyMultiQubitProjector`, `applyMultiStateControlledS` and `applyMultiStateControlledSqrtSwap`; and `FullStateDiagMatr.createCustom`, `fromPauliStrSum` and `setFromPauliStrSum`.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
+- Upgraded QuEST from v4.2 to v4.3. Source builds must now use the updated `QUEST_`-prefixed build flags.
+- QFT and Trotter bindings now take the `inverse` and `permuteTerms` arguments, added in QuEST v4.3.
+- Updated `Qureg.applyMultiStateControlledCompMatr2` binding signature to match QuEST v4.3 (removing the spurious `int` argument).
 
 ### Deprecated
 
 ### Removed
+- Removed `applyInverseQuantumFourierTransform` (use `applyQuantumFourierTransform(..., /* inverse = */ true)` instead, now provided by QuEST).
+- Removed incorrectly bound `Qureg.initArbitraryPureState`.
 
 ### Fixed
+- Fixed incorrectly bound `Qureg.applyTrotterizedNoisyTimeEvolution`.
 
 ### Security
 

@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
+#include <array>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/complex.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
 #include <quest.h>
@@ -40,36 +43,39 @@ void init_quest_bindings(nb::module_ &m) {
 
     nb::module_ quest = m.def_submodule("quest_bindings");
 
-    // // Debug
-    // nb::module_ debug = m.def_submodule("debug");
-    // debug.def("setSeeds", nb::overload_cast<vector<unsigned>>(&setSeeds));
-    // debug.def("getSeeds", nb::overload_cast<>(&getSeeds));
-    // debug.def("setSeedsToDefault", &setSeedsToDefault);
-    // debug.def("getNumSeeds", &getNumSeeds);
-    // debug.def("setValidationOn", &setValidationOn);
-    // debug.def("setValidationOff", &setValidationOff);
-    // debug.def("setValidationEpsilonToDefault", &setValidationEpsilonToDefault);
-    // debug.def("setValidationEpsilon", &setValidationEpsilon);
-    // debug.def("getValidationEpsilon", &getValidationEpsilon);
-    // debug.def("setMaxNumReportedItems", &setMaxNumReportedItems);
-    // debug.def("setMaxNumReportedSigFigs", &setMaxNumReportedSigFigs);
-    // debug.def("setNumReportedNewlines", &setNumReportedNewlines);
-    // debug.def("setReportedPauliChars", &setReportedPauliChars);
-    // debug.def("setReportedPauliStrStyle", &setReportedPauliStrStyle);
-    // debug.def("getGpuCacheSize", &getGpuCacheSize);
-    // debug.def("clearGpuCache", &clearGpuCache);
-    // debug.def("getEnvironmentString", &getEnvironmentString);
+    // Debug
+    nb::module_ debug = quest.def_submodule("debug");
+    debug.def("setQuESTSeeds", nb::overload_cast<vector<unsigned>>(&setQuESTSeeds));
+    debug.def("getQuESTSeeds", nb::overload_cast<>(&getQuESTSeeds));
+    debug.def("setQuESTSeedsToDefault", &setQuESTSeedsToDefault);
+    debug.def("setQuESTValidationOn", &setQuESTValidationOn);
+    debug.def("setQuESTValidationOff", &setQuESTValidationOff);
+    debug.def("setQuESTValidationEpsilonToDefault", &setQuESTValidationEpsilonToDefault);
+    debug.def("setQuESTValidationEpsilon", &setQuESTValidationEpsilon);
+    debug.def("getQuESTValidationEpsilon", &getQuESTValidationEpsilon);
+    debug.def("setQuESTMaxNumReportedItems", &setQuESTMaxNumReportedItems);
+    debug.def("setQuESTMaxNumReportedSigFigs", &setQuESTMaxNumReportedSigFigs);
+    debug.def("setQuESTNumReportedNewlines", &setQuESTNumReportedNewlines);
+    debug.def("setQuESTReportedPauliChars", &setQuESTReportedPauliChars);
+    debug.def("setQuESTReportedPauliStrStyle", &setQuESTReportedPauliStrStyle);
+    debug.def("getQuESTGpuCacheSize", &getQuESTGpuCacheSize);
+    debug.def("clearQuESTGpuCache", &clearQuESTGpuCache);
+    debug.def("getQuESTEnvironmentString", [] {
+        std::array<char, 200> str{};
+        getQuESTEnvironmentString(str.data());
+        return string(str.data());
+    });
 
     // Env
     nb::class_<QuESTEnv>(quest, "QuESTEnv")
-        .def(nb::new_([]() {
+        .def(nb::new_([] {
             initQuESTEnv();
-            setInputErrorHandler(errorHandler);
+            setQuESTInputErrorHandler(errorHandler);
             return getQuESTEnv();
         }))
         .def(nb::new_([](int distrib, int gpu, int multithread) {
             initCustomQuESTEnv(distrib, gpu, multithread);
-            setInputErrorHandler(errorHandler);
+            setQuESTInputErrorHandler(errorHandler);
             return getQuESTEnv();
         }))
         .def_static("report", &reportQuESTEnv)
@@ -95,6 +101,8 @@ void init_quest_bindings(nb::module_ &m) {
         .def("__del__", &destroyPauliStrSum)
         .def_static("fromFile", nb::overload_cast<string>(&createPauliStrSumFromFile))
         .def_static("fromReversedFile", nb::overload_cast<string>(&createPauliStrSumFromReversedFile))
+        .def("sortLexicographic", &sortPauliStrSumLexicographic)
+        .def("sortMagnitude", &sortPauliStrSumMagnitude)
         .def("report", &reportPauliStrSum);
 
     // Qureg
@@ -116,7 +124,7 @@ void init_quest_bindings(nb::module_ &m) {
         .def("initPureState", &initPureState)
         .def("initClassicalState", &initClassicalState)
         .def("initDebugState", &initDebugState)
-        .def("initArbitraryPureState", &initArbitraryPureState)
+        // .def("initArbitraryPureState", &initArbitraryPureState)
         .def("initRandomPureState", &initRandomPureState)
         .def("initRandomMixedState", &initRandomMixedState)
 
@@ -202,8 +210,10 @@ void init_quest_bindings(nb::module_ &m) {
         .def("rightapplyMultiQubitNot", nb::overload_cast<Qureg, vector<int>>(&rightapplyMultiQubitNot))
         .def("leftapplyQubitProjector", &leftapplyQubitProjector)
         .def("rightapplyQubitProjector", &rightapplyQubitProjector)
-        // .def("leftapplyMultiQubitProjector", &leftapplyMultiQubitProjector)
-        // .def("rightapplyMultiQubitProjector", &rightapplyMultiQubitProjector)
+        .def("leftapplyMultiQubitProjector",
+             nb::overload_cast<Qureg, vector<int>, vector<int>>(&leftapplyMultiQubitProjector))
+        .def("rightapplyMultiQubitProjector",
+             nb::overload_cast<Qureg, vector<int>, vector<int>>(&rightapplyMultiQubitProjector))
 
         // Operations
         .def("applyCompMatr1", &applyCompMatr1)
@@ -218,7 +228,7 @@ void init_quest_bindings(nb::module_ &m) {
         .def("applyMultiControlledCompMatr2",
              nb::overload_cast<Qureg, vector<int>, int, int, CompMatr2>(&applyMultiControlledCompMatr2))
         .def("applyMultiStateControlledCompMatr2",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int, int, int, CompMatr2>(
+             nb::overload_cast<Qureg, vector<int>, vector<int>, int, int, CompMatr2>(
                  &applyMultiStateControlledCompMatr2))
 
         .def("applyCompMatr", nb::overload_cast<Qureg, vector<int>, CompMatr>(&applyCompMatr))
@@ -267,6 +277,8 @@ void init_quest_bindings(nb::module_ &m) {
         .def("applyS", &applyS)
         .def("applyControlledS", &applyControlledS)
         .def("applyMultiControlledS", nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledS))
+        .def("applyMultiStateControlledS",
+             nb::overload_cast<Qureg, vector<int>, vector<int>, int>(&applyMultiStateControlledS))
 
         .def("applyT", &applyT)
         .def("applyControlledT", &applyControlledT)
@@ -290,8 +302,8 @@ void init_quest_bindings(nb::module_ &m) {
         .def("applyControlledSqrtSwap", &applyControlledSqrtSwap)
         .def("applyMultiControlledSqrtSwap",
              nb::overload_cast<Qureg, vector<int>, int, int>(&applyMultiControlledSqrtSwap))
-        // .def("applyMultiStateControlledSqrtSwap", nb::overload_cast<Qureg, vector<int>, vector<int>, int, int,
-        // int>(&applyMultiStateControlledSqrtSwap))
+        .def("applyMultiStateControlledSqrtSwap",
+             nb::overload_cast<Qureg, vector<int>, vector<int>, int, int>(&applyMultiStateControlledSqrtSwap))
 
         .def("applyPauliX", &applyPauliX)
         .def("applyPauliY", &applyPauliY)
@@ -380,15 +392,27 @@ void init_quest_bindings(nb::module_ &m) {
              nb::overload_cast<Qureg, vector<int>, vector<int>, vector<int>>(&applyMultiStateControlledMultiQubitNot))
 
         .def("applyQubitMeasurement", &applyQubitMeasurement)
+        .def("applyMultiQubitMeasurement", nb::overload_cast<Qureg, vector<int>>(&applyMultiQubitMeasurement))
         .def("applyForcedQubitMeasurement", &applyForcedQubitMeasurement)
-        // applyMultiQubitMeasurementAndGetProb
         .def("applyForcedMultiQubitMeasurement",
              nb::overload_cast<Qureg, vector<int>, vector<int>>(&applyForcedMultiQubitMeasurement))
+        .def("applyQubitMeasurementAndGetProb",
+             [](Qureg qureg, int target) {
+                 qreal prob = 0.0;
+                 auto index = applyQubitMeasurementAndGetProb(qureg, target, &prob);
+                 return std::make_tuple(index, prob);
+             })
+        .def("applyMultiQubitMeasurementAndGetProb",
+             [](Qureg qureg, std::vector<int> qubits) {
+                 qreal prob = 0.0;
+                 auto index = applyMultiQubitMeasurementAndGetProb(qureg, qubits, &prob);
+                 return std::make_tuple(index, prob);
+             })
 
         .def("applyQubitProjector", &applyQubitProjector)
         .def("applyMultiQubitProjector", nb::overload_cast<Qureg, vector<int>, vector<int>>(&applyMultiQubitProjector))
 
-        .def("applyQuantumFourierTransform", nb::overload_cast<Qureg, vector<int>>(&applyQuantumFourierTransform))
+        .def("applyQuantumFourierTransform", nb::overload_cast<Qureg, vector<int>, bool>(&applyQuantumFourierTransform))
         .def("applyFullQuantumFourierTransform", &applyFullQuantumFourierTransform)
 
         // Decoherence
@@ -406,15 +430,24 @@ void init_quest_bindings(nb::module_ &m) {
         .def("applyTrotterizedPauliStrSumGadget", &applyTrotterizedPauliStrSumGadget)
         .def("applyTrotterizedControlledPauliStrSumGadget", &applyTrotterizedControlledPauliStrSumGadget)
         .def("applyTrotterizedMultiControlledPauliStrSumGadget",
-             nb::overload_cast<Qureg, vector<int>, PauliStrSum, qreal, int, int>(
+             nb::overload_cast<Qureg, vector<int>, PauliStrSum, qreal, int, int, bool>(
                  &applyTrotterizedMultiControlledPauliStrSumGadget))
         .def("applyTrotterizedMultiStateControlledPauliStrSumGadget",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, PauliStrSum, qreal, int, int>(
+             nb::overload_cast<Qureg, vector<int>, vector<int>, PauliStrSum, qreal, int, int, bool>(
                  &applyTrotterizedMultiStateControlledPauliStrSumGadget))
         .def("applyTrotterizedNonUnitaryPauliStrSumGadget", &applyTrotterizedNonUnitaryPauliStrSumGadget)
         .def("applyTrotterizedUnitaryTimeEvolution", &applyTrotterizedUnitaryTimeEvolution)
         .def("applyTrotterizedImaginaryTimeEvolution", &applyTrotterizedImaginaryTimeEvolution)
-        .def("applyTrotterizedNoisyTimeEvolution", &applyTrotterizedNoisyTimeEvolution)
+        .def("applyTrotterizedNoisyTimeEvolution",
+             [](Qureg qureg, PauliStrSum hamil, vector<qreal> damps, vector<PauliStrSum> jumps, qreal time, int order,
+                int reps, bool permuteTerms) {
+                 if (damps.size() != jumps.size()) {
+                     throw std::invalid_argument(
+                         "applyTrotterizedNoisyTimeEvolution - damps and jumps must have equal length.");
+                 }
+                 applyTrotterizedNoisyTimeEvolution(qureg, hamil, damps.data(), jumps.data(), jumps.size(), time, order,
+                                                    reps, permuteTerms);
+             })
 
         // Syncing
         .def("syncQuregToGpu", &syncQuregToGpu)
@@ -483,7 +516,10 @@ void init_quest_bindings(nb::module_ &m) {
     // FullStateDiagMatr
     nb::class_<FullStateDiagMatr>(quest, "FullStateDiagMatr")
         .def(nb::new_(&createFullStateDiagMatr))
+        .def_static("createCustom", &createCustomFullStateDiagMatr)
+        .def_static("fromPauliStrSum", &createFullStateDiagMatrFromPauliStrSum)
         .def("set", nb::overload_cast<FullStateDiagMatr, qindex, vector<qcomp>>(&setFullStateDiagMatr))
+        .def("setFromPauliStrSum", &setFullStateDiagMatrFromPauliStrSum)
         .def("__del__", &destroyFullStateDiagMatr)
         .def("sync", &syncFullStateDiagMatr)
         .def("report", &reportFullStateDiagMatr);
