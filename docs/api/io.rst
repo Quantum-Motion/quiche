@@ -2,7 +2,7 @@ quiche.io
 =========
 
 Hamlib
----------
+------
 
 .. automodule:: quiche.io.hamlib
 

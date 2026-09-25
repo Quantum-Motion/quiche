@@ -1,6 +1,6 @@
 # Quickstart
 
-This page walks through a complete QUICHE calculation from loading a Hamiltonian, to setting
+This page walks through a complete QUICHE calculation from loading a Hamiltonian, to setting up
 the phase estimation calculation, and finally dispatching to both backends.
 
 > [!TIP]
@@ -44,7 +44,7 @@ ham = ElectronicHamiltonian(
 ## 2. Set an error budget
 
 Every approximate method in the calculation draws on an {py:class}`~quiche.core.errors.Errors`
- budget. Using it, QUICHE derives all relevant parameters, such as ancilla counts, number of Trotter steps, QDRIFT repetitions, and so on.
+budget. Using it, QUICHE derives all relevant parameters, such as ancilla counts, number of Trotter steps, QDRIFT repetitions, and so on.
 
 ```python
 from quiche.core import Errors
@@ -60,7 +60,7 @@ error = Errors(
 
 ## 3. Specify the calculation
 
-An initial state for the phase estimation calculation, such as a Hartree-Fock state, can be set
+An initial state for the phase estimation calculation, such as a Hartree-Fock state, can be set:
 ```python
 from quiche.chemistry import HartreeFockState
 
@@ -91,7 +91,7 @@ spec = QPESpec(
 ## 4. Estimate resources
 
 `.get_composite_bloq()` compiles the algorithm into a Qualtran
-[`CompositeBloq`](https://qualtran.readthedocs.io/en/latest/reference/qualtran/CompositeBloq.html)  which can be costed:
+[`CompositeBloq`](https://qualtran.readthedocs.io/en/latest/reference/qualtran/CompositeBloq.html) which can be costed:
 
 ```python
 from quiche.resources.logical import logical_gate_resources, logical_qubit_resources
