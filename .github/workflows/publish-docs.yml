@@ -1,6 +1,7 @@
 name: Publish documentation pages
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
