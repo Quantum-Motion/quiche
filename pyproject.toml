@@ -36,6 +36,7 @@ classifiers = [
 urls.Repository = "https://github.com/Quantum-Motion/quiche"
 urls.Issues = "https://github.com/Quantum-Motion/quiche/issues"
 urls.Changelog = "https://github.com/Quantum-Motion/quiche/blob/main/CHANGELOG.md"
+urls.Documentation = "https://quantum-motion.github.io/quiche/"
 
 # need explicit upper bound due to poetry
 requires-python=">=3.12, <4.0"
