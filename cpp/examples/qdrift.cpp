@@ -83,7 +83,7 @@ int main() {
 
     Qureg trotter_qureg = createQureg(numQubits);
     initPlusState(trotter_qureg);
-    applyTrotterizedUnitaryTimeEvolution(trotter_qureg, hamiltonian, time, 4, 100);
+    applyTrotterizedUnitaryTimeEvolution(trotter_qureg, hamiltonian, time, 4, 100, /* permuteTerms = */ false);
 
     if (verbosity >= 2) {
         reportQureg(trotter_qureg);

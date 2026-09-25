@@ -31,7 +31,7 @@ void errorHandler(const char *errFunc, const char *errMsg) {
 
 int main(int argc, char *argv[]) {
     initQuESTEnv();
-    setInputErrorHandler(errorHandler);
+    setQuESTInputErrorHandler(errorHandler);
     int result = Catch::Session().run(argc, argv);
     finalizeQuESTEnv();
     return result;
