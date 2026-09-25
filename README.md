@@ -42,7 +42,7 @@ nanobind and Catch2 are located with `find_package` and downloaded via `FetchCon
 
 To build the Python package from the published sdist, passing configuration flags through to CMake:
 ```bash
-pip install pyquiche --no-binary pyquiche -C cmake.define.ENABLE_DISTRIBUTION=ON
+pip install pyquiche --no-binary pyquiche -C cmake.define.QUEST_ENABLE_MPI=ON
 ```
 
 > Note: `--no-binary` is required: without it pip installs the prebuilt wheel and the configuration flags are ignored.
