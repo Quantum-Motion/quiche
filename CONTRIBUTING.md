@@ -114,7 +114,7 @@ Aim to keep your PRs and commits self-contained and commit messages descriptive.
 Although not strictly enforced we recommend following the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format.
 
 ### Changelog
-Changes to the API, behaviour, packaging or build requirements should be recorded in the `[Unreleased]` section of `CHANGELOG.md`, following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
+Changes to the API, behaviour, packaging or build requirements should be recorded in the `Unreleased` section of `CHANGELOG.md`, following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 ### Docstrings
 Python docstrings should follow [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html) (with the addition of `Properties` and `Resources` sections used for Qualtran `bloq`s).
@@ -124,7 +124,7 @@ Python docstrings should follow [numpydoc](https://numpydoc.readthedocs.io/en/la
 ## Releasing
 
 1. Open a PR to `main` that:
-    - Renames the `[Unreleased]` section of `CHANGELOG.md`, adds the release date, and adds a new `[Unreleased]` above it with empty category headings.
+    - Renames the `Unreleased` section of `CHANGELOG.md`, adds the release date, and adds a new `Unreleased` above it with empty category headings.
     - Bumps the `VERSION` file.
 2. Once merged, tag the merge commit with the version from step 1 (prefixed with `v`) and push it:
     ```bash

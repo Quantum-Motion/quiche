@@ -77,7 +77,6 @@ ham_simulation = Simulation.Qubitised
 
 {py:class}`~quiche.dispatch.qpespec.QPESpec` brings everything together defining the complete phase estimation calculation.
 ```python
-from quiche.core import PhaseEstimation, Simulation
 from quiche.dispatch import QPESpec
 
 spec = QPESpec(
@@ -92,7 +91,7 @@ spec = QPESpec(
 ## 4. Estimate resources
 
 `.get_composite_bloq()` compiles the algorithm into a Qualtran
-[`CompositeBloq`](https://qualtran.readthedocs.io/en/latest/reference/qualtran.CompositeBloq.html)  which can be costed:
+[`CompositeBloq`](https://qualtran.readthedocs.io/en/latest/reference/qualtran/CompositeBloq.html)  which can be costed:
 
 ```python
 from quiche.resources.logical import logical_gate_resources, logical_qubit_resources

@@ -8,7 +8,7 @@ via quantum phase estimation (QPE).
 
 The main entry point to QUICHE is a `QPESpec` object, which describes the target chemical system, phase estimation circuit and Hamiltonian simulation method. It then dispatches to either of two backends:
 
-- a **resource estimation** backend built on [Qualtran](https://github.com/quantumlib/Qualtran), which decomposes the calculation into its subroutines and counts the logical qubits and gates it would need
+- a **resource estimation** backend built on [Qualtran](https://github.com/quantumlib/Qualtran), which decomposes the calculation into its subroutines and counts the logical qubits and gates it would need.
 - a **simulation** backend built on [QuEST](https://github.com/QuEST-Kit/QuEST), which executes the calculation as a state-vector simulation and returns the estimated phase.
 
 > [!WARNING]
@@ -92,8 +92,10 @@ import quiche
 Prebuilt wheels are available for Linux (`x86_64`, `aarch64`), macOS 15+ (`arm64`) and Windows (`x64`), on Python 3.12 or later. They bundle a multithreaded, double-precision build of QuEST.
 
 For other platforms, custom precision, GPU acceleration or MPI support, QUICHE must be built from source.
+
 <!-- readme-installation-end -->
-For more information see, the [install instructions](docs/installation.md).
+
+For more information, see the [install instructions](https://quantum-motion.github.io/quiche/installation.html).
 
 ---
 

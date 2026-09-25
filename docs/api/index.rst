@@ -19,7 +19,7 @@ The ``quiche`` package is organised into a small set of subpackages:
      - Specifying a calculation and dispatching it to a backend, plus the error-budget
        logic that fixes routine parameters.
    * - :doc:`io <io>`
-     - File parsers for Hamlib electronic hamiltonians and FCIDUMP electronic integral files.
+     - File parsers for Hamlib electronic Hamiltonians and FCIDUMP electronic integral files.
    * - :doc:`resources <resources>`
      - The Qualtran-based resource estimation backend: bloqs and logical cost functions.
    * - :doc:`simulation <simulation>`

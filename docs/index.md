@@ -69,5 +69,5 @@ quickstart
 api/index
 contributing
 changelog
-License <https://github.com/Quantum-Motion/quiche/blob/main/LICENSE>
+Licence <https://github.com/Quantum-Motion/quiche/blob/main/LICENSE>
 ```

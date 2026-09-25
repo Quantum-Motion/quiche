@@ -12,7 +12,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
-- Added QUICHE documentation site
+- Added QUICHE documentation site.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
