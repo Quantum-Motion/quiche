@@ -10,10 +10,14 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
+- Upgraded QuEST from v4.2 to v4.3. Source builds must now use the updated `QUEST_`-prefixed build flags.
+- QFT and Trotter bindings now take the `inverse` and `permuteTerms` arguments, added in QuEST v4.3.
+- Updated `Qureg.applyMultiStateControlledCompMatr2` binding signature to match QuEST v4.3 (removing the spurious `int` argument).
 
 ### Deprecated
 
 ### Removed
+- Removed `applyInverseQuantumFourierTransform` (use `applyQuantumFourierTransform(..., /* inverse = */ true)` instead, now provided by QuEST).
 
 ### Fixed
 
