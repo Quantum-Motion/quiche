@@ -46,7 +46,7 @@ double getPhaseTextbookInner(Qureg qureg, PauliStrSum hamiltonian, const std::ve
         applyControlledUnitary(qureg, ancilla, hamiltonian, index);
     }
 
-    applyInverseQuantumFourierTransform(qureg, ancillas);
+    applyQuantumFourierTransform(qureg, ancillas, /* inverse = */ true);
 
     // Get most likely outcome (deterministic)
     auto [index, prob] = getMostLikelyMultiQubitOutcomeAndProb(qureg, ancillas);

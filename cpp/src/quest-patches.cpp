@@ -52,31 +52,6 @@
 #include <quest/src/core/paulilogic.hpp>
 #include <quest/src/core/validation.hpp>
 
-// Derived from QuEST/quest/src/api/operations.cpp
-// Copyright (c) 2025 The QuEST Authors and Contributors
-// Licensed under the MIT License.
-// Modified to implement the inverse QFT. See PR #705 for upstream patch.
-void applyInverseQuantumFourierTransform(Qureg qureg, int *targets, int numTargets) {
-    validate_quregFields(qureg, __func__);
-    validate_targets(qureg, targets, numTargets, __func__);
-
-    int mid = numTargets / 2; // floors
-    for (int n = 0; n < mid; n++)
-        applySwap(qureg, targets[n], targets[numTargets - 1 - n]);
-
-    for (int n = 0; n < numTargets; n++) {
-        for (int m = 0; m < n; m++) {
-            qreal arg = -const_PI / powerOf2(m + 1);
-            applyTwoQubitPhaseShift(qureg, targets[n], targets[n - m - 1], arg);
-        }
-        applyHadamard(qureg, targets[n]);
-    }
-}
-
-void applyInverseQuantumFourierTransform(Qureg qureg, std::vector<int> targets) {
-    applyInverseQuantumFourierTransform(qureg, targets.data(), targets.size());
-}
-
 std::pair<int, qreal> getMostLikelyMultiQubitOutcomeAndProb(Qureg qureg, const std::vector<int> &qubits) {
     std::vector<qreal> probs = calcProbsOfAllMultiQubitOutcomes(qureg, qubits);
 
