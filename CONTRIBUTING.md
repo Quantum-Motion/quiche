@@ -125,8 +125,7 @@ Python docstrings should follow [numpydoc](https://numpydoc.readthedocs.io/en/la
 
 1. Open a PR to `main` that:
     - Renames the `[Unreleased]` section of `CHANGELOG.md`, adds the release date, and adds a new `[Unreleased]` above it with empty category headings.
-    - Bumps `version` in `pyproject.toml`.
-    - Bumps `VERSION` in `CMakeLists.txt`.
+    - Bumps the `VERSION` file.
 2. Once merged, tag the merge commit with the version from step 1 (prefixed with `v`) and push it:
     ```bash
     git tag vX.Y.Z

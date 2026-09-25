@@ -14,7 +14,6 @@
 
 """Sphinx configuration for the QUICHE documentation."""
 
-import tomllib
 from pathlib import Path
 
 DOCS_DIR = Path(__file__).parent.resolve()
@@ -26,9 +25,8 @@ project = "QUICHE"
 author = "Quantum Motion Technologies Ltd."
 copyright = "2026, Quantum Motion Technologies Ltd."  # noqa: A001
 
-with (REPO_ROOT / "pyproject.toml").open("rb") as f:
-    release = tomllib.load(f)["project"]["version"]
-    version = ".".join(release.split(".")[:2])
+release = (REPO_ROOT / "VERSION").read_text().strip()
+version = ".".join(release.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
 
