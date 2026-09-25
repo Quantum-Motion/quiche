@@ -161,7 +161,11 @@ double getPhaseTextbookTrotter(Qureg qureg, PauliStrSum hamiltonian, const std::
 
     auto trotterLambda = [order, reps, t](Qureg qureg, int control, PauliStrSum hamiltonian, int index) {
         int steps = 1 << index;
-        applyTrotterizedControlledPauliStrSumGadget(qureg, control, hamiltonian, t * steps, order, reps * steps);
+        // applyTrotterizedControlledPauliStrSumGadget(qureg, control, hamiltonian, t * steps, order, reps * steps,
+        //                                             /*permuteTerms = */ false);
+        // FIX: temporary fix due to upstream QuEST v4.3 bug, replace with commented-out code above once fixed
+        applyTrotterizedMultiStateControlledPauliStrSumGadget(qureg, {control}, {1}, hamiltonian, t * steps, order,
+                                                              reps * steps, /* permuteTerms = */ false);
     };
 
     return getPhaseTextbookInner(qureg, hamiltonian, ancillas, trotterLambda);
@@ -183,7 +187,11 @@ double getPhaseKitaevTrotter(Qureg qureg, PauliStrSum hamiltonian, int ancilla, 
 
     auto trotterLambda = [order, reps, t](Qureg qureg, int control, PauliStrSum hamiltonian, int index) {
         int steps = 1 << index;
-        applyTrotterizedControlledPauliStrSumGadget(qureg, control, hamiltonian, t * steps, order, reps * steps);
+        // applyTrotterizedControlledPauliStrSumGadget(qureg, control, hamiltonian, t * steps, order, reps * steps,
+        //                                             /*permuteTerms = */ false);
+        // FIX: temporary fix due to upstream QuEST v4.3 bug, replace with commented-out code above once fixed
+        applyTrotterizedMultiStateControlledPauliStrSumGadget(qureg, {control}, {1}, hamiltonian, t * steps, order,
+                                                              reps * steps, /* permuteTerms = */ false);
     };
 
     return getPhaseKitaevInner(qureg, hamiltonian, ancilla, numBits, trotterLambda);
@@ -218,7 +226,11 @@ double getPhaseTextbookQubitised(Qureg qureg, PauliStrSum hamiltonian, const std
 double getPhaseNaiveTrotter(Qureg qureg, PauliStrSum hamiltonian, int ancilla, int order, int reps, double t) {
 
     auto trotterLambda = [order, reps, t](Qureg qureg, int control, PauliStrSum hamiltonian) {
-        applyTrotterizedControlledPauliStrSumGadget(qureg, control, hamiltonian, t, order, reps);
+        // applyTrotterizedControlledPauliStrSumGadget(qureg, control, hamiltonian, t, order, reps,
+        //                                             /* permuteTerms = */ false);
+        // FIX: temporary fix due to upstream QuEST v4.3 bug, replace with commented-out code above once fixed
+        applyTrotterizedMultiStateControlledPauliStrSumGadget(qureg, {control}, {1}, hamiltonian, t, order, reps,
+                                                              /* permuteTerms = */ false);
     };
 
     return getPhaseNaiveInner(qureg, hamiltonian, ancilla, trotterLambda);
@@ -239,7 +251,11 @@ double getPhaseIterativeTrotter(Qureg qureg, PauliStrSum hamiltonian, int ancill
 
     auto trotterLambda = [order, reps, t](Qureg qureg, int control, PauliStrSum hamiltonian, int index) {
         int steps = 1 << index;
-        applyTrotterizedControlledPauliStrSumGadget(qureg, control, hamiltonian, t * steps, order, reps * steps);
+        // applyTrotterizedControlledPauliStrSumGadget(qureg, control, hamiltonian, t * steps, order, reps * steps,
+        //                                             /* permuteTerms = */ false);
+        // FIX: temporary fix due to upstream QuEST v4.3 bug, replace with commented-out code above once fixed
+        applyTrotterizedMultiStateControlledPauliStrSumGadget(qureg, {control}, {1}, hamiltonian, t * steps, order,
+                                                              reps * steps, /* permuteTerms = */ false);
     };
 
     return getPhaseIterativeInner(qureg, hamiltonian, ancilla, numBits, trotterLambda);
