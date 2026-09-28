@@ -23,7 +23,10 @@ from .estimation import (
     TrotterLadder,
 )
 from .simulation import (
+    CTRLQDRIFT,
     QDRIFT,
+    CTRLPauliWordRotation,
+    CTRLTrotterisation,
     LCUBlockEncodingWrapper,
     PauliWordRotation,
     SelectPauliLCUWrapper,
@@ -32,8 +35,11 @@ from .simulation import (
 from .state_prep import BitstringStatePrep, IdentityStatePrep, PrepareFromStatePrep
 
 __all__ = [
+    "CTRLQDRIFT",
     "QDRIFT",
     "BitstringStatePrep",
+    "CTRLPauliWordRotation",
+    "CTRLTrotterisation",
     "IdentityStatePrep",
     "IterativeQPE",
     "KitaevQPE",

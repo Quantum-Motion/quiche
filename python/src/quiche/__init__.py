@@ -15,8 +15,36 @@
 """QUICHE - A library for QUantum Integrated CHEmistry."""
 
 from . import bindings, chemistry, core, cudaq, dispatch, hamlib, qualtran, quest
+from .chemistry import HartreeFockState
+from .core import (
+    Errors,
+    Mapping,
+    Pauli,
+    PauliSum,
+    PauliWord,
+    PhaseEstimation,
+    Seed,
+    Simulation,
+)
+from .cudaq import CudaqKernel
+from .dispatch import HartreeFockSpec, QPESpec, Spec
+from .quest import QuestRoutine
 
 __all__ = [
+    "CudaqKernel",
+    "Errors",
+    "HartreeFockSpec",
+    "HartreeFockState",
+    "Mapping",
+    "Pauli",
+    "PauliSum",
+    "PauliWord",
+    "PhaseEstimation",
+    "QPESpec",
+    "QuestRoutine",
+    "Seed",
+    "Simulation",
+    "Spec",
     "bindings",
     "chemistry",
     "core",
