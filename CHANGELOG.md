@@ -23,6 +23,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Renamed `IdentityStatePrep`'s `n_qubits` to `num_qubits`.
 - Renamed `PrepareFromStatePrep`'s `select_nqubits` to `num_select_qubits`.
 - Renamed `NaiveQPE`, `KitaevQPE` and `IterativeQPE`'s `n_simulation_qubits` and `n_estimation_bits` to `num_simulation_qubits` and `num_estimation_bits`.
+- Renamed `ElectronicHamiltonian` and `SecondQuantisedHamiltonian`'s `electrons` to `num_electrons`.
+- Renamed `HartreeFockState.closed_shell`'s `electrons` and `spin_orbitals` to `num_electrons` and `num_spin_orbitals`.
 
 ### Deprecated
 
