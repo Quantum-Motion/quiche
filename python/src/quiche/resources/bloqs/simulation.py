@@ -596,7 +596,7 @@ class Trotterisation(Bloq):
 
     @property
     def dt(self) -> float:
-        """Determine the time step size in each step of the Trotterization."""
+        """Determine the time step size in each step of the Trotterisation."""
         return self.t / self.n_steps
 
     def get_coeffs_indices(
