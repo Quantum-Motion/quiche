@@ -144,12 +144,12 @@ class HartreeFockState:
     occupation: tuple[int, ...]
 
     @classmethod
-    def closed_shell(cls, electrons: int, spin_orbitals: int) -> Self:
+    def closed_shell(cls, num_electrons: int, num_spin_orbitals: int) -> Self:
         """Initialise the Hartree-Fock state for a closed-shell system."""
-        if electrons % 2 != 0:
+        if num_electrons % 2 != 0:
             error_msg = "Closed shell system must have even number of electrons."
             raise ValueError(error_msg)
-        return cls(occupation=tuple(get_hf_state(spin_orbitals, electrons)))
+        return cls(occupation=tuple(get_hf_state(num_spin_orbitals, num_electrons)))
 
     def __post_init__(self) -> None:
         """Input validation for constructors."""

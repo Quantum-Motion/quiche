@@ -49,7 +49,7 @@ class TestSecondQuantisedHamiltonian:
             SecondQuantisedHamiltonian(
                 one_body=one_body,
                 two_body=two_body,
-                electrons=0,
+                num_electrons=0,
             )
 
     @pytest.mark.parametrize(
@@ -64,7 +64,7 @@ class TestSecondQuantisedHamiltonian:
             SecondQuantisedHamiltonian(
                 one_body=np.empty(shape),
                 two_body=np.empty((shape[0],) * 4),
-                electrons=0,
+                num_electrons=0,
             )
 
     def test_mismatched_shapes(self):
@@ -73,7 +73,7 @@ class TestSecondQuantisedHamiltonian:
             SecondQuantisedHamiltonian(
                 one_body=np.empty((2, 2)),
                 two_body=np.empty((3,) * 4),
-                electrons=0,
+                num_electrons=0,
             )
 
     @pytest.mark.parametrize(
@@ -83,14 +83,14 @@ class TestSecondQuantisedHamiltonian:
             (5, "number of electrons must not exceed the number of spin orbitals"),
         ],
     )
-    def test_invalid_electrons(self, electrons: int, error_msg: str):
+    def test_invalid_num_electrons(self, electrons: int, error_msg: str):
         one_body = np.empty((2, 2))
         two_body = np.empty((2,) * 4)
         with pytest.raises(ValueError, match=error_msg):
             SecondQuantisedHamiltonian(
                 one_body=one_body,
                 two_body=two_body,
-                electrons=electrons,
+                num_electrons=electrons,
             )
 
     @pytest.mark.parametrize("norb", [1, 2, 5])
@@ -100,7 +100,7 @@ class TestSecondQuantisedHamiltonian:
         hamiltonian = SecondQuantisedHamiltonian(
             one_body=one_body,
             two_body=two_body,
-            electrons=2,
+            num_electrons=2,
         )
 
         assert hamiltonian.num_spatial_orbitals == norb

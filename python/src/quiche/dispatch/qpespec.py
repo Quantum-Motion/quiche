@@ -93,7 +93,7 @@ class QPESpec:
 
         if isinstance(self.state_prep, HartreeFockState) and (
             (self.state_prep.num_spin_orbitals != self.hamiltonian.paulis.num_qubits)
-            or (self.state_prep.num_electrons != self.hamiltonian.electrons)
+            or (self.state_prep.num_electrons != self.hamiltonian.num_electrons)
         ):
             error_msg = (
                 "Provided HartreeFockState is inconsistent with ElectronicHamiltonian."

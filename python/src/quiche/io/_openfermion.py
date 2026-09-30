@@ -113,7 +113,7 @@ def _second_quantised_to_electronic_hamiltonian(
     paulis = _qubit_operator_to_pauli_sum(qubit_operator)
 
     return ElectronicHamiltonian(
-        electrons=hamiltonian.electrons,
+        num_electrons=hamiltonian.num_electrons,
         mapping=mapping,
         paulis=paulis,
     )
