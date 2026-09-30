@@ -68,12 +68,12 @@ class TestSelectPauliLCUWrapper:
 
     @pytest.fixture
     def select(self, h2: PauliSum, budget: Errors) -> SelectPauliLCUWrapper:
-        select_nqubits = ceil(log2(h2.num_terms))
-        phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
+        num_select_qubits = ceil(log2(h2.num_terms))
+        phase_bitsize = max(ceil(log2(2.0 * num_select_qubits / budget.state_prep)), 2)
         terms = (term.to_cirq(h2.num_qubits) for term in h2.terms)
 
         return SelectPauliLCUWrapper(
-            selection_bitsize=select_nqubits + phase_bitsize,
+            selection_bitsize=num_select_qubits + phase_bitsize,
             target_bitsize=h2.num_qubits,
             select_unitaries=terms,
         )
@@ -96,22 +96,22 @@ class TestLCUBlockEncodingWrapper:
 
     @pytest.fixture
     def blockencoding(self, h2: PauliSum, budget: Errors) -> LCUBlockEncodingWrapper:
-        select_nqubits = ceil(log2(h2.num_terms_with_identity))
-        phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
+        num_select_qubits = ceil(log2(h2.num_terms_with_identity))
+        phase_bitsize = max(ceil(log2(2.0 * num_select_qubits / budget.state_prep)), 2)
         return LCUBlockEncodingWrapper.from_hamiltonian(h2, phase_bitsize)
 
     def test_signature(
         self, blockencoding: LCUBlockEncodingWrapper, h2: PauliSum, budget: Errors
     ):
         """Check bloq signature."""
-        select_nqubits = ceil(log2(h2.num_terms_with_identity))
-        phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
+        num_select_qubits = ceil(log2(h2.num_terms_with_identity))
+        phase_bitsize = max(ceil(log2(2.0 * num_select_qubits / budget.state_prep)), 2)
         sig = blockencoding.signature
         assert len(sig) == 3
 
         reg = sig[0]
         assert reg.name == "selection"
-        assert reg.dtype == QAny(select_nqubits)
+        assert reg.dtype == QAny(num_select_qubits)
         assert reg.side == Side.THRU
 
         reg = sig[1]
@@ -214,7 +214,7 @@ class TestPauliWordRotation:
         assert reg.dtype == QAny(rotation.num_qubits)
         assert reg.side == Side.THRU
 
-    def test_wrong_n_qubits(self):
+    def test_wrong_num_qubits(self):
         word = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.X), qubits=(0, 2, 7))
         with pytest.raises(ValueError, match="Target qubit 7 is out of range"):
             PauliWordRotation(word, 0.4, 7)
@@ -248,7 +248,7 @@ class TestQDRIFT:
     def qdrift(self, h2: PauliSum) -> QDRIFT:
         return QDRIFT(h2, t=5, num_samples=20, seed=1024)
 
-    def test_invalid_negative_nterms(self, h2: PauliSum):
+    def test_invalid_negative_num_samples(self, h2: PauliSum):
         with pytest.raises(ValueError, match="Choose positive num_samples"):
             QDRIFT(h2, t=5, num_samples=-10, seed=1024)
 
@@ -309,7 +309,7 @@ class TestTrotterisation:
         return Trotterisation(h2, t=5, num_steps=10, order=request.param)
 
     @pytest.mark.parametrize("num_steps", [-10, 0])
-    def test_invalid_nsteps(self, h2: PauliSum, num_steps: int):
+    def test_invalid_num_steps(self, h2: PauliSum, num_steps: int):
         with pytest.raises(ValueError, match="Choose positive num_steps"):
             Trotterisation(h2, t=1, num_steps=num_steps, order=2)
 

@@ -53,10 +53,10 @@ def _make_trotter(h: PauliSum, order: int, num_steps: int = 100) -> Trotterisati
 def _make_qubitisation_walk(
     h: PauliSum, budget: Errors
 ) -> tuple[QubitizationWalkOperator, int, int]:
-    select_nqubits = ceil(log2(h.num_terms_with_identity))
-    phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.simulation)), 2)
+    num_select_qubits = ceil(log2(h.num_terms_with_identity))
+    phase_bitsize = max(ceil(log2(2.0 * num_select_qubits / budget.simulation)), 2)
     blockencoding = LCUBlockEncodingWrapper.from_hamiltonian(h, phase_bitsize)
-    return QubitizationWalkOperator(blockencoding), select_nqubits, phase_bitsize
+    return QubitizationWalkOperator(blockencoding), num_select_qubits, phase_bitsize
 
 
 def _make_textbookqpe_trotter(
@@ -183,10 +183,10 @@ class TestTextbookQPE:
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
     def test_bloq_count_qubitisation_ladder(self, h2: PauliSum, budget: Errors):
-        walk, select_nqubits, phase_bitsize = _make_qubitisation_walk(h2, budget)
+        walk, num_select_qubits, phase_bitsize = _make_qubitisation_walk(h2, budget)
         num_data = h2.num_qubits
         num_estimation = _get_num_estimation_qubits(budget)
-        num_ancillas = select_nqubits + phase_bitsize
+        num_ancillas = num_select_qubits + phase_bitsize
 
         bloq = _make_textbookqpe_qubitised(walk, num_data, num_estimation, num_ancillas)
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
@@ -202,10 +202,10 @@ class TestTextbookQPE:
         assert manual_counts == decomp_counts
 
     def test_qubit_counts_qubitisation_ladder(self, h2: PauliSum, budget: Errors):
-        walk, select_nqubits, phase_bitsize = _make_qubitisation_walk(h2, budget)
+        walk, num_select_qubits, phase_bitsize = _make_qubitisation_walk(h2, budget)
         num_data = h2.num_qubits
         num_estimation = _get_num_estimation_qubits(budget)
-        num_ancillas = select_nqubits + phase_bitsize
+        num_ancillas = num_select_qubits + phase_bitsize
 
         bloq = _make_textbookqpe_qubitised(walk, num_data, num_estimation, num_ancillas)
         manual_counts = logical_qubit_resources(bloq)

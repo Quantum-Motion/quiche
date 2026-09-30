@@ -174,7 +174,7 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
             raise ValueError(error_msg)
 
         terms = [u.to_cirq(h.num_qubits) for u in h.terms]
-        nterms = h.num_terms_with_identity
+        num_terms = h.num_terms_with_identity
         lam = h.lam
         coeffs = np.array(h.coefficients)
 
@@ -189,17 +189,17 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
         prep_coeffs = np.sqrt(np.abs(coeffs) / lam)
 
         # find the number of select qubits
-        select_nqubits = ceil(log2(nterms))
+        num_select_qubits = ceil(log2(num_terms))
 
         # pad coefficients if necessary
-        if log2(nterms) % 1 > 0:
-            nadd = int(2**select_nqubits - nterms)
+        if log2(num_terms) % 1 > 0:
+            num_add = int(2**num_select_qubits - num_terms)
             id_string = DensePauliString.eye(h.num_qubits)
-            terms += [id_string] * nadd
-            prep_coeffs = np.append(prep_coeffs, np.zeros(nadd, dtype=np.float64))
+            terms += [id_string] * num_add
+            prep_coeffs = np.append(prep_coeffs, np.zeros(num_add, dtype=np.float64))
 
         select = SelectPauliLCUWrapper(
-            selection_bitsize=select_nqubits,
+            selection_bitsize=num_select_qubits,
             target_bitsize=h.num_qubits,
             select_unitaries=terms,
         )
@@ -211,7 +211,7 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
         prepare = PrepareFromStatePrep(
             stateprep=prepare_op,
             phase_bitsize=phase_bitsize,
-            select_nqubits=select_nqubits,
+            num_select_qubits=num_select_qubits,
         )
 
         return cls(prepare=prepare, select=select)

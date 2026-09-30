@@ -128,19 +128,19 @@ class PrepareFromStatePrep(PrepareOracle):
         State preparation bloq.
     phase_bitsize : int
         Number of qubits used for phase gradient.
-    select_nqubits : int
+    num_select_qubits : int
         Number of qubits on which to prepare the PREP state. Note that L must be equal
-        to ``2**select_nqubits``.
+        to ``2**num_select_qubits``.
     """
 
     stateprep: StatePreparationViaRotations
     phase_bitsize: int
-    select_nqubits: int
+    num_select_qubits: int
 
     @property
     def selection_registers(self) -> tuple[Register, ...]:
         """Get selection (index) register."""
-        return (Register("selection", QAny(self.select_nqubits)),)
+        return (Register("selection", QAny(self.num_select_qubits)),)
 
     @property
     def junk_registers(self) -> tuple[Register, ...]:
