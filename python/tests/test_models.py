@@ -128,7 +128,7 @@ class TestPauliSum:
 
         actual = psum._to_matrix()
         expected = (
-            id_coeff * np.identity(2**psum.n_qubits)
+            id_coeff * np.identity(2**psum.num_qubits)
             + coeffs[0] * np.kron(np.kron(X, ID), Z)
             + coeffs[1] * np.kron(np.kron(Z, Y), ID)
         )

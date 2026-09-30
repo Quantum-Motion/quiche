@@ -46,8 +46,8 @@ def _make_qdrift(h: PauliSum, budget: Errors, seed: int = 20148) -> QDRIFT:
     return QDRIFT(h, t, n_terms, seed)
 
 
-def _make_trotter(h: PauliSum, order: int, n_steps: int = 100) -> Trotterisation:
-    return Trotterisation(h, 2 * pi / h.lam, n_steps, order)
+def _make_trotter(h: PauliSum, order: int, num_steps: int = 100) -> Trotterisation:
+    return Trotterisation(h, 2 * pi / h.lam, num_steps, order)
 
 
 def _make_qubitisation_walk(
@@ -176,7 +176,7 @@ class TestTextbookQPE:
     def test_bloq_counts_trotter_ladder(
         self, simulation: QDRIFT | Trotterisation, h2: PauliSum, budget: Errors
     ):
-        num_data = h2.n_qubits
+        num_data = h2.num_qubits
         num_estimation = _get_num_estimation_qubits(budget)
 
         bloq = _make_textbookqpe_trotter(simulation, num_data, num_estimation)
@@ -184,7 +184,7 @@ class TestTextbookQPE:
 
     def test_bloq_count_qubitisation_ladder(self, h2: PauliSum, budget: Errors):
         walk, select_nqubits, phase_bitsize = _make_qubitisation_walk(h2, budget)
-        num_data = h2.n_qubits
+        num_data = h2.num_qubits
         num_estimation = _get_num_estimation_qubits(budget)
         num_ancillas = select_nqubits + phase_bitsize
 
@@ -194,7 +194,7 @@ class TestTextbookQPE:
     def test_qubit_counts_trotter_ladder(
         self, simulation: QDRIFT | Trotterisation, h2: PauliSum, budget: Errors
     ):
-        num_data = h2.n_qubits
+        num_data = h2.num_qubits
         num_estimation = _get_num_estimation_qubits(budget)
         bloq = _make_textbookqpe_trotter(simulation, num_data, num_estimation)
         manual_counts = logical_qubit_resources(bloq)
@@ -203,7 +203,7 @@ class TestTextbookQPE:
 
     def test_qubit_counts_qubitisation_ladder(self, h2: PauliSum, budget: Errors):
         walk, select_nqubits, phase_bitsize = _make_qubitisation_walk(h2, budget)
-        num_data = h2.n_qubits
+        num_data = h2.num_qubits
         num_estimation = _get_num_estimation_qubits(budget)
         num_ancillas = select_nqubits + phase_bitsize
 

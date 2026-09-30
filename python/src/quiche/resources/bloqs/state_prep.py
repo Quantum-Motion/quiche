@@ -34,19 +34,19 @@ from qualtran.resource_counting import (
 class IdentityStatePrep(Bloq):
     """Routine for trivial state preparation."""
 
-    n_qubits: int
+    num_qubits: int
 
     def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount):
             # Only data qubits are needed for this state preparation.
-            return self.n_qubits
+            return self.num_qubits
         return NotImplemented
 
     @property
     def signature(self) -> Signature:
         """Define input and/or output registers of the bloq."""
-        return Signature([Register("q", dtype=QAny(self.n_qubits), side=Side.RIGHT)])
+        return Signature([Register("q", dtype=QAny(self.num_qubits), side=Side.RIGHT)])
 
     def build_composite_bloq(
         self,
@@ -54,11 +54,11 @@ class IdentityStatePrep(Bloq):
         **_soqs: SoquetT,
     ) -> dict[str, SoquetT]:
         """Implement bloq decomposition into sub-bloqs."""
-        return {"q": bb.allocate(self.n_qubits)}
+        return {"q": bb.allocate(self.num_qubits)}
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph."""
-        return {Allocate(QAny(self.n_qubits)): 1}
+        return {Allocate(QAny(self.num_qubits)): 1}
 
 
 @attrs.frozen

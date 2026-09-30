@@ -92,7 +92,7 @@ class QPESpec:
             raise ValueError(error_msg)
 
         if isinstance(self.state_prep, HartreeFockState) and (
-            (self.state_prep.num_spin_orbitals != self.hamiltonian.paulis.n_qubits)
+            (self.state_prep.num_spin_orbitals != self.hamiltonian.paulis.num_qubits)
             or (self.state_prep.num_electrons != self.hamiltonian.electrons)
         ):
             error_msg = (
@@ -139,7 +139,7 @@ class QPESpec:
                     self.error_budget,
                 )
 
-        self.num_data = self.hamiltonian.paulis.n_qubits
+        self.num_data = self.hamiltonian.paulis.num_qubits
         self.num_simulation_ancillas = self.num_index_ancillas + self.num_phase_ancillas
         self.num_qubits = (
             self.num_data + self.num_qpe_ancillas + self.num_simulation_ancillas
@@ -200,7 +200,7 @@ class QPESpec:
                 bloq = Trotterisation(
                     h=self.hamiltonian.paulis,
                     t=self.time,
-                    n_steps=self.reps,
+                    num_steps=self.reps,
                     order=self.order,
                 )
 

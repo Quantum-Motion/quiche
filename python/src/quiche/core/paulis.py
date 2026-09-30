@@ -195,7 +195,7 @@ class PauliSum(BaseModel):
 
     @computed_field
     @cached_property
-    def n_qubits(self) -> int:
+    def num_qubits(self) -> int:
         """Get the number of qubits targeted by all the operators."""
         return max(term.greatest_qubit for term in self.terms) + 1
 
@@ -259,19 +259,21 @@ class PauliSum(BaseModel):
 
         Will raise if called outside of a QuESTEnv.
         """
-        strings = [word.to_quest(self.n_qubits) for word in self.terms]
+        strings = [word.to_quest(self.num_qubits) for word in self.terms]
         coefficients = list(self.coefficients)
 
         if self.has_identity:
-            strings.append(PauliStr("I" * self.n_qubits))
+            strings.append(PauliStr("I" * self.num_qubits))
             coefficients.append(self.identity_coefficient)
 
         return PauliStrSum(strings, coefficients)
 
     def _to_matrix(self) -> NDArray:
-        total = self.identity_coefficient * np.identity(2**self.n_qubits, dtype=complex)
+        total = self.identity_coefficient * np.identity(
+            2**self.num_qubits, dtype=complex
+        )
         for word, coeff in zip(self.terms, self.coefficients, strict=True):
             total += coeff * word._to_matrix(  # noqa: SLF001
-                length=self.n_qubits, ignore_idle_qubits=False
+                length=self.num_qubits, ignore_idle_qubits=False
             )
         return total

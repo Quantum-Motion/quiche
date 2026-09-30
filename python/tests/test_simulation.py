@@ -70,11 +70,11 @@ class TestSelectPauliLCUWrapper:
     def select(self, h2: PauliSum, budget: Errors) -> SelectPauliLCUWrapper:
         select_nqubits = ceil(log2(h2.n_terms))
         phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
-        terms = (term.to_cirq(h2.n_qubits) for term in h2.terms)
+        terms = (term.to_cirq(h2.num_qubits) for term in h2.terms)
 
         return SelectPauliLCUWrapper(
             selection_bitsize=select_nqubits + phase_bitsize,
-            target_bitsize=h2.n_qubits,
+            target_bitsize=h2.num_qubits,
             select_unitaries=terms,
         )
 
@@ -121,7 +121,7 @@ class TestLCUBlockEncodingWrapper:
 
         reg = sig[2]
         assert reg.name == "target"
-        assert reg.dtype == QAny(h2.n_qubits)
+        assert reg.dtype == QAny(h2.num_qubits)
         assert reg.side == Side.THRU
 
     def test_small_phase_bitsize(self, h2: PauliSum):
@@ -160,8 +160,8 @@ class TestLCUBlockEncodingWrapper:
         true_prep_coeffs = true_prep_coeffs[: h2.n_terms_with_identity]
 
         # Set the target unitaries and coefficients
-        target_unitaries = [u.to_cirq(h2.n_qubits) for u in h2.terms] + [
-            cirq.DensePauliString.eye(h2.n_qubits)
+        target_unitaries = [u.to_cirq(h2.num_qubits) for u in h2.terms] + [
+            cirq.DensePauliString.eye(h2.num_qubits)
         ]
         target_coefficients = [*h2.coefficients, h2.identity_coefficient]
 
@@ -200,10 +200,10 @@ class TestPauliWordRotation:
     @pytest.fixture
     def rotation(self) -> PauliWordRotation:
         qubits = (0, 2, 5)
-        n_qubits = 7
+        num_qubits = 7
         phase = 0.4
         word = PauliWord(terms=(Pauli.Y, Pauli.Z, Pauli.X), qubits=qubits)
-        return PauliWordRotation(word, phase, n_qubits)
+        return PauliWordRotation(word, phase, num_qubits)
 
     def test_signature(self, rotation: PauliWordRotation):
         sig = rotation.signature
@@ -211,7 +211,7 @@ class TestPauliWordRotation:
 
         reg = sig[0]
         assert reg.name == "system"
-        assert reg.dtype == QAny(rotation.n_qubits)
+        assert reg.dtype == QAny(rotation.num_qubits)
         assert reg.side == Side.THRU
 
     def test_wrong_n_qubits(self):
@@ -221,7 +221,7 @@ class TestPauliWordRotation:
 
     def test_decomposition(self, rotation: PauliWordRotation):
         circ = rotation.decompose_bloq().to_cirq_circuit(
-            cirq_quregs={"system": cirq.LineQubit.range(rotation.n_qubits)},
+            cirq_quregs={"system": cirq.LineQubit.range(rotation.num_qubits)},
         )
         u = circ.unitary()
 
@@ -294,7 +294,7 @@ class TestQDRIFT:
     def test_trotter(self, h_single: PauliSum, t: float):
         """Check QDRIFT against Trotterisation."""
         qdrift = QDRIFT(h_single, t=t, n_terms=3, seed=1024)
-        trotter = Trotterisation(h_single, t=t, n_steps=1, order=1)
+        trotter = Trotterisation(h_single, t=t, num_steps=1, order=1)
 
         np.testing.assert_allclose(
             qdrift.tensor_contract(),
@@ -306,12 +306,12 @@ class TestQDRIFT:
 class TestTrotterisation:
     @pytest.fixture
     def trotter(self, h2: PauliSum, request: pytest.FixtureRequest) -> Trotterisation:
-        return Trotterisation(h2, t=5, n_steps=10, order=request.param)
+        return Trotterisation(h2, t=5, num_steps=10, order=request.param)
 
-    @pytest.mark.parametrize("n_steps", [-10, 0])
-    def test_invalid_nsteps(self, h2: PauliSum, n_steps: int):
-        with pytest.raises(ValueError, match="Choose positive n_steps"):
-            Trotterisation(h2, t=1, n_steps=n_steps, order=2)
+    @pytest.mark.parametrize("num_steps", [-10, 0])
+    def test_invalid_nsteps(self, h2: PauliSum, num_steps: int):
+        with pytest.raises(ValueError, match="Choose positive num_steps"):
+            Trotterisation(h2, t=1, num_steps=num_steps, order=2)
 
     @pytest.mark.parametrize(
         ("order", "error_msg"),
@@ -323,7 +323,7 @@ class TestTrotterisation:
     )
     def test_invalid_trotter_order(self, h2: PauliSum, order: int, error_msg: str):
         with pytest.raises(ValueError, match=error_msg):
-            Trotterisation(h2, t=0.2, n_steps=23, order=order)
+            Trotterisation(h2, t=0.2, num_steps=23, order=order)
 
     def test_coeffs_indices_lie_trotter(self):
         word1 = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
@@ -333,7 +333,7 @@ class TestTrotterisation:
             identity_coefficient=0,
         )
 
-        trotterisation = Trotterisation(h, t=42.0, n_steps=10, order=1)
+        trotterisation = Trotterisation(h, t=42.0, num_steps=10, order=1)
         coeffs, indices = trotterisation.get_coeffs_indices()
 
         np.testing.assert_equal(indices, [0, 1, 2, 3])
@@ -347,7 +347,7 @@ class TestTrotterisation:
             identity_coefficient=0,
         )
 
-        trotterisation = Trotterisation(h, t=10, n_steps=100, order=2)
+        trotterisation = Trotterisation(h, t=10, num_steps=100, order=2)
         coeffs, indices = trotterisation.get_coeffs_indices()
 
         np.testing.assert_equal(indices, [0, 1, 2, 3, 2, 1, 0])
@@ -362,7 +362,7 @@ class TestTrotterisation:
         )
 
         order = 4
-        trotterisation = Trotterisation(h, t=5.0, n_steps=15, order=order)
+        trotterisation = Trotterisation(h, t=5.0, num_steps=15, order=order)
         coeffs_actual, indices_actual = trotterisation.get_coeffs_indices()
 
         indices_expect = [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0]
@@ -403,20 +403,20 @@ class TestTrotterisation:
         terms = (word1, word2, word3)
         h = PauliSum(coefficients=coeffs, terms=terms, identity_coefficient=0)
 
-        trotterisation = Trotterisation(h, t=10, n_steps=20, order=1)
+        trotterisation = Trotterisation(h, t=10, num_steps=20, order=1)
 
         h1 = coeffs[0] * word1._to_matrix(ignore_idle_qubits=False)
         h2 = coeffs[1] * word2._to_matrix(ignore_idle_qubits=False)
         h3 = coeffs[2] * word3._to_matrix(ignore_idle_qubits=False)
 
-        u_target = np.identity(2**h.n_qubits)
-        for _ in range(trotterisation.n_steps):
+        u_target = np.identity(2**h.num_qubits)
+        for _ in range(trotterisation.num_steps):
             u_target = np.dot(u_target, expm(-1j * h3 * trotterisation.dt))
             u_target = np.dot(u_target, expm(-1j * h2 * trotterisation.dt))
             u_target = np.dot(u_target, expm(-1j * h1 * trotterisation.dt))
 
         circ = trotterisation.decompose_bloq().to_cirq_circuit(
-            cirq_quregs={"simulation": cirq.LineQubit.range(h.n_qubits)},
+            cirq_quregs={"simulation": cirq.LineQubit.range(h.num_qubits)},
         )
         u = circ.unitary()
         np.testing.assert_allclose(u, u_target)
@@ -427,23 +427,23 @@ class TestTrotterisation:
         h = PauliSum(
             coefficients=(5.0, 10.0), terms=(word1, word2), identity_coefficient=0
         )
-        n_qubits = h.n_qubits
-        trotterisation = Trotterisation(h, t=7.5, n_steps=10, order=1)
+        num_qubits = h.num_qubits
+        trotterisation = Trotterisation(h, t=7.5, num_steps=10, order=1)
 
         h1 = h.coefficients[0] * word1._to_matrix(
-            length=n_qubits, ignore_idle_qubits=False
+            length=num_qubits, ignore_idle_qubits=False
         )
         h2 = h.coefficients[1] * word2._to_matrix(
-            length=n_qubits, ignore_idle_qubits=False
+            length=num_qubits, ignore_idle_qubits=False
         )
 
-        u_target = np.identity(2**n_qubits)
-        for _ in range(trotterisation.n_steps):
+        u_target = np.identity(2**num_qubits)
+        for _ in range(trotterisation.num_steps):
             u_target = np.dot(u_target, expm(-1j * h2 * trotterisation.dt))
             u_target = np.dot(u_target, expm(-1j * h1 * trotterisation.dt))
 
         circ = trotterisation.decompose_bloq().to_cirq_circuit(
-            cirq_quregs={"simulation": cirq.LineQubit.range(n_qubits)},
+            cirq_quregs={"simulation": cirq.LineQubit.range(num_qubits)},
         )
         u = circ.unitary()
 
@@ -457,16 +457,16 @@ class TestTrotterisation:
         coeffs = (1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0)
         terms = (word1, word2, word3)
         h = PauliSum(coefficients=coeffs, terms=terms, identity_coefficient=0)
-        n_qubits = h.n_qubits
+        num_qubits = h.num_qubits
 
-        trotterisation = Trotterisation(h, t=10, n_steps=20, order=2)
+        trotterisation = Trotterisation(h, t=10, num_steps=20, order=2)
 
         h1 = coeffs[0] * word1._to_matrix(ignore_idle_qubits=False)
         h2 = coeffs[1] * word2._to_matrix(ignore_idle_qubits=False)
         h3 = coeffs[2] * word3._to_matrix(ignore_idle_qubits=False)
 
-        u_target = np.identity(2**n_qubits)
-        for _ in range(trotterisation.n_steps):
+        u_target = np.identity(2**num_qubits)
+        for _ in range(trotterisation.num_steps):
             u_target = np.dot(u_target, expm(-0.5j * h1 * trotterisation.dt))
             u_target = np.dot(u_target, expm(-0.5j * h2 * trotterisation.dt))
             u_target = np.dot(u_target, expm(-1.0j * h3 * trotterisation.dt))
@@ -474,7 +474,7 @@ class TestTrotterisation:
             u_target = np.dot(u_target, expm(-0.5j * h1 * trotterisation.dt))
 
         circ = trotterisation.decompose_bloq().to_cirq_circuit(
-            cirq_quregs={"simulation": cirq.LineQubit.range(n_qubits)},
+            cirq_quregs={"simulation": cirq.LineQubit.range(num_qubits)},
         )
         u = circ.unitary()
 
@@ -490,22 +490,22 @@ class TestTrotterisation:
             terms=(word1, word2, word3),
             identity_coefficient=0,
         )
-        n_qubits = h.n_qubits
+        num_qubits = h.num_qubits
 
-        trotterisation = Trotterisation(h, t=10, n_steps=10, order=2)
+        trotterisation = Trotterisation(h, t=10, num_steps=10, order=2)
 
         h1 = h.coefficients[0] * word1._to_matrix(
-            length=n_qubits, ignore_idle_qubits=False
+            length=num_qubits, ignore_idle_qubits=False
         )
         h2 = h.coefficients[1] * word2._to_matrix(
-            length=n_qubits, ignore_idle_qubits=False
+            length=num_qubits, ignore_idle_qubits=False
         )
         h3 = h.coefficients[2] * word3._to_matrix(
-            length=n_qubits, ignore_idle_qubits=False
+            length=num_qubits, ignore_idle_qubits=False
         )
 
-        u_target = np.identity(2**n_qubits)
-        for _ in range(trotterisation.n_steps):
+        u_target = np.identity(2**num_qubits)
+        for _ in range(trotterisation.num_steps):
             u_target = np.dot(u_target, expm(-0.5j * h1 * trotterisation.dt))
             u_target = np.dot(u_target, expm(-0.5j * h2 * trotterisation.dt))
             u_target = np.dot(u_target, expm(-1.0j * h3 * trotterisation.dt))
@@ -513,7 +513,7 @@ class TestTrotterisation:
             u_target = np.dot(u_target, expm(-0.5j * h1 * trotterisation.dt))
 
         circ = trotterisation.decompose_bloq().to_cirq_circuit(
-            cirq_quregs={"simulation": cirq.LineQubit.range(n_qubits)},
+            cirq_quregs={"simulation": cirq.LineQubit.range(num_qubits)},
         )
         u = circ.unitary()
 
@@ -525,24 +525,24 @@ class TestTrotterisation:
         h = PauliSum(
             coefficients=(0.5, 0.5), terms=(word1, word2), identity_coefficient=10
         )
-        n_qubits = h.n_qubits
+        num_qubits = h.num_qubits
         t = 12
-        trotterisation = Trotterisation(h, t=t, n_steps=20, order=1)
+        trotterisation = Trotterisation(h, t=t, num_steps=20, order=1)
 
         h1 = h.coefficients[0] * word1._to_matrix(
-            length=n_qubits, ignore_idle_qubits=False
+            length=num_qubits, ignore_idle_qubits=False
         )
         h2 = h.coefficients[1] * word2._to_matrix(
-            length=n_qubits, ignore_idle_qubits=False
+            length=num_qubits, ignore_idle_qubits=False
         )
 
-        u_target = expm(-1j * t * h.identity_coefficient * np.identity(2**n_qubits))
-        for _ in range(trotterisation.n_steps):
+        u_target = expm(-1j * t * h.identity_coefficient * np.identity(2**num_qubits))
+        for _ in range(trotterisation.num_steps):
             u_target = np.dot(u_target, expm(-1j * h2 * trotterisation.dt))
             u_target = np.dot(u_target, expm(-1j * h1 * trotterisation.dt))
 
         circ = trotterisation.decompose_bloq().to_cirq_circuit(
-            cirq_quregs={"simulation": cirq.LineQubit.range(n_qubits)},
+            cirq_quregs={"simulation": cirq.LineQubit.range(num_qubits)},
         )
         u = circ.unitary()
 
