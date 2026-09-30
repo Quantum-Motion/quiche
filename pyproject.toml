@@ -2,9 +2,7 @@
 name = "pyquiche"
 dynamic = ["version"]
 description = "QUantum Integrated CHEmistry toolkit."
-authors = [
-    { name = "Quantum Motion Technologies Ltd."},
-]
+authors = [{ name = "Quantum Motion Technologies Ltd." }]
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "licenses/*.txt"]
