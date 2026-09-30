@@ -42,8 +42,8 @@ from quiche.resources.bloqs import (
 
 def _make_qdrift(h: PauliSum, budget: Errors, seed: int = 20148) -> QDRIFT:
     t = 2 * pi / h.lam
-    n_terms = ceil(2 * h.lam**2 * t**2 / budget.simulation)
-    return QDRIFT(h, t, n_terms, seed)
+    num_samples = ceil(2 * h.lam**2 * t**2 / budget.simulation)
+    return QDRIFT(h, t, num_samples, seed)
 
 
 def _make_trotter(h: PauliSum, order: int, num_steps: int = 100) -> Trotterisation:

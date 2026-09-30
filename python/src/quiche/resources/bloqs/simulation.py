@@ -350,7 +350,7 @@ class QDRIFT(Bloq):
 
     h: PauliSum
     t: float
-    n_terms: int
+    num_samples: int
     seed: int = attrs.field(
         validator=[
             attrs.validators.instance_of((int, np.integer)),
@@ -361,8 +361,8 @@ class QDRIFT(Bloq):
 
     def __attrs_post_init__(self) -> None:
         """Validate attributes."""
-        if self.n_terms < 1:
-            error_msg = "Choose positive n_terms."
+        if self.num_samples < 1:
+            error_msg = "Choose positive num_samples."
             raise ValueError(error_msg)
 
         if self.t <= 0:
@@ -392,7 +392,9 @@ class QDRIFT(Bloq):
     def __str__(self) -> str:
         """Get human-readable representation."""
         name = "C[QDRIFT]" if self.is_controlled else "QDRIFT"
-        return f"{name}(h, t={self.t}, n_terms={self.n_terms}, seed={self.seed})"
+        return (
+            f"{name}(h, t={self.t}, num_samples={self.num_samples}, seed={self.seed})"
+        )
 
     __repr__ = __str__
 
@@ -435,7 +437,7 @@ class QDRIFT(Bloq):
     @property
     def dt(self) -> float:
         """Get timestep for each operator."""
-        return self.t * self.lam / self.n_terms
+        return self.t * self.lam / self.num_samples
 
     @cached_property
     def sampled_indices(self) -> tuple[int, ...]:
@@ -443,7 +445,7 @@ class QDRIFT(Bloq):
         rng = np.random.default_rng(self.seed)
         probabilities = np.asarray(self.positive_coefficients) / self.lam
         return tuple(
-            rng.choice(self.h.n_terms, size=self.n_terms, p=probabilities).tolist()
+            rng.choice(self.h.n_terms, size=self.num_samples, p=probabilities).tolist()
         )
 
     def build_composite_bloq(

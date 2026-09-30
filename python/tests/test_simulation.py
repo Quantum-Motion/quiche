@@ -246,15 +246,15 @@ class TestPauliWordRotation:
 class TestQDRIFT:
     @pytest.fixture
     def qdrift(self, h2: PauliSum) -> QDRIFT:
-        return QDRIFT(h2, t=5, n_terms=20, seed=1024)
+        return QDRIFT(h2, t=5, num_samples=20, seed=1024)
 
     def test_invalid_negative_nterms(self, h2: PauliSum):
-        with pytest.raises(ValueError, match="Choose positive n_terms"):
-            QDRIFT(h2, t=5, n_terms=-10, seed=1024)
+        with pytest.raises(ValueError, match="Choose positive num_samples"):
+            QDRIFT(h2, t=5, num_samples=-10, seed=1024)
 
     def test_invalid_negative_time(self, h2: PauliSum):
         with pytest.raises(ValueError, match="Choose positive evolution time"):
-            QDRIFT(h2, t=-5, n_terms=4, seed=1024)
+            QDRIFT(h2, t=-5, num_samples=4, seed=1024)
 
     @pytest.mark.parametrize("controlled", [False, True])
     def test_bloq_counts(self, qdrift: QDRIFT, *, controlled: bool):
@@ -277,7 +277,7 @@ class TestQDRIFT:
     @pytest.mark.parametrize("controlled", [False, True])
     def test_analytic(self, h_single: PauliSum, t: float, *, controlled: bool):
         """Check QDRIFT against the exact matrix exponential."""
-        qdrift = QDRIFT(h_single, t=t, n_terms=3, seed=1024)
+        qdrift = QDRIFT(h_single, t=t, num_samples=3, seed=1024)
         bloq = qdrift.controlled() if controlled else qdrift
         actual = bloq.tensor_contract()
 
@@ -293,7 +293,7 @@ class TestQDRIFT:
     @pytest.mark.parametrize("t", [0.5, 5.0])
     def test_trotter(self, h_single: PauliSum, t: float):
         """Check QDRIFT against Trotterisation."""
-        qdrift = QDRIFT(h_single, t=t, n_terms=3, seed=1024)
+        qdrift = QDRIFT(h_single, t=t, num_samples=3, seed=1024)
         trotter = Trotterisation(h_single, t=t, num_steps=1, order=1)
 
         np.testing.assert_allclose(

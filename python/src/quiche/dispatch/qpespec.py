@@ -171,7 +171,7 @@ class QPESpec:
                 bloq = QDRIFT(
                     h=self.hamiltonian.paulis,
                     t=self.time,
-                    n_terms=self.reps,
+                    num_samples=self.reps,
                     seed=self.seed,
                 )
 
