@@ -77,20 +77,20 @@ class TestSecondQuantisedHamiltonian:
             )
 
     @pytest.mark.parametrize(
-        ("electrons", "error_msg"),
+        ("num_electrons", "error_msg"),
         [
             (-1, "number of electrons must be non-negative"),
             (5, "number of electrons must not exceed the number of spin orbitals"),
         ],
     )
-    def test_invalid_num_electrons(self, electrons: int, error_msg: str):
+    def test_invalid_num_electrons(self, num_electrons: int, error_msg: str):
         one_body = np.empty((2, 2))
         two_body = np.empty((2,) * 4)
         with pytest.raises(ValueError, match=error_msg):
             SecondQuantisedHamiltonian(
                 one_body=one_body,
                 two_body=two_body,
-                num_electrons=electrons,
+                num_electrons=num_electrons,
             )
 
     @pytest.mark.parametrize("norb", [1, 2, 5])

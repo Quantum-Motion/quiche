@@ -67,7 +67,7 @@ def logical_rotations_to_tgates(
         ts_per_rotation = int(3 * log2(1 / eps_per_rotation))
         total_ts = num_rotations * ts_per_rotation
     else:
-        error_msg = f"Rotation synthesis method {rotation_synthesis} not recognized."
+        error_msg = f"Rotation synthesis method {rotation_synthesis} not recognised."
         raise ValueError(error_msg)
 
     # Now that the rotations have been converted, set number of rotations to zero and
