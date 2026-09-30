@@ -21,7 +21,7 @@ from quiche.io import hamlib
 raw_data = hamlib.read_dataset("H2.hdf5", "ham_JW-4")
 paulis = hamlib.parse(raw_data)
 
-print(paulis.n_qubits, paulis.n_terms, paulis.lam)
+print(paulis.num_qubits, paulis.num_terms, paulis.lam)
 ```
 
 ```text
