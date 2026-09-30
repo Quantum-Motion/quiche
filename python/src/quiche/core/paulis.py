@@ -207,15 +207,15 @@ class PauliSum(BaseModel):
 
     @computed_field
     @cached_property
-    def n_terms(self) -> int:
+    def num_terms(self) -> int:
         """Get number of terms in linear combination."""
         return len(self.terms)
 
     @computed_field
     @cached_property
-    def n_terms_with_identity(self) -> int:
+    def num_terms_with_identity(self) -> int:
         """Get the number of terms including the identity if non-zero."""
-        return self.n_terms + (1 if self.has_identity else 0)
+        return self.num_terms + (1 if self.has_identity else 0)
 
     @computed_field
     @cached_property
@@ -226,7 +226,7 @@ class PauliSum(BaseModel):
     def __str__(self) -> str:
         """Define printing for PauliSum class."""
         msg = str(self.identity_coefficient) + " * I\n"
-        for ii in range(self.n_terms):
+        for ii in range(self.num_terms):
             msg += f"+ {self.coefficients[ii]:f} * "
             for op, qubit in zip(
                 self.terms[ii].terms, self.terms[ii].qubits, strict=True

@@ -53,7 +53,7 @@ def _make_trotter(h: PauliSum, order: int, num_steps: int = 100) -> Trotterisati
 def _make_qubitisation_walk(
     h: PauliSum, budget: Errors
 ) -> tuple[QubitizationWalkOperator, int, int]:
-    select_nqubits = ceil(log2(h.n_terms_with_identity))
+    select_nqubits = ceil(log2(h.num_terms_with_identity))
     phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.simulation)), 2)
     blockencoding = LCUBlockEncodingWrapper.from_hamiltonian(h, phase_bitsize)
     return QubitizationWalkOperator(blockencoding), select_nqubits, phase_bitsize

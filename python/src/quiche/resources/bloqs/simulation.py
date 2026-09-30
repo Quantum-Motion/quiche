@@ -117,8 +117,8 @@ class SelectPauliLCUWrapper(SelectPauliLCU):
     def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount):
-            n_terms = len(self.select_unitaries)
-            num_select_qubits = ceil(log2(n_terms))
+            num_terms = len(self.select_unitaries)
+            num_select_qubits = ceil(log2(num_terms))
             # The controlled version of SelectPauliLCUWrapper is obtained by setting the
             # attribute control_val.
             if self.control_val is None:
@@ -137,8 +137,8 @@ class SelectPauliLCUWrapper(SelectPauliLCU):
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for SelectPauliLCU."""
-        n_terms = len(self.select_unitaries)
-        num_and = n_terms - 1 if self.control_val is not None else n_terms - 2
+        num_terms = len(self.select_unitaries)
+        num_and = num_terms - 1 if self.control_val is not None else num_terms - 2
 
         bloq_counts = {}
 
@@ -174,7 +174,7 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
             raise ValueError(error_msg)
 
         terms = [u.to_cirq(h.num_qubits) for u in h.terms]
-        nterms = h.n_terms_with_identity
+        nterms = h.num_terms_with_identity
         lam = h.lam
         coeffs = np.array(h.coefficients)
 
@@ -445,7 +445,11 @@ class QDRIFT(Bloq):
         rng = np.random.default_rng(self.seed)
         probabilities = np.asarray(self.positive_coefficients) / self.lam
         return tuple(
-            rng.choice(self.h.n_terms, size=self.num_samples, p=probabilities).tolist()
+            rng.choice(
+                self.h.num_terms,
+                size=self.num_samples,
+                p=probabilities,
+            ).tolist()
         )
 
     def build_composite_bloq(
@@ -618,13 +622,13 @@ class Trotterisation(Bloq):
         # If order is 1 or 2, return the appropriate coefficients and indices. Otherwise
         # call the function recursively with decreased order.
         if order == 1:
-            coeffs = np.ones(self.h.n_terms)
-            indices = np.arange(self.h.n_terms)
+            coeffs = np.ones(self.h.num_terms)
+            indices = np.arange(self.h.num_terms)
         elif order == 2:
-            coeffs = 0.5 * np.ones(2 * self.h.n_terms - 1)
-            coeffs[self.h.n_terms - 1] = 1.0
+            coeffs = 0.5 * np.ones(2 * self.h.num_terms - 1)
+            coeffs[self.h.num_terms - 1] = 1.0
             indices = np.concatenate(
-                [np.arange(self.h.n_terms - 1), np.arange(self.h.n_terms)[::-1]]
+                [np.arange(self.h.num_terms - 1), np.arange(self.h.num_terms)[::-1]]
             )
         else:
             uk = 1.0 / (4.0 - 4.0 ** (1.0 / (order - 1.0)))

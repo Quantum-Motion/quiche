@@ -111,7 +111,7 @@ class TestPauliSum:
         assert filtered.identity_coefficient == 0.0
         assert filtered.terms == h2.terms
         assert filtered.coefficients == h2.coefficients
-        assert filtered.n_terms_with_identity == filtered.n_terms
+        assert filtered.num_terms_with_identity == filtered.num_terms
         assert filtered.lam == pytest.approx(h2.lam - abs(h2.identity_coefficient))
 
     def test_to_matrix(self):
