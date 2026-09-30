@@ -102,8 +102,8 @@ class BitstringStatePrep(Bloq):
         """Build call graph."""
         bloq_counts = {Allocate(QAny(self.num_qubits)): 1}
 
-        if n_x := sum(self.bitstring):
-            bloq_counts[XGate()] = n_x
+        if num_x := sum(self.bitstring):
+            bloq_counts[XGate()] = num_x
 
         return bloq_counts
 

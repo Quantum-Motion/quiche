@@ -118,34 +118,34 @@ class SelectPauliLCUWrapper(SelectPauliLCU):
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount):
             n_terms = len(self.select_unitaries)
-            n_select_qubits = ceil(log2(n_terms))
+            num_select_qubits = ceil(log2(n_terms))
             # The controlled version of SelectPauliLCUWrapper is obtained by setting the
             # attribute control_val.
             if self.control_val is None:
-                # There is at most a ladder of (n_select_qubits - 1) and_bloqs coming
-                # from the unary iteration, which needs n_select_qubits - 1 ancilla.
+                # There is at most a ladder of (num_select_qubits - 1) and_bloqs coming
+                # from the unary iteration, which needs num_select_qubits - 1 ancilla.
                 # This cost is added to the select and target bloqs, which act on
                 # selection_bitsize + target_bitsize qubits.
                 return (
-                    self.selection_bitsize + self.target_bitsize + n_select_qubits - 1
+                    self.selection_bitsize + self.target_bitsize + num_select_qubits - 1
                 )
             # If the bloq is controlled, there are two additional ancilla: One is the
             # control ancilla, and the second is from an additional and_bloq in the
             # unary iteration.
-            return self.selection_bitsize + self.target_bitsize + n_select_qubits + 1
+            return self.selection_bitsize + self.target_bitsize + num_select_qubits + 1
         return NotImplemented
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for SelectPauliLCU."""
         n_terms = len(self.select_unitaries)
-        n_and = n_terms - 1 if self.control_val is not None else n_terms - 2
+        num_and = n_terms - 1 if self.control_val is not None else n_terms - 2
 
         bloq_counts = {}
 
-        if n_and > 0:
-            bloq_counts[And(cv1=1, cv2=0)] = n_and
-            bloq_counts[And().adjoint()] = n_and
-            bloq_counts[CNOT()] = n_and
+        if num_and > 0:
+            bloq_counts[And(cv1=1, cv2=0)] = num_and
+            bloq_counts[And().adjoint()] = num_and
+            bloq_counts[CNOT()] = num_and
 
         if self.control_val is None:
             bloq_counts[XGate()] = 2
@@ -249,7 +249,7 @@ class PauliWordRotation(Bloq):
         return (Register("ctrl", dtype=QBit()),) if self.is_controlled else ()
 
     @property
-    def n_controls(self) -> int:
+    def num_controls(self) -> int:
         """Number of control qubits (1 if controlled, 0 otherwise)."""
         return 1 if self.is_controlled else 0
 
@@ -281,7 +281,7 @@ class PauliWordRotation(Bloq):
             # the rotation gate is counted separately and the number of ancilla qubits
             # is calculated in post-processing.
             # So only the data and control qubits are counted here.
-            return self.n_qubits + self.n_controls
+            return self.n_qubits + self.num_controls
         return NotImplemented
 
     def build_composite_bloq(
@@ -320,9 +320,9 @@ class PauliWordRotation(Bloq):
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for PauliWordRotation."""
-        n_x = sum(term is Pauli.X for term in self.word.terms)
-        n_y = sum(term is Pauli.Y for term in self.word.terms)
-        n_cnot = 2 * (len(self.word.terms) - 1)
+        num_x = sum(term is Pauli.X for term in self.word.terms)
+        num_y = sum(term is Pauli.Y for term in self.word.terms)
+        num_cnot = 2 * (len(self.word.terms) - 1)
 
         bloq_counts = {}
 
@@ -331,15 +331,15 @@ class PauliWordRotation(Bloq):
         else:
             bloq_counts[Rz(self.angle)] = 1
 
-        if n_cnot > 0:
-            bloq_counts[CNOT()] = n_cnot
+        if num_cnot > 0:
+            bloq_counts[CNOT()] = num_cnot
 
-        if n_y:
-            bloq_counts[SGate(is_adjoint=True)] = n_y
-            bloq_counts[SGate()] = n_y
+        if num_y:
+            bloq_counts[SGate(is_adjoint=True)] = num_y
+            bloq_counts[SGate()] = num_y
 
-        if n_x + n_y:
-            bloq_counts[Hadamard()] = 2 * (n_x + n_y)
+        if num_x + num_y:
+            bloq_counts[Hadamard()] = 2 * (num_x + num_y)
 
         return bloq_counts
 
@@ -375,7 +375,7 @@ class QDRIFT(Bloq):
         return (Register("ctrl", dtype=QBit()),) if self.is_controlled else ()
 
     @property
-    def n_controls(self) -> int:
+    def num_controls(self) -> int:
         """Number of control qubits (1 if controlled, 0 otherwise)."""
         return 1 if self.is_controlled else 0
 
@@ -410,7 +410,7 @@ class QDRIFT(Bloq):
             # the rotation gate is counted separately and the number of ancilla qubits
             # is calculated in post-processing.
             # So only the data and control qubits are counted here.
-            return self.n_qubits + self.n_controls
+            return self.n_qubits + self.num_controls
         return NotImplemented
 
     @property
@@ -547,7 +547,7 @@ class Trotterisation(Bloq):
         return (Register("ctrl", dtype=QBit()),) if self.is_controlled else ()
 
     @property
-    def n_controls(self) -> int:
+    def num_controls(self) -> int:
         """Number of control qubits (1 if controlled, 0 otherwise)."""
         return 1 if self.is_controlled else 0
 
@@ -586,7 +586,7 @@ class Trotterisation(Bloq):
             # the rotation gate is counted separately and the number of ancilla qubits
             # is calculated in post-processing.
             # So only the data and control qubits are counted here.
-            return self.n_qubits + self.n_controls
+            return self.n_qubits + self.num_controls
         return NotImplemented
 
     @property
