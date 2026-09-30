@@ -36,20 +36,20 @@ def get_hf_state(num_spin_orbitals: int, num_electrons: int) -> NDArray[np.int_]
     Returns
     -------
     ``NDArray[np.int_]``
-        The HF state with the lowest ``num_electron`` number of orbitals occupied.
+        The HF state with the lowest ``num_electrons`` number of orbitals occupied.
 
     """
     if num_electrons < 0:
-        err_msg = "Number of electrons must be non-negative."
-        raise ValueError(err_msg)
+        error_msg = "Number of electrons must be non-negative."
+        raise ValueError(error_msg)
 
     if num_spin_orbitals < 1:
-        err_msg = "Number of spin orbitals must be positive."
-        raise ValueError(err_msg)
+        error_msg = "Number of spin orbitals must be positive."
+        raise ValueError(error_msg)
 
     if num_electrons > num_spin_orbitals:
-        err_msg = "Number of electrons must not exceed number of spin orbitals."
-        raise ValueError(err_msg)
+        error_msg = "Number of electrons must not exceed number of spin orbitals."
+        raise ValueError(error_msg)
 
     occupation = np.zeros(num_spin_orbitals, dtype=int)
     occupation[:num_electrons] = 1
@@ -147,15 +147,15 @@ class HartreeFockState:
     def closed_shell(cls, electrons: int, spin_orbitals: int) -> Self:
         """Initialise the Hartree-Fock state for a closed-shell system."""
         if electrons % 2 != 0:
-            err_msg = "Closed shell system must have even number of electrons."
-            raise ValueError(err_msg)
+            error_msg = "Closed shell system must have even number of electrons."
+            raise ValueError(error_msg)
         return cls(occupation=tuple(get_hf_state(spin_orbitals, electrons)))
 
     def __post_init__(self) -> None:
         """Input validation for constructors."""
         if not all(i in {0, 1} for i in self.occupation):
-            err_msg = "Spin orbital occupation must contain binary entries."
-            raise ValueError(err_msg)
+            error_msg = "Spin orbital occupation must contain binary entries."
+            raise ValueError(error_msg)
 
     @property
     def num_electrons(self) -> int:

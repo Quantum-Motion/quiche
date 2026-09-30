@@ -168,11 +168,11 @@ class TestLCUBlockEncodingWrapper:
         # Assert the unitaries (and signs)
         for ii in range(len(target_unitaries)):
             target = target_unitaries[ii] * np.sign(target_coefficients[ii])
-            err_msg = (
+            error_msg = (
                 f"Unitaries at index {ii} do not agree: "
                 f"{true_unitaries[ii]} vs {target}."
             )
-            assert true_unitaries[ii] == target, err_msg
+            assert true_unitaries[ii] == target, error_msg
 
         # Assert the coefficients
         np.testing.assert_allclose(
@@ -314,15 +314,15 @@ class TestTrotterisation:
             Trotterisation(h2, t=1, n_steps=n_steps, order=2)
 
     @pytest.mark.parametrize(
-        ("order", "err_msg"),
+        ("order", "error_msg"),
         [
             (-2, "positive Trotter order"),
             (0, "positive Trotter order"),
             (3, "order must be even"),
         ],
     )
-    def test_invalid_trotter_order(self, h2: PauliSum, order: int, err_msg: str):
-        with pytest.raises(ValueError, match=err_msg):
+    def test_invalid_trotter_order(self, h2: PauliSum, order: int, error_msg: str):
+        with pytest.raises(ValueError, match=error_msg):
             Trotterisation(h2, t=0.2, n_steps=23, order=order)
 
     def test_coeffs_indices_lie_trotter(self):

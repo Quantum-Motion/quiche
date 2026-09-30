@@ -70,8 +70,8 @@ class BitstringStatePrep(Bloq):
     def __attrs_post_init__(self) -> None:
         """Input validator."""
         if not all(i in {0, 1} for i in self.bitstring):
-            err_msg = "Invalid bitstring."
-            raise ValueError(err_msg)
+            error_msg = "Invalid bitstring."
+            raise ValueError(error_msg)
 
     @property
     def signature(self) -> Signature:

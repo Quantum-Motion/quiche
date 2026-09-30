@@ -28,7 +28,7 @@ from quiche.chemistry import (
 
 
 @pytest.mark.parametrize(
-    ("num_spin_orbitals", "num_electrons", "err_msg"),
+    ("num_spin_orbitals", "num_electrons", "error_msg"),
     [
         (1, -1, "electrons must be non-negative"),
         (0, 0, "spin orbitals must be positive"),
@@ -38,10 +38,10 @@ from quiche.chemistry import (
 def test_get_hf_state_invalid_cases(
     num_spin_orbitals: int,
     num_electrons: int,
-    err_msg: str,
+    error_msg: str,
 ):
     """Test input validation for Hartree-Fock basis state."""
-    with pytest.raises(ValueError, match=err_msg):
+    with pytest.raises(ValueError, match=error_msg):
         get_hf_state(num_spin_orbitals, num_electrons)
 
 
@@ -112,7 +112,7 @@ class TestHartreeFockState:
     """Test HartreeFockState class."""
 
     @pytest.mark.parametrize(
-        ("num_electrons", "num_spin_orbitals", "err_msg"),
+        ("num_electrons", "num_spin_orbitals", "error_msg"),
         [
             (2, 1, "electrons must not exceed number of spin orbitals"),
             (3, 5, "must have even number of electrons"),
@@ -124,9 +124,9 @@ class TestHartreeFockState:
         self,
         num_electrons: int,
         num_spin_orbitals: int,
-        err_msg: str,
+        error_msg: str,
     ):
-        with pytest.raises(ValueError, match=err_msg):
+        with pytest.raises(ValueError, match=error_msg):
             HartreeFockState.closed_shell(num_electrons, num_spin_orbitals)
 
     @pytest.mark.parametrize("occupation", [(1, 2, 1, 1), (1, -1, 0), (1, "a", 0)])

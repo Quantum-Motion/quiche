@@ -142,17 +142,17 @@ class TestIterativeQPE:
     """Test IterativeQPE class."""
 
     @pytest.mark.parametrize(
-        ("k", "mode", "err_msg"),
+        ("k", "mode", "error_msg"),
         [
             (-1, "re", "Exponent must be positive"),
             (3, "a", "Measurement mode must be either 're' or 'im'"),
         ],
     )
     def test_invalid_inputs(
-        self, h2: PauliSum, budget: Errors, k: int, mode: str, err_msg: str
+        self, h2: PauliSum, budget: Errors, k: int, mode: str, error_msg: str
     ):
         simulation = _make_qdrift(h2, budget)
-        with pytest.raises(ValueError, match=err_msg):
+        with pytest.raises(ValueError, match=error_msg):
             IterativeQPE(simulation, k, mode)
 
     @pytest.mark.parametrize("k", range(4))

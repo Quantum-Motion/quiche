@@ -88,8 +88,8 @@ class QPESpec:
         if self.state_prep is not None and not isinstance(
             self.state_prep, HartreeFockState
         ):
-            err_msg = f"Invalid state preparation {self.state_prep}"
-            raise ValueError(err_msg)
+            error_msg = f"Invalid state preparation {self.state_prep}"
+            raise ValueError(error_msg)
 
         if isinstance(self.state_prep, HartreeFockState) and (
             (self.state_prep.num_spin_orbitals != self.hamiltonian.paulis.n_qubits)
@@ -118,8 +118,8 @@ class QPESpec:
         match self.simulation:
             case Simulation.QDRIFT:
                 if self.seed is None:
-                    err_msg = "QDRIFT requires a seed."
-                    raise ValueError(err_msg)
+                    error_msg = "QDRIFT requires a seed."
+                    raise ValueError(error_msg)
 
                 self.time, self.reps = get_qdrift_params(
                     self.hamiltonian.paulis,

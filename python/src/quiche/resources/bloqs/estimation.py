@@ -83,11 +83,11 @@ class _SingleAncillaQPE(Bloq):
     def __attrs_post_init__(self) -> None:
         """Input validator."""
         if not isinstance(self.exponent, numbers.Integral) or self.exponent < 1:
-            err_msg = "Exponent must be positive integer."
-            raise ValueError(err_msg)
+            error_msg = "Exponent must be positive integer."
+            raise ValueError(error_msg)
         if self.mode not in ("re", "im"):
-            err_msg = "Measurement mode must be either 're' or 'im'."
-            raise ValueError(err_msg)
+            error_msg = "Measurement mode must be either 're' or 'im'."
+            raise ValueError(error_msg)
 
     @property
     @abc.abstractmethod

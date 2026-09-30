@@ -61,8 +61,8 @@ class TestPauliWord:
             PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 1, 0))
 
     def test_invalid_qubit(self):
-        err_msg = "Input should be a valid integer, got a number with a fractional part"
-        with pytest.raises(ValueError, match=err_msg):
+        error_msg = "should be a valid integer, got a number with a fractional part"
+        with pytest.raises(ValueError, match=error_msg):
             PauliWord(terms=(Pauli.X,), qubits=(1.5,))
 
     def test_invalid_pauli(self):
