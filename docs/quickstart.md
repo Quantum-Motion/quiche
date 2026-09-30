@@ -35,7 +35,7 @@ an {py:class}`~quiche.core.electronic.ElectronicHamiltonian`.
 from quiche.core import ElectronicHamiltonian, Mapping
 
 ham = ElectronicHamiltonian(
-    electrons=2,
+    num_electrons=2,
     paulis=paulis,
     mapping=Mapping.JordanWigner,
 )
@@ -64,7 +64,7 @@ An initial state for the phase estimation calculation, such as a Hartree-Fock st
 ```python
 from quiche.chemistry import HartreeFockState
 
-hf = HartreeFockState.closed_shell(electrons=2, spin_orbitals=4)
+hf = HartreeFockState.closed_shell(num_electrons=2, num_spin_orbitals=4)
 ```
 
 and the specific algorithms for Hamiltonian simulation and phase estimation can be picked:
