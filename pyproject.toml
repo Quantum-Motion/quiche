@@ -3,9 +3,7 @@ name = "pyquiche"
 dynamic = ["version"]
 description = "QUantum Integrated CHEmistry toolkit."
 authors = [
-    { name = "Thomas Bromley", email = "thomas@quantummotion.tech"},
-    { name = "Annina Lieberherr", email = "annina@quantummotion.tech"},
-    { name = "Vasco Ferreira", email = "vasco.ferreira@quantummotion.tech"}
+    { name = "Quantum Motion Technologies Ltd."},
 ]
 readme = "README.md"
 license = "Apache-2.0"

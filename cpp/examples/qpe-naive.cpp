@@ -17,8 +17,6 @@
 /** @file
  * Demo simulation of single-ancilla naive quantum phase estimation using QDRIFT for
  * Hamiltonian simulation with a minimal basis set H2 molecule.
- *
- * @author Vasco Ferreira
  */
 
 #include <cmath>

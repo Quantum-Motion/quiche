@@ -17,7 +17,6 @@
 /**
  * @file qdrift.hpp
  * @brief QDRIFT functionality for QuEST simulations.
- * @author Vasco Ferreira
  */
 
 #pragma once
