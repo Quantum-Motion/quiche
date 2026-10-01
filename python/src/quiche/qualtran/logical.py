@@ -27,14 +27,14 @@ from qualtran.resource_counting.generalizers import ignore_split_join
 
 
 def logical_gate_resources(circuit: Bloq) -> GateCounts:
-    """Calculate estimated logical gate cost of a bloq provided an error budget."""
+    """Calculate the estimated logical gate cost of a bloq."""
     # Ignores soquet joining and splitting operations needed within Qualtran to join
     # bloqs with different signatures.
     return get_cost_value(circuit, QECGatesCost(), generalizer=[ignore_split_join])
 
 
 def logical_qubit_resources(circuit: Bloq) -> int:
-    """Calculate estimated logical gate cost of a bloq provided an error budget."""
+    """Calculate the estimated logical qubit count of a bloq."""
     # Ignores soquet joining and splitting operations needed within Qualtran to join
     # bloqs with different signatures.
     return get_cost_value(circuit, QubitCount(), generalizer=[ignore_split_join])
