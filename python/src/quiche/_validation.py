@@ -12,19 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Methods for determining phase estimation parameters from error budgets."""
 
-from math import ceil, log2
-
-from quiche.core.errors import Errors
+"""Input validation shared by the algorithm method objects."""
 
 
-def get_textbook_qpe_ancillas(e: Errors) -> int:
-    """Get the number of ancillas required for Textbook QPE."""
-    # TODO(Annina): add the one-norm of the Hamiltonian.
-    return ceil(log2(1 / e.estimation)) + ceil(log2(1 / e.overlap)) + 4
-
-
-def get_kitaev_qpe_rounds(e: Errors) -> int:
-    """Get the number of rounds for Kitaev single-ancilla QPE."""
-    return get_textbook_qpe_ancillas(e)
+def require_exactly_one(**options: object) -> None:
+    """Raise unless exactly one of the keyword arguments is not `None`."""
+    given = [name for name, value in options.items() if value is not None]
+    if len(given) != 1:
+        names = " or ".join(f"`{name}`" for name in options)
+        msg = f"Exactly one of {names} must be given, got {len(given)}."
+        raise ValueError(msg)

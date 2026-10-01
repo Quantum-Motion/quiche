@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""State-preparation specs implementing the common `Spec` interface."""
+"""State-preparation methods implementing the common `Spec` interface."""
 
 from functools import partial
 
@@ -36,11 +36,35 @@ from quiche.quest import QuestRoutine
 
 
 @dataclass(frozen=True)
-class HartreeFockSpec(Spec):
-    """State-preparation spec for a Hartree-Fock reference state."""
+class HartreeFock(Spec):
+    """
+    State preparation for a Hartree-Fock reference state.
+
+    `qubits` optionally keeps only those qubits of the mapped state, in order. Pass the
+    indices returned by `PauliSum.compact()` so the state lines up with the compacted
+    Hamiltonian. Selecting after the mapping is correct for every mapping, because the
+    mapped state is a computational basis state and the dropped qubits are idle.
+    """
 
     state: HartreeFockState
     mapping: Mapping
+    qubits: tuple[int, ...] | None = None
+
+    def __post_init__(self) -> None:
+        """Validate the kept qubits against the state's width."""
+        if self.qubits is not None and not all(
+            0 <= i < self.state.num_spin_orbitals for i in self.qubits
+        ):
+            msg = (
+                f"Kept qubits {self.qubits} must lie in "
+                f"[0, {self.state.num_spin_orbitals})."
+            )
+            raise ValueError(msg)
+
+    @property
+    def num_qubits(self) -> int:
+        """Get the number of qubits the state is prepared on."""
+        return len(self._bitstring())
 
     def to_qualtran(self) -> Bloq:
         """Build the Qualtran Bloq preparing the Hartree-Fock state."""
@@ -60,8 +84,11 @@ class HartreeFockSpec(Spec):
         """Transform the occupation basis state to the qubit basis via `mapping`."""
         match self.mapping:
             case Mapping.JordanWigner:
-                return get_jw_state(self.state.occupation)
+                bitstring = get_jw_state(self.state.occupation)
             case Mapping.BravyiKitaev:
-                return get_bk_state(self.state.occupation)
+                bitstring = get_bk_state(self.state.occupation)
             case Mapping.Parity:
-                return get_parity_state(self.state.occupation)
+                bitstring = get_parity_state(self.state.occupation)
+        if self.qubits is None:
+            return bitstring
+        return np.asarray(bitstring)[list(self.qubits)]

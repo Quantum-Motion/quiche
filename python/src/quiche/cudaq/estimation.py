@@ -21,19 +21,52 @@
 # construction, so a file-level suppression is low-risk. The kernel factories
 # below also take many named, optional simulation parameters, matching the
 # equally wide `getPhaseTextbook*` signatures in quiche.quest.estimation.
-# ruff: noqa: F821, PLR0913, PLR0917
+# ruff: noqa: F821
 
 from math import pi
+from typing import TYPE_CHECKING
 
 import numpy as np
 
-from quiche.core import PauliSum, Seed, Simulation
+from quiche.core import PauliSum
 from quiche.cudaq._runtime import CudaqKernel, load_cudaq
 from quiche.cudaq.simulation import (
     qdrift_evolution,
     qubitised_encoding,
     trotter_evolution,
 )
+from quiche.simulation import QDRIFT, Qubitised, Trotter
+
+if TYPE_CHECKING:
+    from cudaq_algorithms.trotter import Trotter as CudaqTrotter
+
+
+def _product_formula(
+    simulation: Trotter | QDRIFT | Qubitised,
+    qubitised_msg: str,
+    n_qubits: int | None,
+) -> tuple["CudaqTrotter", int, int]:
+    """
+    Build the evolution and its `(steps, order)` for a Trotter/QDRIFT simulation.
+
+    QDRIFT's sampled sequence is applied once at first order, so its `steps` and
+    `order` are both `1`. `Qubitised` raises `NotImplementedError(qubitised_msg)`:
+    it has no `(time, reps, order, seed)` shape to share with the product formulas.
+    """
+    match simulation:
+        case Trotter():
+            evolution = trotter_evolution(simulation.hamiltonian, n_qubits=n_qubits)
+            return evolution, simulation.reps, simulation.order
+        case QDRIFT():
+            evolution = qdrift_evolution(
+                simulation.hamiltonian,
+                simulation.reps,
+                seed=simulation.seed,
+                n_qubits=n_qubits,
+            )
+            return evolution, 1, 1
+        case Qubitised():
+            raise NotImplementedError(qubitised_msg)
 
 
 def inverse_qft_kernel() -> CudaqKernel:
@@ -69,18 +102,16 @@ def inverse_qft_kernel() -> CudaqKernel:
 
 
 def textbook_qpe_kernel(
-    hamiltonian: PauliSum,
-    simulation: Simulation,
+    simulation: Trotter | QDRIFT,
     num_qpe_ancillas: int,
-    time: float,
-    reps: int,
-    order: int = 2,
     *,
-    seed: Seed = None,
     n_qubits: int | None = None,
 ) -> CudaqKernel:
     """
-    Build the Textbook QPE kernel for `Simulation.Trotter`/`Simulation.QDRIFT`.
+    Build the Textbook QPE kernel for a `Trotter`/`QDRIFT` simulation.
+
+    The Hamiltonian, `time`, steps (`reps`), `order` and QDRIFT `seed` all come from
+    `simulation`.
 
     The returned kernel has signature `(data: cudaq.qview) -> float`: like
     `bitstring_kernel`/`inverse_qft_kernel`, it operates in place on an
@@ -89,7 +120,7 @@ def textbook_qpe_kernel(
     state-preparation kernel on it (mirroring `to_qualtran`'s "compose with a
     state-preparation Bloq" and `to_quest`'s "compose with a state preparation
     routine" contracts), then this kernel, all within one compiled top-level
-    kernel - see `QPESpec.to_cudaq`'s docstring for a worked example. `data`
+    kernel - see `Textbook.to_cudaq`'s docstring for a worked example. `data`
     must be at least `n_qubits` wide, the caller's responsibility (same
     requirement as `apply_trotter`/`bitstring_kernel`).
 
@@ -137,29 +168,19 @@ def textbook_qpe_kernel(
     what makes the measured phase reflect the full Hamiltonian's eigenvalue,
     not just the non-identity part (see the decode note above).
 
-    `Simulation.Qubitised` raises `NotImplementedError`: it has no `(time,
-    reps, order, seed)` shape to share with this function (no evolution-time
-    concept for a qubitisation walk operator) - use `qubitised_qpe_kernel`
-    directly instead.
+    `Qubitised` raises `NotImplementedError`: it has no `(time, reps, order,
+    seed)` shape to share with this function (no evolution-time concept for a
+    qubitisation walk operator) - use `qubitised_qpe_kernel` directly instead.
     """
-    cudaq, _ = load_cudaq()
+    msg = (
+        "Qubitised simulation has no (time, reps, order, seed) shape "
+        "to share with Trotter/QDRIFT - use "
+        "quiche.cudaq.estimation.qubitised_qpe_kernel directly."
+    )
+    evolution, base_steps, base_order = _product_formula(simulation, msg, n_qubits)
+    time = simulation.time
 
-    match simulation:
-        case Simulation.Trotter:
-            evolution = trotter_evolution(hamiltonian, n_qubits=n_qubits)
-            base_steps, base_order = reps, order
-        case Simulation.QDRIFT:
-            evolution = qdrift_evolution(
-                hamiltonian, reps, seed=seed, n_qubits=n_qubits
-            )
-            base_steps, base_order = 1, 1
-        case Simulation.Qubitised:
-            msg = (
-                "Simulation.Qubitised has no (time, reps, order, seed) shape "
-                "to share with Trotter/QDRIFT - use "
-                "quiche.cudaq.estimation.qubitised_qpe_kernel directly."
-            )
-            raise NotImplementedError(msg)
+    cudaq, _ = load_cudaq()
 
     coefficients = evolution.coefficients
     words = [cudaq.pauli_word(word) for word in evolution.words]
@@ -213,7 +234,7 @@ def qubitised_qpe_kernel(
     n_qubits: int | None = None,
 ) -> CudaqKernel:
     """
-    Build the Textbook QPE kernel for `Simulation.Qubitised`.
+    Build the Textbook QPE kernel for a `Qubitised` simulation.
 
     Same contract as `textbook_qpe_kernel`: signature `(data: cudaq.qview) ->
     float`, operates in place on an already-allocated register, decodes one
@@ -229,7 +250,7 @@ def qubitised_qpe_kernel(
     Builds `qubitised_encoding(hamiltonian, n_qubits=n_qubits)` fresh and uses
     its own `.num_ancilla`/`.alpha` as the sole source of truth for register
     width and the decode formula - deliberately not any externally-supplied
-    ancilla count. `get_qubitisation_ancillas` (`dispatch/budget/simulation.py`)
+    ancilla count. `get_qubitisation_ancillas` (`quiche/budget/simulation.py`)
     is already known to under-count relative to `PauliLCU.num_ancilla` whenever
     the identity coefficient is nonzero (see `TestQubitisedEncoding.test_num_ancilla`
     in `test_cudaq.py`); sidestepping it here matches the pattern
@@ -324,18 +345,13 @@ def qubitised_qpe_kernel(
 
 
 def naive_qpe_kernel(
-    hamiltonian: PauliSum,
-    simulation: Simulation,
-    time: float,
-    reps: int,
-    order: int = 2,
+    simulation: Trotter | QDRIFT,
     *,
     mode: str = "re",
-    seed: Seed = None,
     n_qubits: int | None = None,
 ) -> CudaqKernel:
     """
-    Build the Naive (Hadamard-test) QPE kernel for `Simulation.Trotter`/`QDRIFT`.
+    Build the Naive (Hadamard-test) QPE kernel for a `Trotter`/`QDRIFT` simulation.
 
     Single ancilla, single round: `h(ancilla)`, `[sdg(ancilla)` if `mode="im"]`,
     controlled-U (`base_steps`/`base_order`-parametrized, no ladder - just one
@@ -361,28 +377,19 @@ def naive_qpe_kernel(
     (idiomatic for a single qubit in CUDA-Q's own examples), not a size-1
     `cudaq.qvector`.
 
-    `Simulation.Qubitised` raises `NotImplementedError`: same reasoning as
+    `Qubitised` raises `NotImplementedError`: same reasoning as
     `textbook_qpe_kernel`/`qubitised_qpe_kernel` - no `(time, reps, order,
     seed)` shape to share - use `qubitised_naive_qpe_kernel` directly.
     """
-    cudaq, _ = load_cudaq()
+    msg = (
+        "Qubitised simulation has no (time, reps, order, seed) shape "
+        "to share with Trotter/QDRIFT - use "
+        "quiche.cudaq.estimation.qubitised_naive_qpe_kernel directly."
+    )
+    evolution, base_steps, base_order = _product_formula(simulation, msg, n_qubits)
+    time = simulation.time
 
-    match simulation:
-        case Simulation.Trotter:
-            evolution = trotter_evolution(hamiltonian, n_qubits=n_qubits)
-            base_steps, base_order = reps, order
-        case Simulation.QDRIFT:
-            evolution = qdrift_evolution(
-                hamiltonian, reps, seed=seed, n_qubits=n_qubits
-            )
-            base_steps, base_order = 1, 1
-        case Simulation.Qubitised:
-            msg = (
-                "Simulation.Qubitised has no (time, reps, order, seed) shape "
-                "to share with Trotter/QDRIFT - use "
-                "quiche.cudaq.estimation.qubitised_naive_qpe_kernel directly."
-            )
-            raise NotImplementedError(msg)
+    cudaq, _ = load_cudaq()
 
     coefficients = evolution.coefficients
     words = [cudaq.pauli_word(word) for word in evolution.words]
@@ -447,7 +454,7 @@ def qubitised_naive_qpe_kernel(
     n_qubits: int | None = None,
 ) -> CudaqKernel:
     """
-    Build the Naive (Hadamard-test) QPE kernel for `Simulation.Qubitised`.
+    Build the Naive (Hadamard-test) QPE kernel for a `Qubitised` simulation.
 
     Same `+1.0`/`-1.0` single-shot contract as `naive_qpe_kernel` (see its
     docstring - this is not a decoded energy). Reuses `qubitised_qpe_kernel`'s
@@ -462,7 +469,7 @@ def qubitised_naive_qpe_kernel(
     `cudaq_algorithms.qubitization`) already give more direct access to
     Chebyshev-moment expectation values without a Hadamard-test ancilla at
     all - this function exists for interface consistency with
-    `naive_qpe_kernel` across all three `Simulation` variants, not because
+    `naive_qpe_kernel` across all three simulation methods, not because
     it's the most efficient way to extract this information for Qubitised
     specifically.
     """
@@ -512,18 +519,13 @@ def qubitised_naive_qpe_kernel(
 
 
 def iterative_qpe_kernel(
-    hamiltonian: PauliSum,
-    simulation: Simulation,
+    simulation: Trotter | QDRIFT,
     num_rounds: int,
-    time: float,
-    reps: int,
-    order: int = 2,
     *,
-    seed: Seed = None,
     n_qubits: int | None = None,
 ) -> CudaqKernel:
     """
-    Build the Iterative QPE kernel for `Simulation.Trotter`/`Simulation.QDRIFT`.
+    Build the Iterative QPE kernel for a `Trotter`/`QDRIFT` simulation.
 
     Single ancilla, classical Rz feedback - IPEA, Dobsicek et al. 2007. Same
     evolution setup as `textbook_qpe_kernel`. Returns
@@ -562,29 +564,20 @@ def iterative_qpe_kernel(
     `num_rounds - 1`) and computes `index = num_rounds - 1 - round_number`
     itself.
 
-    `Simulation.Qubitised` raises `NotImplementedError`: combining this
-    reset/feedback construction with the already-complex CNOT-borrow
-    controlled mechanism needs its own separate validation, deferred.
+    `Qubitised` raises `NotImplementedError`: combining this reset/feedback
+    construction with the already-complex CNOT-borrow controlled mechanism
+    needs its own separate validation, deferred.
     """
-    cudaq, _ = load_cudaq()
+    msg = (
+        "Qubitised simulation is not yet implemented for Iterative "
+        "QPE in the CUDA-Q backend - it needs its own validation of "
+        "the reset/feedback construction combined with the "
+        "CNOT-borrow controlled mechanism."
+    )
+    evolution, base_steps, base_order = _product_formula(simulation, msg, n_qubits)
+    time = simulation.time
 
-    match simulation:
-        case Simulation.Trotter:
-            evolution = trotter_evolution(hamiltonian, n_qubits=n_qubits)
-            base_steps, base_order = reps, order
-        case Simulation.QDRIFT:
-            evolution = qdrift_evolution(
-                hamiltonian, reps, seed=seed, n_qubits=n_qubits
-            )
-            base_steps, base_order = 1, 1
-        case Simulation.Qubitised:
-            msg = (
-                "Simulation.Qubitised is not yet implemented for Iterative "
-                "QPE in the CUDA-Q backend - it needs its own validation of "
-                "the reset/feedback construction combined with the "
-                "CNOT-borrow controlled mechanism."
-            )
-            raise NotImplementedError(msg)
+    cudaq, _ = load_cudaq()
 
     coefficients = evolution.coefficients
     words = [cudaq.pauli_word(word) for word in evolution.words]

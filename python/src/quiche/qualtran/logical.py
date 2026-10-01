@@ -25,8 +25,6 @@ from qualtran.resource_counting import (
 )
 from qualtran.resource_counting.generalizers import ignore_split_join
 
-from quiche.core.errors import Errors
-
 
 def logical_gate_resources(circuit: Bloq) -> GateCounts:
     """Calculate estimated logical gate cost of a bloq provided an error budget."""
@@ -47,9 +45,14 @@ def logical_qubit_resources(circuit: Bloq) -> int:
 # ancillas, these are handled in the my_static_cost subroutine of each bloq and do not
 # need to be accounted for during postprocessing like rotations.
 def logical_rotations_to_tgates(
-    gates: GateCounts, errors: Errors, rotation_synthesis: str
+    gates: GateCounts, rotation_error: float, rotation_synthesis: str
 ) -> GateCounts:
-    """Transform rotation gates to T gates according to the error budget."""
+    """
+    Transform rotation gates to T gates within a total synthesis error.
+
+    `rotation_error` is the error allowed for synthesising all of the rotations,
+    shared equally between them.
+    """
     gc_dict = gates.asdict()
     n_rotations = int(gates.rotation)
     if n_rotations == 0:
@@ -60,7 +63,7 @@ def logical_rotations_to_tgates(
     # of T gates.
     if rotation_synthesis == "direct":
         # Calculate the error allowed per rotation.
-        eps_per_rotation = errors.rotations / n_rotations
+        eps_per_rotation = rotation_error / n_rotations
         ts_per_rotation = int(3 * log2(1 / eps_per_rotation))
         total_ts = n_rotations * ts_per_rotation
     else:

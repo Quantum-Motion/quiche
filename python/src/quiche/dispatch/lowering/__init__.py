@@ -12,14 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Enumerations of fermion-to-qubit mappings."""
 
-from enum import StrEnum, auto
+"""
+Per-backend lowering of the phase estimation algorithms.
 
-
-class Mapping(StrEnum):
-    """Fermion-to-Qubit mappings."""
-
-    BravyiKitaev = auto()
-    JordanWigner = auto()
-    Parity = auto()
+Each module matches on the (algorithm, simulation) pair and builds that backend's
+object; unsupported pairs raise `NotImplementedError`.
+"""

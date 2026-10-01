@@ -147,6 +147,45 @@ class TestPauliSum:
 
         np.testing.assert_equal(actual, expected)
 
+    @pytest.fixture
+    def gapped(self) -> PauliSum:
+        """PauliSum on qubits 0, 2 and 4, leaving 1 and 3 unused."""
+        return PauliSum(
+            coefficients=(0.5, -0.3),
+            terms=(
+                PauliWord(terms=(Pauli.X, Pauli.Z), qubits=(0, 2)),
+                PauliWord(terms=(Pauli.Y,), qubits=(4,)),
+            ),
+            identity_coefficient=0.7,
+        )
+
+    def test_unused_qubits(self, gapped: PauliSum):
+        assert gapped.unused_qubits == (1, 3)
+
+    def test_compact(self, gapped: PauliSum):
+        compacted, kept = gapped.compact()
+
+        assert kept == (0, 2, 4)
+        assert compacted.n_qubits == 3
+        assert compacted.unused_qubits == ()
+        assert compacted.coefficients == gapped.coefficients
+        assert compacted.identity_coefficient == gapped.identity_coefficient
+        expected = (
+            0.7 * np.identity(8)
+            + 0.5 * np.kron(np.kron(X, Z), ID)
+            - 0.3 * np.kron(np.kron(ID, ID), Y)
+        )
+        np.testing.assert_allclose(compacted._to_matrix(), expected)
+
+    def test_compact_without_unused_qubits(self):
+        word = PauliWord(terms=(Pauli.X, Pauli.Z), qubits=(0, 1))
+        psum = PauliSum(coefficients=(1.0,), terms=(word,), identity_coefficient=0)
+
+        compacted, kept = psum.compact()
+
+        assert kept == (0, 1)
+        assert compacted == psum
+
 
 class TestPauliSumFromCudaq:
     """

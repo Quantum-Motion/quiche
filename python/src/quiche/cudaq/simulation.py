@@ -21,9 +21,10 @@
 from math import copysign
 from typing import TYPE_CHECKING
 
-from quiche.core import PauliSum, Seed, Simulation
+from quiche.core import PauliSum, Seed
 from quiche.core.qdrift import sample_qdrift_indices
 from quiche.cudaq._runtime import CudaqKernel, load_cudaq
+from quiche.simulation import QDRIFT, Qubitised, Trotter
 
 if TYPE_CHECKING:
     # cudaq_algorithms is a soft, optional dependency; only imported for real
@@ -69,7 +70,7 @@ def trotter_evolution(
 
     `n_qubits` fixes the register width; it defaults to the Hamiltonian's own
     width but must be given explicitly when the caller's register is wider (e.g.
-    a `QPESpec` whose `n_qubits` exceeds every term's extent).
+    a state whose width exceeds every term's extent).
 
     The resulting kernels realise `exp(-i (H - identity_coefficient) t)`: CUDA-Q
     cannot represent a global phase in a circuit, so `identity_coefficient` is
@@ -255,46 +256,44 @@ def qubitised_controlled_kernel(
 
 
 def simulation_kernel(
-    simulation: Simulation,
-    hamiltonian: PauliSum,
-    time: float,
-    reps: int,
+    simulation: Trotter | QDRIFT | Qubitised,
     *,
-    order: int = 2,
-    seed: Seed = None,
     n_qubits: int | None = None,
     state_prep: CudaqKernel | None = None,
 ) -> CudaqKernel:
     """
     Dispatch to the CUDA-Q Hamiltonian-simulation kernel for `simulation`.
 
-    `order` is ignored for `Simulation.QDRIFT` (its product formula is
-    first-order by construction) and `seed` is ignored for `Simulation.Trotter`
-    (it is deterministic). `Simulation.Qubitised` has no time-evolution
-    semantics to dispatch here - it needs `qubitised_kernel`/
-    `qubitised_controlled_kernel` directly, parametrized by a walk power
-    instead of `time`/`reps`; that case is checked before any CUDA-Q import is
-    attempted.
+    The Hamiltonian, `time`, steps (`reps`), `order` and QDRIFT `seed` all come from
+    `simulation`. `Qubitised` has no time-evolution semantics to dispatch here - it
+    needs `qubitised_kernel`/`qubitised_controlled_kernel` directly, parametrized by a
+    walk power instead of `time`/`reps`; that case is checked before any CUDA-Q import
+    is attempted.
     """
     match simulation:
-        case Simulation.Trotter:
+        case Trotter():
             return trotter_kernel(
-                hamiltonian, time, reps, order, n_qubits=n_qubits, state_prep=state_prep
-            )
-
-        case Simulation.QDRIFT:
-            return qdrift_kernel(
-                hamiltonian,
-                time,
-                reps,
-                seed=seed,
+                simulation.hamiltonian,
+                simulation.time,
+                simulation.reps,
+                simulation.order,
                 n_qubits=n_qubits,
                 state_prep=state_prep,
             )
 
-        case Simulation.Qubitised:
+        case QDRIFT():
+            return qdrift_kernel(
+                simulation.hamiltonian,
+                simulation.time,
+                simulation.reps,
+                seed=simulation.seed,
+                n_qubits=n_qubits,
+                state_prep=state_prep,
+            )
+
+        case Qubitised():
             msg = (
-                "Simulation.Qubitised has no (time, reps) form in the CUDA-Q "
+                "Qubitised simulation has no (time, reps) form in the CUDA-Q "
                 "backend; use qubitised_kernel/qubitised_controlled_kernel directly."
             )
             raise NotImplementedError(msg)

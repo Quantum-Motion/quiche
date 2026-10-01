@@ -12,21 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Core data structures for quantum primites, routines and errors."""
+"""Core data structures for quantum primitives and routines."""
 
-from .algorithms import Mapping, PhaseEstimation, Simulation
-from .errors import Errors
+from .algorithms import Mapping
 from .paulis import Pauli, PauliSum, PauliWord
 from .qdrift import Seed, sample_qdrift_indices
 
 __all__ = [
-    "Errors",
     "Mapping",
     "Pauli",
     "PauliSum",
     "PauliWord",
-    "PhaseEstimation",
     "Seed",
-    "Simulation",
     "sample_qdrift_indices",
 ]

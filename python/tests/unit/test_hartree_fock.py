@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for statespec module."""
+"""Tests for the state_prep module."""
 
 from collections.abc import Callable
 
@@ -27,18 +27,19 @@ from quiche.chemistry import (
     get_parity_state,
 )
 from quiche.core import Mapping
-from quiche.dispatch import HartreeFockSpec, Spec
+from quiche.dispatch import Spec
 from quiche.qualtran.bloqs import BitstringStatePrep
 from quiche.quest import QuestRoutine
+from quiche.state_prep import HartreeFock
 
 
-class TestHartreeFockSpec:
-    """Tests for HartreeFockSpec."""
+class TestHartreeFock:
+    """Tests for HartreeFock."""
 
     state = HartreeFockState.closed_shell(electrons=2, spin_orbitals=4)
 
     def test_is_spec(self):
-        spec = HartreeFockSpec(state=self.state, mapping=Mapping.JordanWigner)
+        spec = HartreeFock(state=self.state, mapping=Mapping.JordanWigner)
         assert isinstance(spec, Spec)
 
     @pytest.mark.parametrize(
@@ -55,7 +56,7 @@ class TestHartreeFockSpec:
         expected_fn: Callable[[NDArray[np.int_]], NDArray[np.int_]],
     ):
         """Validate the Bloq's bitstring matches the corresponding chemistry mapping."""
-        spec = HartreeFockSpec(state=self.state, mapping=mapping)
+        spec = HartreeFock(state=self.state, mapping=mapping)
         bloq = spec.to_qualtran()
         expected = tuple(expected_fn(self.state.occupation))
 
@@ -63,8 +64,37 @@ class TestHartreeFockSpec:
         assert bloq.bitstring == expected
 
     def test_to_quest_routine(self):
-        spec = HartreeFockSpec(state=self.state, mapping=Mapping.JordanWigner)
+        spec = HartreeFock(state=self.state, mapping=Mapping.JordanWigner)
         routine = spec.to_quest()
 
         assert isinstance(routine, QuestRoutine)
         assert len(routine.ops) == 1
+
+    def test_num_qubits(self):
+        spec = HartreeFock(state=self.state, mapping=Mapping.JordanWigner)
+        assert spec.num_qubits == 4
+
+    @pytest.mark.parametrize(
+        ("mapping", "expected_fn"),
+        [
+            (Mapping.JordanWigner, get_jw_state),
+            (Mapping.BravyiKitaev, get_bk_state),
+            (Mapping.Parity, get_parity_state),
+        ],
+    )
+    def test_qubits_select_from_mapped_state(
+        self,
+        mapping: Mapping,
+        expected_fn: Callable[[NDArray[np.int_]], NDArray[np.int_]],
+    ):
+        """Kept qubits index the mapped bitstring, not the occupations."""
+        kept = (0, 2, 3)
+        spec = HartreeFock(state=self.state, mapping=mapping, qubits=kept)
+        expected = tuple(np.asarray(expected_fn(self.state.occupation))[list(kept)])
+
+        assert spec.num_qubits == len(kept)
+        assert spec.to_qualtran().bitstring == expected
+
+    def test_qubits_out_of_range(self):
+        with pytest.raises(ValueError, match="Kept qubits"):
+            HartreeFock(state=self.state, mapping=Mapping.JordanWigner, qubits=(4,))

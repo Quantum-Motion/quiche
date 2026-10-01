@@ -236,6 +236,40 @@ class PauliSum(BaseModel):
         """Get the 1-norm of the coefficients."""
         return sum(map(abs, self.coefficients))
 
+    @computed_field
+    @cached_property
+    def unused_qubits(self) -> tuple[int, ...]:
+        """Get the qubits below `n_qubits` that no term acts on."""
+        used = {qubit for term in self.terms for qubit in term.qubits}
+        return tuple(qubit for qubit in range(self.n_qubits) if qubit not in used)
+
+    def compact(self) -> tuple[Self, tuple[int, ...]]:
+        """
+        Drop the unused qubits, relabelling the rest onto `0, ..., k - 1` in order.
+
+        Returns the compacted PauliSum and the original indices of the kept qubits.
+        Apply the same kept indices to the state preparation (e.g. the `qubits` of
+        `quiche.state_prep.HartreeFock`) so the two still line up; this also drops any
+        state qubits beyond this PauliSum's `n_qubits`.
+        """
+        kept = tuple(
+            qubit for qubit in range(self.n_qubits) if qubit not in self.unused_qubits
+        )
+        relabel = {qubit: index for index, qubit in enumerate(kept)}
+        terms = tuple(
+            PauliWord(
+                terms=term.terms,
+                qubits=tuple(relabel[qubit] for qubit in term.qubits),
+            )
+            for term in self.terms
+        )
+        compacted = type(self)(
+            coefficients=self.coefficients,
+            terms=terms,
+            identity_coefficient=self.identity_coefficient,
+        )
+        return compacted, kept
+
     def __str__(self) -> str:
         """Define printing for PauliSum class."""
         msg = str(self.identity_coefficient) + " * I\n"

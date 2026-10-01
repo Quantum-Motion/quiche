@@ -29,7 +29,7 @@ from qualtran.testing import (
 )
 from scipy.linalg import expm
 
-from quiche.core import Errors, Pauli, PauliSum, PauliWord
+from quiche.core import Pauli, PauliSum, PauliWord
 from quiche.qualtran import logical_qubit_resources
 from quiche.qualtran.bloqs import (
     QDRIFT,
@@ -38,6 +38,9 @@ from quiche.qualtran.bloqs import (
     SelectPauliLCUWrapper,
     Trotterisation,
 )
+
+# Prepare error shared by the block-encoding tests.
+PREPARE_ERROR = 0.16 / 3
 
 
 def _flatten_trotterizedunitary(bloq_counts: dict) -> dict:
@@ -57,9 +60,9 @@ class TestSelectPauliLCUWrapper:
     """Tests for SelectPauliLCUWrapper."""
 
     @pytest.fixture
-    def select(self, h2: PauliSum, budget: Errors) -> SelectPauliLCUWrapper:
+    def select(self, h2: PauliSum) -> SelectPauliLCUWrapper:
         select_nqubits = ceil(log2(h2.n_terms))
-        phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
+        phase_bitsize = max(ceil(log2(2.0 * select_nqubits / PREPARE_ERROR)), 2)
         terms = (term.to_cirq(h2.n_qubits) for term in h2.terms)
 
         return SelectPauliLCUWrapper(
@@ -85,17 +88,15 @@ class TestLCUBlockEncodingWrapper:
     """Tests for LCUBlockEncodingWrapper."""
 
     @pytest.fixture
-    def blockencoding(self, h2: PauliSum, budget: Errors) -> LCUBlockEncodingWrapper:
+    def blockencoding(self, h2: PauliSum) -> LCUBlockEncodingWrapper:
         select_nqubits = ceil(log2(h2.n_terms))
-        phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
+        phase_bitsize = max(ceil(log2(2.0 * select_nqubits / PREPARE_ERROR)), 2)
         return LCUBlockEncodingWrapper.from_hamiltonian(h2, phase_bitsize)
 
-    def test_signature(
-        self, blockencoding: LCUBlockEncodingWrapper, h2: PauliSum, budget: Errors
-    ):
+    def test_signature(self, blockencoding: LCUBlockEncodingWrapper, h2: PauliSum):
         """Check bloq signature."""
         select_nqubits = ceil(log2(h2.n_terms))
-        phase_bitsize = max(ceil(log2(2.0 * select_nqubits / budget.state_prep)), 2)
+        phase_bitsize = max(ceil(log2(2.0 * select_nqubits / PREPARE_ERROR)), 2)
         sig = blockencoding.signature
         assert len(sig) == 2
 

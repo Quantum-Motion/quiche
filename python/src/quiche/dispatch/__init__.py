@@ -12,11 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Methods and structures for dispatching to the Qualtran and QuEST backends."""
+"""Methods and structures for dispatching to the Qualtran, QuEST and CUDA-Q backends."""
 
-from . import budget
-from .qpespec import QPESpec
 from .spec import Spec
-from .statespec import HartreeFockSpec
 
-__all__ = ["HartreeFockSpec", "QPESpec", "Spec", "budget"]
+__all__ = ["Spec"]
