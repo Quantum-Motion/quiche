@@ -28,7 +28,6 @@ from . import (
     simulation,
     state_prep,
 )
-from .chemistry import HartreeFockState
 from .core import (
     Mapping,
     Pauli,
@@ -42,7 +41,6 @@ from .quest import QuestRoutine
 
 __all__ = [
     "CudaqKernel",
-    "HartreeFockState",
     "Mapping",
     "Pauli",
     "PauliSum",

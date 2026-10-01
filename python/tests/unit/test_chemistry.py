@@ -19,7 +19,6 @@ import pytest
 from numpy.typing import NDArray
 
 from quiche.chemistry import (
-    HartreeFockState,
     get_bk_state,
     get_hf_state,
     get_jw_state,
@@ -106,30 +105,3 @@ def test_get_bk_state(occupation: NDArray[np.int_], expected: NDArray[np.int_]):
     """Validate Bravyi-Kitaev basis state mapping."""
     actual = get_bk_state(occupation)
     np.testing.assert_array_equal(actual, expected)
-
-
-class TestHartreeFockState:
-    """Test HartreeFockState class."""
-
-    @pytest.mark.parametrize(
-        ("num_electrons", "num_spin_orbitals", "err_msg"),
-        [
-            (2, 1, "electrons must not exceed number of spin orbitals"),
-            (3, 5, "must have even number of electrons"),
-            (-2, 3, "Number of electrons must be non-negative"),
-            (2, 0, "Number of spin orbitals must be positive"),
-        ],
-    )
-    def test_invalid_closed_shell(
-        self,
-        num_electrons: int,
-        num_spin_orbitals: int,
-        err_msg: str,
-    ):
-        with pytest.raises(ValueError, match=err_msg):
-            HartreeFockState.closed_shell(num_electrons, num_spin_orbitals)
-
-    @pytest.mark.parametrize("occupation", [(1, 2, 1, 1), (1, -1, 0), (1, "a", 0)])
-    def test_invalid(self, occupation: tuple):
-        with pytest.raises(ValueError, match="occupation must contain binary entries"):
-            HartreeFockState(occupation)

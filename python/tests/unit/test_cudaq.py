@@ -27,7 +27,7 @@ from scipy.linalg import expm
 
 from quiche import estimation as est
 from quiche import simulation as sim
-from quiche.chemistry import HartreeFockState, get_jw_state
+from quiche.chemistry import get_jw_state
 from quiche.core import Mapping, PauliSum, PauliWord
 from quiche.core.qdrift import sample_qdrift_indices
 from quiche.cudaq import CudaqKernel
@@ -213,12 +213,13 @@ class TestBitstringKernel:
         np.testing.assert_allclose(state, np.eye(len(state))[index], atol=1e-12)
 
     def test_hartree_fock_to_cudaq(self, cudaq: ModuleType):
-        hf_state = HartreeFockState.closed_shell(electrons=2, spin_orbitals=4)
-        spec = HartreeFock(state=hf_state, mapping=Mapping.JordanWigner)
+        spec = HartreeFock.closed_shell(
+            electrons=2, spin_orbitals=4, mapping=Mapping.JordanWigner
+        )
 
         state = _prepared(cudaq, 4, spec.to_cudaq())
 
-        bitstring = get_jw_state(hf_state.occupation)
+        bitstring = get_jw_state(spec.occupation)
         index = int("".join(str(int(bit)) for bit in bitstring), 2)
         assert np.argmax(np.abs(state)) == index
 

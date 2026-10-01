@@ -15,6 +15,7 @@
 """State-preparation methods implementing the common `Spec` interface."""
 
 from functools import partial
+from typing import Self
 
 import numpy as np
 from numpy.typing import NDArray
@@ -23,8 +24,8 @@ from qualtran import Bloq
 
 from quiche.bindings.quiche_bindings import initClassicalState
 from quiche.chemistry import (
-    HartreeFockState,
     get_bk_state,
+    get_hf_state,
     get_jw_state,
     get_parity_state,
 )
@@ -40,26 +41,59 @@ class HartreeFock(Spec):
     """
     State preparation for a Hartree-Fock reference state.
 
+    `occupation` gives the occupation (0 or 1) of each spin orbital, which `mapping`
+    transforms to the qubit basis. `closed_shell` builds the occupation from electron
+    and spin orbital counts.
+
     `qubits` optionally keeps only those qubits of the mapped state, in order. Pass the
     indices returned by `PauliSum.compact()` so the state lines up with the compacted
     Hamiltonian. Selecting after the mapping is correct for every mapping, because the
     mapped state is a computational basis state and the dropped qubits are idle.
     """
 
-    state: HartreeFockState
+    occupation: tuple[int, ...]
     mapping: Mapping
     qubits: tuple[int, ...] | None = None
 
+    @classmethod
+    def closed_shell(
+        cls,
+        electrons: int,
+        spin_orbitals: int,
+        *,
+        mapping: Mapping,
+        qubits: tuple[int, ...] | None = None,
+    ) -> Self:
+        """Build the Hartree-Fock state of a closed-shell system."""
+        if electrons % 2 != 0:
+            err_msg = "Closed shell system must have even number of electrons."
+            raise ValueError(err_msg)
+        occupation = tuple(int(i) for i in get_hf_state(spin_orbitals, electrons))
+        return cls(occupation=occupation, mapping=mapping, qubits=qubits)
+
     def __post_init__(self) -> None:
-        """Validate the kept qubits against the state's width."""
+        """Validate the occupation and the kept qubits."""
+        if not all(i in {0, 1} for i in self.occupation):
+            err_msg = "Spin orbital occupation must contain binary entries."
+            raise ValueError(err_msg)
+
         if self.qubits is not None and not all(
-            0 <= i < self.state.num_spin_orbitals for i in self.qubits
+            0 <= i < self.num_spin_orbitals for i in self.qubits
         ):
             msg = (
-                f"Kept qubits {self.qubits} must lie in "
-                f"[0, {self.state.num_spin_orbitals})."
+                f"Kept qubits {self.qubits} must lie in [0, {self.num_spin_orbitals})."
             )
             raise ValueError(msg)
+
+    @property
+    def num_electrons(self) -> int:
+        """Get the number of electrons."""
+        return sum(self.occupation)
+
+    @property
+    def num_spin_orbitals(self) -> int:
+        """Get the number of spin orbitals."""
+        return len(self.occupation)
 
     @property
     def num_qubits(self) -> int:
@@ -84,11 +118,11 @@ class HartreeFock(Spec):
         """Transform the occupation basis state to the qubit basis via `mapping`."""
         match self.mapping:
             case Mapping.JordanWigner:
-                bitstring = get_jw_state(self.state.occupation)
+                bitstring = get_jw_state(self.occupation)
             case Mapping.BravyiKitaev:
-                bitstring = get_bk_state(self.state.occupation)
+                bitstring = get_bk_state(self.occupation)
             case Mapping.Parity:
-                bitstring = get_parity_state(self.state.occupation)
+                bitstring = get_parity_state(self.occupation)
         if self.qubits is None:
             return bitstring
         return np.asarray(bitstring)[list(self.qubits)]

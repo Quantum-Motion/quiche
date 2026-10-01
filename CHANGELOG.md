@@ -7,7 +7,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Added
 - `quiche.simulation` (`Trotter`, `QDRIFT`, `Qubitised`) and `quiche.estimation` (`Textbook`, `Kitaev`, `Iterative`, `Naive`) method objects. Each one takes either its parameters or a target error, works out the other when it's created, and reports the `error` its final parameters achieve. Estimation objects hold their simulation and the initial-state `overlap`, report `total_error`, and build the QPE circuit with `to_qualtran`/`to_quest`/`to_cudaq`.
-- `quiche.state_prep.HartreeFock`, with an optional `qubits` selection of the mapped state.
+- `quiche.state_prep.HartreeFock`, built from an `occupation` and a required `mapping` (or with `HartreeFock.closed_shell`), with an optional `qubits` selection of the mapped state.
 - `PauliSum.unused_qubits` and `PauliSum.compact()` for dropping qubits that no term acts on.
 - Inverse error-budget formulas in `quiche.budget` (e.g. `get_trotter_error`, `get_textbook_qpe_error`).
 
@@ -20,7 +20,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ### Deprecated
 
 ### Removed
-- `QPESpec`, `HartreeFockSpec`, `Errors` and the `PhaseEstimation`/`Simulation` enums, replaced by the method objects above.
+- `QPESpec`, `HartreeFockSpec`, `HartreeFockState`, `Errors` and the `PhaseEstimation`/`Simulation` enums, replaced by the objects above.
 
 ### Fixed
 

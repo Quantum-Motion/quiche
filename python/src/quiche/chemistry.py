@@ -14,9 +14,7 @@
 
 """Quantum chemistry related methods and transformations."""
 
-from dataclasses import dataclass
 from math import ceil, log2
-from typing import Self
 
 import numpy as np
 from numpy.typing import NDArray
@@ -135,34 +133,3 @@ def get_bk_state(occupation: NDArray[np.int_]) -> NDArray[np.int_]:
     """
     mat = _bk_transformation_matrix(len(occupation))
     return (mat @ occupation) % 2
-
-
-@dataclass(frozen=True)
-class HartreeFockState:
-    """Dataclass representing a single Hartree-Fock state."""
-
-    occupation: tuple[int, ...]
-
-    @classmethod
-    def closed_shell(cls, electrons: int, spin_orbitals: int) -> Self:
-        """Initialise the Hartree-Fock state for a closed-shell system."""
-        if electrons % 2 != 0:
-            err_msg = "Closed shell system must have even number of electrons."
-            raise ValueError(err_msg)
-        return cls(occupation=tuple(get_hf_state(spin_orbitals, electrons)))
-
-    def __post_init__(self) -> None:
-        """Input validation for constructors."""
-        if not all(i in {0, 1} for i in self.occupation):
-            err_msg = "Spin orbital occupation must contain binary entries."
-            raise ValueError(err_msg)
-
-    @property
-    def num_electrons(self) -> int:
-        """Get number of electrons of Hartree-Fock state."""
-        return sum(self.occupation)
-
-    @property
-    def num_spin_orbitals(self) -> int:
-        """Get number of spin orbitals of Hartree-Fock state."""
-        return len(self.occupation)
