@@ -16,7 +16,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
-- Renamed `PauliSum`'s `n_qubits`, `n_terms` and `n_terms_with_identity` to `num_qubits`, `num_terms` and `num_terms_with_identity`.
+- Renamed `PauliWord`'s `terms` to `paulis`.
+- Renamed `PauliSum`'s `terms`, `n_terms`, `n_terms_with_identity` and `n_qubits` to `words`, `num_words`, `num_words_with_identity` and `num_qubits`.
 - Renamed `PauliWordRotation`'s `n_qubits` and `n_controls` to `num_qubits` and `num_controls`.
 - Renamed `QDRIFT`'s `n_qubits`, `n_controls` and `n_terms` to `num_qubits`, `num_controls` and `num_samples`.
 - Renamed `Trotterisation`'s `n_qubits`, `n_controls` and `n_steps` to `num_qubits`, `num_controls` and `num_steps`.
