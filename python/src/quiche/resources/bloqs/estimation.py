@@ -83,11 +83,11 @@ class _SingleAncillaQPE(Bloq):
     def __attrs_post_init__(self) -> None:
         """Input validator."""
         if not isinstance(self.exponent, numbers.Integral) or self.exponent < 1:
-            err_msg = "Exponent must be positive integer."
-            raise ValueError(err_msg)
+            error_msg = "Exponent must be positive integer."
+            raise ValueError(error_msg)
         if self.mode not in ("re", "im"):
-            err_msg = "Measurement mode must be either 're' or 'im'."
-            raise ValueError(err_msg)
+            error_msg = "Measurement mode must be either 're' or 'im'."
+            raise ValueError(error_msg)
 
     @property
     @abc.abstractmethod
@@ -111,19 +111,21 @@ class _SingleAncillaQPE(Bloq):
         )
 
     @property
-    def n_simulation_qubits(self) -> int:
+    def num_simulation_qubits(self) -> int:
         """Return number of qubits used for Hamiltonian simulation."""
         return self.simulation.signature.get_left("simulation").total_bits()
 
     @property
-    def n_estimation_bits(self) -> int:
+    def num_estimation_bits(self) -> int:
         """Return number of estimation qubits."""
         return 1
 
     @property
     def signature(self) -> Signature:
         """Define input and/or output registers of the bloq."""
-        return Signature([Register("simulation", dtype=QAny(self.n_simulation_qubits))])
+        return Signature(
+            [Register("simulation", dtype=QAny(self.num_simulation_qubits))]
+        )
 
     def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
@@ -132,7 +134,7 @@ class _SingleAncillaQPE(Bloq):
         ):
             # This bloq only needs the data qubits and one ancilla. So far assumes that
             # will not be initialised with a Qubitisation simulation bloq.
-            return self.n_simulation_qubits + 1
+            return self.num_simulation_qubits + 1
         return NotImplemented
 
     def build_composite_bloq(
@@ -143,7 +145,7 @@ class _SingleAncillaQPE(Bloq):
         """Implement bloq decomposition into sub-bloqs."""
         simulation = soqs["simulation"]
 
-        estimation = bb.add(RectangularWindowState(self.n_estimation_bits))
+        estimation = bb.add(RectangularWindowState(self.num_estimation_bits))
 
         if self.mode == "im":
             estimation = bb.add(SGate(is_adjoint=True), q=estimation)
@@ -166,7 +168,7 @@ class _SingleAncillaQPE(Bloq):
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for single-ancilla QPE."""
         bloq_counts = {
-            RectangularWindowState(self.n_estimation_bits): 1,
+            RectangularWindowState(self.num_estimation_bits): 1,
             self.controlled_propagator: 1,
             Hadamard(): 1,
             Free(QBit()): 1,
@@ -389,19 +391,21 @@ class TextbookQPE(Bloq):
                 # The qubit count only cares about the widest part of the algorithm.
                 # This can be found by finding the width of the controlled reflection
                 # and the width of the controlled walk.
-                n_reflect = get_cost_value(
+                num_reflect = get_cost_value(
                     self.simulation_factory(0).walk.reflect.controlled(
                         ctrl_spec=CtrlSpec(cvs=(0,))
                     ),
                     QubitCount(),
                 )
-                n_walk = get_cost_value(
+                num_walk = get_cost_value(
                     self.simulation_factory(0).walk.controlled(), QubitCount()
                 )
                 # Calculate the ancillas allocated and deallocated on the fly by
                 # subtracting the qubits that are kept throughout the algorithm.
-                tmp_ancillas_reflect = n_reflect - self.num_other_ancillas - 1
-                tmp_ancillas_walk = n_walk - self.num_other_ancillas - self.num_data - 1
+                tmp_ancillas_reflect = num_reflect - self.num_other_ancillas - 1
+                tmp_ancillas_walk = (
+                    num_walk - self.num_other_ancillas - self.num_data - 1
+                )
                 tmp_ancillas_qft = 1
                 # get the temporary ancillas for the QubitisationLadder
                 tmp_ancillas_prop = max(tmp_ancillas_reflect, tmp_ancillas_walk)

@@ -202,7 +202,7 @@ def parse(text: str) -> SecondQuantisedHamiltonian:
     return SecondQuantisedHamiltonian(
         one_body=one_body,
         two_body=two_body,
-        electrons=nelec,
+        num_electrons=nelec,
         core_energy=core_energy,
     )
 

@@ -36,7 +36,7 @@ from .paulis import PauliSum
 class ElectronicHamiltonian:
     """Class encompassing a physical electronic Hamiltonian."""
 
-    electrons: int
+    num_electrons: int
     mapping: Mapping
     paulis: PauliSum
 
@@ -53,7 +53,7 @@ class SecondQuantisedHamiltonian(BaseModel):
 
     one_body: NDArray[np.float64]
     two_body: NDArray[np.float64]
-    electrons: int
+    num_electrons: int
     core_energy: float = 0.0
 
     @field_validator("one_body", "two_body", mode="before")
@@ -109,11 +109,11 @@ class SecondQuantisedHamiltonian(BaseModel):
     @model_validator(mode="after")
     def check_electrons(self) -> Self:
         """Validate the electron count fits in the given orbital space."""
-        if self.electrons < 0:
+        if self.num_electrons < 0:
             error_msg = "The number of electrons must be non-negative."
             raise ValueError(error_msg)
 
-        if self.electrons > self.num_spin_orbitals:
+        if self.num_electrons > self.num_spin_orbitals:
             error_msg = (
                 "The number of electrons must not exceed the number of spin orbitals."
             )
@@ -139,7 +139,7 @@ class SecondQuantisedHamiltonian(BaseModel):
             return NotImplemented
 
         return (
-            self.electrons == other.electrons
+            self.num_electrons == other.num_electrons
             and self.core_energy == other.core_energy
             and np.array_equal(self.one_body, other.one_body)
             and np.array_equal(self.two_body, other.two_body)
@@ -149,7 +149,7 @@ class SecondQuantisedHamiltonian(BaseModel):
         """Hash a SecondQuantisedHamiltonian."""
         return hash(
             (
-                self.electrons,
+                self.num_electrons,
                 self.core_energy,
                 self.one_body.shape,
                 self.one_body.tobytes(),
