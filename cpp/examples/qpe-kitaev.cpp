@@ -17,8 +17,6 @@
 /** @file
  * Demo simulation of single-ancilla Kitaev quantum phase estimation using QDRIFT for
  * Hamiltonian simulation with a minimal basis set H2 molecule.
- *
- * @author Vasco Ferreira
  */
 
 #include <cmath>

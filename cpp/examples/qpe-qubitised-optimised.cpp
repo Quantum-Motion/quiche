@@ -18,8 +18,6 @@
  * Demo simulation of textbook quantum phase estimation with qubitisation
  * using the optimised method of Babbush et al. (arXiv:1805.03662)
  * for Hamiltonian simulation with a minimal basis set H2 molecule.
- *
- * @author Vasco Ferreira
  */
 
 #include <cmath>
