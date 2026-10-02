@@ -34,6 +34,7 @@ jobs:
         env:
           # Ensure Windows compiles in parallel for CI runs
           CL: ${{ runner.os == 'Windows' && '/MP' || '' }}
+          TEMP: ${{ runner.os == 'Windows' && runner.temp || '' }}
 
       - name: Upload wheels
         uses: actions/upload-artifact@v7
