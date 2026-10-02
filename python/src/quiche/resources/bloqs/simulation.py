@@ -82,10 +82,10 @@ def _pauli_to_z_string(
     """First half of transforming X, Y Pauli gates to Z and add to BloqBuilder."""
     # Using H Z H = X and (SH) Z (SH)^\dagger = Y, apply the operators preceding the
     # application of the centre Z.
-    for q, t in zip(word.qubits, word.terms, strict=True):
-        if t is Pauli.X:
+    for q, p in zip(word.qubits, word.paulis, strict=True):
+        if p is Pauli.X:
             qs[q] = bb.add(Hadamard(), q=qs[q])
-        if t is Pauli.Y:
+        if p is Pauli.Y:
             qs[q] = bb.add(SGate(is_adjoint=True), q=qs[q])
             qs[q] = bb.add(Hadamard(), q=qs[q])
 
@@ -98,10 +98,10 @@ def _adjoint_pauli_to_z_string(
     """Second half of transforming X, Y Pauli gates to Z and add to BloqBuilder."""
     # Using H Z H = X and (SH) Z (SH)^\dagger = Y, apply the operators following the
     # application of the centre Z.
-    for q, t in zip(word.qubits, word.terms, strict=True):
-        if t is Pauli.X:
+    for q, p in zip(word.qubits, word.paulis, strict=True):
+        if p is Pauli.X:
             qs[q] = bb.add(Hadamard(), q=qs[q])
-        if t is Pauli.Y:
+        if p is Pauli.Y:
             qs[q] = bb.add(Hadamard(), q=qs[q])
             qs[q] = bb.add(SGate(), q=qs[q])
 
@@ -173,8 +173,8 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
             error_msg = "Choose phase_bitsize at least 2."
             raise ValueError(error_msg)
 
-        terms = [u.to_cirq(h.num_qubits) for u in h.terms]
-        num_terms = h.num_terms_with_identity
+        terms = [u.to_cirq(h.num_qubits) for u in h.words]
+        num_terms = h.num_words_with_identity
         lam = h.lam
         coeffs = np.array(h.coefficients)
 
@@ -320,9 +320,9 @@ class PauliWordRotation(Bloq):
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for PauliWordRotation."""
-        num_x = sum(term is Pauli.X for term in self.word.terms)
-        num_y = sum(term is Pauli.Y for term in self.word.terms)
-        num_cnot = 2 * (len(self.word.terms) - 1)
+        num_x = sum(pauli is Pauli.X for pauli in self.word.paulis)
+        num_y = sum(pauli is Pauli.Y for pauli in self.word.paulis)
+        num_cnot = 2 * (len(self.word.paulis) - 1)
 
         bloq_counts = {}
 
@@ -446,7 +446,7 @@ class QDRIFT(Bloq):
         probabilities = np.asarray(self.positive_coefficients) / self.lam
         return tuple(
             rng.choice(
-                self.h.num_terms,
+                self.h.num_words,
                 size=self.num_samples,
                 p=probabilities,
             ).tolist()
@@ -464,11 +464,11 @@ class QDRIFT(Bloq):
         if self.is_controlled:
             bloqs = tuple(
                 PauliWordRotation(t, self.dt, self.num_qubits).controlled()
-                for t in self.h.terms
+                for t in self.h.words
             )
         else:
             bloqs = tuple(
-                PauliWordRotation(t, self.dt, self.num_qubits) for t in self.h.terms
+                PauliWordRotation(t, self.dt, self.num_qubits) for t in self.h.words
             )
         # The frequency with which indices are sampled already accounts for the term's
         # coefficient in the Hamiltonian, so only need to record the sign of the
@@ -506,7 +506,7 @@ class QDRIFT(Bloq):
         bloq_counts = {}
         # For each index in the Counter, add the relevant bloq to the count.
         for idx, count in index_counts.items():
-            word = self.h.terms[idx]
+            word = self.h.words[idx]
             sign = -1 if self.h.coefficients[idx] < 0 else 1
             angle = sign * self.dt
 
@@ -622,13 +622,13 @@ class Trotterisation(Bloq):
         # If order is 1 or 2, return the appropriate coefficients and indices. Otherwise
         # call the function recursively with decreased order.
         if order == 1:
-            coeffs = np.ones(self.h.num_terms)
-            indices = np.arange(self.h.num_terms)
+            coeffs = np.ones(self.h.num_words)
+            indices = np.arange(self.h.num_words)
         elif order == 2:
-            coeffs = 0.5 * np.ones(2 * self.h.num_terms - 1)
-            coeffs[self.h.num_terms - 1] = 1.0
+            coeffs = 0.5 * np.ones(2 * self.h.num_words - 1)
+            coeffs[self.h.num_words - 1] = 1.0
             indices = np.concatenate(
-                [np.arange(self.h.num_terms - 1), np.arange(self.h.num_terms)[::-1]]
+                [np.arange(self.h.num_words - 1), np.arange(self.h.num_words)[::-1]]
             )
         else:
             uk = 1.0 / (4.0 - 4.0 ** (1.0 / (order - 1.0)))
@@ -667,11 +667,11 @@ class Trotterisation(Bloq):
         if self.is_controlled:
             bloqs = tuple(
                 PauliWordRotation(t, self.dt, self.num_qubits).controlled()
-                for t in self.h.terms
+                for t in self.h.words
             )
         else:
             bloqs = tuple(
-                PauliWordRotation(t, self.dt, self.num_qubits) for t in self.h.terms
+                PauliWordRotation(t, self.dt, self.num_qubits) for t in self.h.words
             )
         # Extract coefficients and indices for the given Trotter formula.
         coeffs, indices = self.get_coeffs_indices(self.order)
@@ -720,7 +720,7 @@ class Trotterisation(Bloq):
 
         # For each index in the Counter, add the relevant bloq to the count.
         for (coeff, idx), count in index_counts.items():
-            word = self.h.terms[idx]
+            word = self.h.words[idx]
             angle = coeff * self.h.coefficients[idx] * self.dt
 
             # Create the corresponding Bloq. Double the angle because Qualtran

@@ -45,7 +45,7 @@ def h_single() -> PauliSum:
     """Single Pauli Hamiltonian with nonzero identity for QDRIFT testing."""
     return PauliSum(
         coefficients=(1.0,),
-        terms=(PauliWord(terms=(Pauli.X,), qubits=(0,)),),
+        words=(PauliWord(paulis=(Pauli.X,), qubits=(0,)),),
         identity_coefficient=0.3,
     )
 
@@ -68,14 +68,14 @@ class TestSelectPauliLCUWrapper:
 
     @pytest.fixture
     def select(self, h2: PauliSum, budget: Errors) -> SelectPauliLCUWrapper:
-        num_select_qubits = ceil(log2(h2.num_terms))
+        num_select_qubits = ceil(log2(h2.num_words))
         phase_bitsize = max(ceil(log2(2.0 * num_select_qubits / budget.state_prep)), 2)
-        terms = (term.to_cirq(h2.num_qubits) for term in h2.terms)
+        words = (word.to_cirq(h2.num_qubits) for word in h2.words)
 
         return SelectPauliLCUWrapper(
             selection_bitsize=num_select_qubits + phase_bitsize,
             target_bitsize=h2.num_qubits,
-            select_unitaries=terms,
+            select_unitaries=words,
         )
 
     @pytest.mark.parametrize("controlled", [False, True])
@@ -96,7 +96,7 @@ class TestLCUBlockEncodingWrapper:
 
     @pytest.fixture
     def blockencoding(self, h2: PauliSum, budget: Errors) -> LCUBlockEncodingWrapper:
-        num_select_qubits = ceil(log2(h2.num_terms_with_identity))
+        num_select_qubits = ceil(log2(h2.num_words_with_identity))
         phase_bitsize = max(ceil(log2(2.0 * num_select_qubits / budget.state_prep)), 2)
         return LCUBlockEncodingWrapper.from_hamiltonian(h2, phase_bitsize)
 
@@ -104,7 +104,7 @@ class TestLCUBlockEncodingWrapper:
         self, blockencoding: LCUBlockEncodingWrapper, h2: PauliSum, budget: Errors
     ):
         """Check bloq signature."""
-        num_select_qubits = ceil(log2(h2.num_terms_with_identity))
+        num_select_qubits = ceil(log2(h2.num_words_with_identity))
         phase_bitsize = max(ceil(log2(2.0 * num_select_qubits / budget.state_prep)), 2)
         sig = blockencoding.signature
         assert len(sig) == 3
@@ -136,13 +136,13 @@ class TestLCUBlockEncodingWrapper:
         prep_coeffs = blockencoding.prepare.stateprep.state_coefficients
         # The block encoding pads the coefficients to a power of two. All coefficients
         # beyond the ones needed for the Hamiltonian should be zero and have no effect.
-        # There are a total of h2.num_terms_with_identity non-zero coefficients because
+        # There are a total of h2.num_words_with_identity non-zero coefficients because
         # the identity coefficient is non-zero. Test that these are indeed non-zero and
         # all others are zero.
         np.testing.assert_equal(
-            prep_coeffs[: h2.num_terms_with_identity] != 0, desired=True
+            prep_coeffs[: h2.num_words_with_identity] != 0, desired=True
         )
-        np.testing.assert_allclose(prep_coeffs[h2.num_terms_with_identity :], 0.0)
+        np.testing.assert_allclose(prep_coeffs[h2.num_words_with_identity :], 0.0)
 
     def test_selectunitaries(
         self, blockencoding: LCUBlockEncodingWrapper, h2: PauliSum
@@ -153,14 +153,14 @@ class TestLCUBlockEncodingWrapper:
         true_prep_coeffs = np.array(
             blockencoding.prepare.stateprep.state_coefficients, dtype=complex
         )
-        # Truncate to the non-zero terms. All truncated coefficients are zero, which is
+        # Truncate to the non-zero words. All truncated coefficients are zero, which is
         # tested separately in test_zerocoefficients. Truncate after
-        # h2.num_terms_with_identity in order to count the identity contribution.
-        true_unitaries = true_unitaries[: h2.num_terms_with_identity]
-        true_prep_coeffs = true_prep_coeffs[: h2.num_terms_with_identity]
+        # h2.num_words_with_identity in order to count the identity contribution.
+        true_unitaries = true_unitaries[: h2.num_words_with_identity]
+        true_prep_coeffs = true_prep_coeffs[: h2.num_words_with_identity]
 
         # Set the target unitaries and coefficients
-        target_unitaries = [u.to_cirq(h2.num_qubits) for u in h2.terms] + [
+        target_unitaries = [u.to_cirq(h2.num_qubits) for u in h2.words] + [
             cirq.DensePauliString.eye(h2.num_qubits)
         ]
         target_coefficients = [*h2.coefficients, h2.identity_coefficient]
@@ -202,7 +202,7 @@ class TestPauliWordRotation:
         qubits = (0, 2, 5)
         num_qubits = 7
         phase = 0.4
-        word = PauliWord(terms=(Pauli.Y, Pauli.Z, Pauli.X), qubits=qubits)
+        word = PauliWord(paulis=(Pauli.Y, Pauli.Z, Pauli.X), qubits=qubits)
         return PauliWordRotation(word, phase, num_qubits)
 
     def test_signature(self, rotation: PauliWordRotation):
@@ -215,7 +215,7 @@ class TestPauliWordRotation:
         assert reg.side == Side.THRU
 
     def test_wrong_num_qubits(self):
-        word = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.X), qubits=(0, 2, 7))
+        word = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.X), qubits=(0, 2, 7))
         with pytest.raises(ValueError, match="Target qubit 7 is out of range"):
             PauliWordRotation(word, 0.4, 7)
 
@@ -326,10 +326,10 @@ class TestTrotterisation:
             Trotterisation(h2, t=0.2, num_steps=23, order=order)
 
     def test_coeffs_indices_lie_trotter(self):
-        word1 = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
+        word1 = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
         h = PauliSum(
             coefficients=(5.0, 19.0, 10.0, 15.0),
-            terms=(word1, word1, word1, word1),
+            words=(word1, word1, word1, word1),
             identity_coefficient=0,
         )
 
@@ -340,10 +340,10 @@ class TestTrotterisation:
         np.testing.assert_allclose(coeffs, (1.0, 1.0, 1.0, 1.0))
 
     def test_coeffs_indices_suzuki_2(self):
-        word1 = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
+        word1 = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
         h = PauliSum(
             coefficients=(5.0, 19.0, 10.0, 15.0),
-            terms=(word1, word1, word1, word1),
+            words=(word1, word1, word1, word1),
             identity_coefficient=0,
         )
 
@@ -354,10 +354,10 @@ class TestTrotterisation:
         np.testing.assert_allclose(coeffs, [0.5, 0.5, 0.5, 1.0, 0.5, 0.5, 0.5])
 
     def test_coeffs_indices_suzuki_4(self):
-        word1 = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
+        word1 = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
         h = PauliSum(
             coefficients=(5.0, 19.0, 10.0),
-            terms=(word1, word1, word1),
+            words=(word1, word1, word1),
             identity_coefficient=0,
         )
 
@@ -395,13 +395,13 @@ class TestTrotterisation:
         np.testing.assert_allclose(coeffs_actual, coeffs_expect)
 
     def test_lt_singlequbit(self):
-        word1 = PauliWord(terms=(Pauli.Z,), qubits=(0,))
-        word2 = PauliWord(terms=(Pauli.Y,), qubits=(0,))
-        word3 = PauliWord(terms=(Pauli.X,), qubits=(0,))
+        word1 = PauliWord(paulis=(Pauli.Z,), qubits=(0,))
+        word2 = PauliWord(paulis=(Pauli.Y,), qubits=(0,))
+        word3 = PauliWord(paulis=(Pauli.X,), qubits=(0,))
 
         coeffs = (1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0)
-        terms = (word1, word2, word3)
-        h = PauliSum(coefficients=coeffs, terms=terms, identity_coefficient=0)
+        words = (word1, word2, word3)
+        h = PauliSum(coefficients=coeffs, words=words, identity_coefficient=0)
 
         trotterisation = Trotterisation(h, t=10, num_steps=20, order=1)
 
@@ -422,10 +422,12 @@ class TestTrotterisation:
         np.testing.assert_allclose(u, u_target)
 
     def test_lt_fourqubits(self):
-        word1 = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
-        word2 = PauliWord(terms=(Pauli.Y, Pauli.Z, Pauli.X), qubits=(1, 2, 3))
+        word1 = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
+        word2 = PauliWord(paulis=(Pauli.Y, Pauli.Z, Pauli.X), qubits=(1, 2, 3))
         h = PauliSum(
-            coefficients=(5.0, 10.0), terms=(word1, word2), identity_coefficient=0
+            coefficients=(5.0, 10.0),
+            words=(word1, word2),
+            identity_coefficient=0,
         )
         num_qubits = h.num_qubits
         trotterisation = Trotterisation(h, t=7.5, num_steps=10, order=1)
@@ -450,13 +452,13 @@ class TestTrotterisation:
         np.testing.assert_allclose(u, u_target, atol=1e-15)
 
     def test_st_singlequbit(self):
-        word1 = PauliWord(terms=(Pauli.Z,), qubits=(0,))
-        word2 = PauliWord(terms=(Pauli.Y,), qubits=(0,))
-        word3 = PauliWord(terms=(Pauli.X,), qubits=(0,))
+        word1 = PauliWord(paulis=(Pauli.Z,), qubits=(0,))
+        word2 = PauliWord(paulis=(Pauli.Y,), qubits=(0,))
+        word3 = PauliWord(paulis=(Pauli.X,), qubits=(0,))
 
         coeffs = (1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0)
-        terms = (word1, word2, word3)
-        h = PauliSum(coefficients=coeffs, terms=terms, identity_coefficient=0)
+        words = (word1, word2, word3)
+        h = PauliSum(coefficients=coeffs, words=words, identity_coefficient=0)
         num_qubits = h.num_qubits
 
         trotterisation = Trotterisation(h, t=10, num_steps=20, order=2)
@@ -481,13 +483,13 @@ class TestTrotterisation:
         np.testing.assert_allclose(u, u_target)
 
     def test_st_fourqubits(self):
-        word1 = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
-        word2 = PauliWord(terms=(Pauli.Y, Pauli.Z, Pauli.X), qubits=(1, 2, 3))
-        word3 = PauliWord(terms=(Pauli.Z, Pauli.X), qubits=(1, 3))
+        word1 = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
+        word2 = PauliWord(paulis=(Pauli.Y, Pauli.Z, Pauli.X), qubits=(1, 2, 3))
+        word3 = PauliWord(paulis=(Pauli.Z, Pauli.X), qubits=(1, 3))
 
         h = PauliSum(
             coefficients=(5.0, 3.0, 1.0),
-            terms=(word1, word2, word3),
+            words=(word1, word2, word3),
             identity_coefficient=0,
         )
         num_qubits = h.num_qubits
@@ -520,10 +522,10 @@ class TestTrotterisation:
         np.testing.assert_allclose(u, u_target, atol=1e-15)
 
     def test_nonzero_identity_lt_fourqubits(self):
-        word1 = PauliWord(terms=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
-        word2 = PauliWord(terms=(Pauli.Y, Pauli.Z, Pauli.X), qubits=(1, 2, 3))
+        word1 = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
+        word2 = PauliWord(paulis=(Pauli.Y, Pauli.Z, Pauli.X), qubits=(1, 2, 3))
         h = PauliSum(
-            coefficients=(0.5, 0.5), terms=(word1, word2), identity_coefficient=10
+            coefficients=(0.5, 0.5), words=(word1, word2), identity_coefficient=10
         )
         num_qubits = h.num_qubits
         t = 12

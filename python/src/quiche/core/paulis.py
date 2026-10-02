@@ -53,14 +53,14 @@ class PauliWord(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    terms: tuple[Pauli, ...]
+    paulis: tuple[Pauli, ...]
     qubits: tuple[int, ...]
 
     @model_validator(mode="after")
     def check_nonzero_lengths(self) -> Self:
-        """Validate number of terms and number of qubits is nonzero."""
-        if len(self.terms) == 0:
-            error_msg = "The number of terms of the PauliWord must be nonzero."
+        """Validate number of paulis and number of qubits is nonzero."""
+        if len(self.paulis) == 0:
+            error_msg = "The number of paulis of the PauliWord must be nonzero."
             raise ValueError(error_msg)
 
         if len(self.qubits) == 0:
@@ -70,9 +70,9 @@ class PauliWord(BaseModel):
 
     @model_validator(mode="after")
     def check_lengths_match(self) -> Self:
-        """Validate number of terms and number of qubits."""
-        if len(self.terms) != len(self.qubits):
-            error_msg = "The terms and qubits of the PauliWord must be the same length"
+        """Validate number of paulis and number of qubits."""
+        if len(self.paulis) != len(self.qubits):
+            error_msg = "The paulis and qubits of the PauliWord must be the same length"
             raise ValueError(error_msg)
         return self
 
@@ -112,7 +112,7 @@ class PauliWord(BaseModel):
 
         ops = ["I"] * length
 
-        for i, pauli in zip(self.qubits, self.terms, strict=True):
+        for i, pauli in zip(self.qubits, self.paulis, strict=True):
             ops[i] = str(pauli)
 
         if not big_endian:
@@ -149,7 +149,7 @@ class PauliWord(BaseModel):
         for ii in range(length):
             if ii in self.qubits:
                 idx = self.qubits.index(ii)
-                curr = self.terms[idx]._to_matrix()  # noqa: SLF001
+                curr = self.paulis[idx]._to_matrix()  # noqa: SLF001
             else:
                 curr = identity
             result = np.kron(result, curr)
@@ -162,24 +162,24 @@ class PauliSum(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     coefficients: tuple[float, ...]
-    terms: tuple[PauliWord, ...]
+    words: tuple[PauliWord, ...]
     identity_coefficient: float = 0.0
 
     @model_validator(mode="after")
     def check_nonzero_lengths(self) -> Self:
-        """Validate number of terms is nonzero."""
-        if len(self.terms) == 0:
-            error_msg = "The number of terms of the PauliSum must be nonzero."
+        """Validate number of words is nonzero."""
+        if len(self.words) == 0:
+            error_msg = "The number of words of the PauliSum must be nonzero."
             raise ValueError(error_msg)
 
         return self
 
     @model_validator(mode="after")
     def check_lengths_match(self) -> Self:
-        """Validate number of terms and coefficients match."""
-        if len(self.coefficients) != len(self.terms):
+        """Validate number of words and coefficients match."""
+        if len(self.coefficients) != len(self.words):
             error_msg = (
-                "The coefficients and terms of the PauliSum must be the same length"
+                "The coefficients and words of the PauliSum must be the same length"
             )
             raise ValueError(error_msg)
 
@@ -187,7 +187,7 @@ class PauliSum(BaseModel):
 
     @model_validator(mode="after")
     def check_for_zero_coefficients(self) -> Self:
-        """Validate linear combination has no zero coefficient terms."""
+        """Validate linear combination has no zero coefficient words."""
         if any(isclose(c, 0) for c in self.coefficients):
             error_msg = "PauliSum should not contain zero-valued coefficients"
             raise ValueError(error_msg)
@@ -197,7 +197,7 @@ class PauliSum(BaseModel):
     @cached_property
     def num_qubits(self) -> int:
         """Get the number of qubits targeted by all the operators."""
-        return max(term.greatest_qubit for term in self.terms) + 1
+        return max(word.greatest_qubit for word in self.words) + 1
 
     @computed_field
     @cached_property
@@ -207,15 +207,15 @@ class PauliSum(BaseModel):
 
     @computed_field
     @cached_property
-    def num_terms(self) -> int:
-        """Get number of terms in linear combination."""
-        return len(self.terms)
+    def num_words(self) -> int:
+        """Get number of words in linear combination."""
+        return len(self.words)
 
     @computed_field
     @cached_property
-    def num_terms_with_identity(self) -> int:
+    def num_words_with_identity(self) -> int:
         """Get the number of terms including the identity if non-zero."""
-        return self.num_terms + (1 if self.has_identity else 0)
+        return self.num_words + (1 if self.has_identity else 0)
 
     @computed_field
     @cached_property
@@ -226,10 +226,10 @@ class PauliSum(BaseModel):
     def __str__(self) -> str:
         """Define printing for PauliSum class."""
         msg = str(self.identity_coefficient) + " * I\n"
-        for ii in range(self.num_terms):
+        for ii in range(self.num_words):
             msg += f"+ {self.coefficients[ii]:f} * "
             for op, qubit in zip(
-                self.terms[ii].terms, self.terms[ii].qubits, strict=True
+                self.words[ii].paulis, self.words[ii].qubits, strict=True
             ):
                 if op is Pauli.X:
                     msg += "X"
@@ -245,7 +245,7 @@ class PauliSum(BaseModel):
         """Get a copy of the PauliSum with the identity coefficient zeroed."""
         return PauliSum(
             coefficients=self.coefficients,
-            terms=self.terms,
+            words=self.words,
             identity_coefficient=0.0,
         )
 
@@ -259,7 +259,7 @@ class PauliSum(BaseModel):
 
         Will raise if called outside of a QuESTEnv.
         """
-        strings = [word.to_quest(self.num_qubits) for word in self.terms]
+        strings = [word.to_quest(self.num_qubits) for word in self.words]
         coefficients = list(self.coefficients)
 
         if self.has_identity:
@@ -272,7 +272,7 @@ class PauliSum(BaseModel):
         total = self.identity_coefficient * np.identity(
             2**self.num_qubits, dtype=complex
         )
-        for word, coeff in zip(self.terms, self.coefficients, strict=True):
+        for word, coeff in zip(self.words, self.coefficients, strict=True):
             total += coeff * word._to_matrix(  # noqa: SLF001
                 length=self.num_qubits, ignore_idle_qubits=False
             )

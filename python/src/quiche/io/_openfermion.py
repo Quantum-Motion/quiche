@@ -61,12 +61,12 @@ def _qubit_operator_to_pauli_sum(operator: QubitOperator) -> PauliSum:
 
         coefficients.append(coefficient.real)
         pauli_words.append(
-            PauliWord(terms=tuple(Pauli(pauli) for pauli in paulis), qubits=qubits)
+            PauliWord(paulis=tuple(Pauli(pauli) for pauli in paulis), qubits=qubits)
         )
 
     return PauliSum(
         coefficients=tuple(coefficients),
-        terms=tuple(pauli_words),
+        words=tuple(pauli_words),
         identity_coefficient=identity_coefficient.real,
     )
 
