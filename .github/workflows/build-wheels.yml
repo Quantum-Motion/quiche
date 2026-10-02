@@ -29,12 +29,17 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.1
 
+      - name: Configure Windows build environment
+        if: runner.os == 'Windows'
+        shell: bash
+        # Set temp directory to the same drive as uv's cache so uv can hardlink
+        # instead of copying. Also ensure MSVC compiles in parallel.
+        run: |
+          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "CL=/MP" >> "$GITHUB_ENV"
+
       - name: Run cibuildwheel
         run: uvx cibuildwheel~=4.2.0 --output-dir dist
-        env:
-          # Ensure Windows compiles in parallel for CI runs
-          CL: ${{ runner.os == 'Windows' && '/MP' || '' }}
-          TEMP: ${{ runner.os == 'Windows' && runner.temp || '' }}
 
       - name: Upload wheels
         uses: actions/upload-artifact@v7
