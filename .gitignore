@@ -4,6 +4,8 @@ __pycache__
 .venv
 *.egg-info
 dist
+python/examples/H2.zip
+python/examples/H2.hdf5
 
 # C++
 compile_commands.json
