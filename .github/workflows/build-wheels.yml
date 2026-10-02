@@ -31,6 +31,9 @@ jobs:
 
       - name: Run cibuildwheel
         run: uvx cibuildwheel~=4.2.0 --output-dir dist
+        env:
+          # Ensure Windows compiles in parallel for CI runs
+          CL: ${{ runner.os == 'Windows' && '/MP' || '' }}
 
       - name: Upload wheels
         uses: actions/upload-artifact@v7
