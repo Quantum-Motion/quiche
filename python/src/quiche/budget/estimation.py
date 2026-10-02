@@ -12,46 +12,96 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Methods for determining phase estimation parameters from error budgets."""
+"""
+Error bounds and success probabilities for phase estimation.
 
-from math import ceil, log2
+The protocol modelled here runs QPE `repetitions` times on the prepared state and keeps
+the minimum energy reading. With overlap `p0` (the squared overlap of the prepared state
+with the ground state), each run collapses onto the ground state with probability `p0`,
+so roughly `1/p0` runs are needed. Each run also has a small chance of a spuriously low
+reading; over `1/p0` runs these add up unless each run's tail probability shrinks by a
+factor of `p0`, which costs `log2(1/p0)` extra ancillas [LinTong2022, Sec. I A].
 
-# Extra ancillas beyond the precision and overlap terms, from the textbook
-# success-probability analysis.
-_EXTRA_ANCILLAS = 4
+Energy errors are in the units of the Hamiltonian's coefficients.
+
+References
+----------
+[NielsenChuang] Nielsen, Chuang, "Quantum Computation and Quantum Information",
+    Sec. 5.2.1, Eq. (5.35).
+[LinTong2022] Lin, Tong, "Heisenberg-limited ground-state energy estimation for early
+    fault-tolerant quantum computers", PRX Quantum 3, 010318 (2022).
+[Campbell2019] Campbell, "Random compiler for fast Hamiltonian simulation",
+    Phys. Rev. Lett. 123, 070503 (2019), App. E.
+
+"""
+
+from math import ceil, log, log2
+
+# Smallest number of bits beyond the precision bits for which the tail bound holds.
+MIN_EXTRA_ANCILLAS = 2
+# Default probability of missing the ground state in every repetition.
+DEFAULT_MISS_PROBABILITY = 0.05
 
 
-def _overlap_ancillas(overlap: float) -> int:
-    """Get the ancillas needed to compensate for an imperfect initial-state overlap."""
+def get_precision_bits(energy_scale: float, error: float) -> int:
+    """
+    Get the fewest phase bits resolving energies to within `error`.
+
+    `energy_scale` is the energy per cycle of phase, so `b` bits resolve
+    `energy_scale / 2^b`.
+    """
+    return max(1, ceil(log2(energy_scale / error)))
+
+
+def get_estimation_error(energy_scale: float, precision_bits: int) -> float:
+    """Get the energy resolution of `precision_bits` phase bits."""
+    return energy_scale / 2**precision_bits
+
+
+def get_overlap_bits(overlap: float) -> int:
+    """Get the extra bits protecting the minimum over `~1/overlap` repetitions."""
     return ceil(log2(1 / overlap))
 
 
-# TODO(Annina): Decide whether estimation error should be input in Ha. In that case
-# we will have to convert it to a dimensionless error in the phase.
-def get_textbook_qpe_ancillas(error: float, overlap: float) -> int:
-    """Get the number of ancillas required for Textbook QPE."""
-    # TODO(Annina): add the one-norm of the Hamiltonian.
-    return ceil(log2(1 / error)) + _overlap_ancillas(overlap) + _EXTRA_ANCILLAS
+def get_tail_probability(extra_bits: int) -> float:
+    """
+    Get the probability that one QPE run misses the precision window.
 
-
-def get_textbook_qpe_error(num_ancillas: int, overlap: float) -> float:
-    """Get the estimation error achieved by Textbook QPE with `num_ancillas`."""
-    precision_bits = num_ancillas - _overlap_ancillas(overlap) - _EXTRA_ANCILLAS
-    if precision_bits < 0:
-        minimum = _overlap_ancillas(overlap) + _EXTRA_ANCILLAS
-        msg = (
-            f"Textbook QPE needs at least {minimum} ancillas for overlap {overlap}, "
-            f"got {num_ancillas}."
-        )
+    With `extra_bits` bits beyond the precision bits, the phase is accurate to the
+    precision bits with probability at least `1 - 1 / (2 (2^p - 2))` [NielsenChuang].
+    """
+    if extra_bits < MIN_EXTRA_ANCILLAS:
+        msg = f"Need at least {MIN_EXTRA_ANCILLAS} extra bits, got {extra_bits}."
         raise ValueError(msg)
-    return 2.0**-precision_bits
+    return 1 / (2 * (2**extra_bits - 2))
 
 
-def get_kitaev_qpe_rounds(error: float, overlap: float) -> int:
-    """Get the number of rounds for Kitaev single-ancilla QPE."""
-    return get_textbook_qpe_ancillas(error, overlap)
+def get_default_repetitions(overlap: float, tail_probability: float) -> int:
+    """Get the fewest repetitions missing the ground state with probability <= 5%."""
+    hit = overlap * (1 - tail_probability)
+    if hit >= 1:
+        return 1
+    return max(1, ceil(log(DEFAULT_MISS_PROBABILITY) / log(1 - hit)))
 
 
-def get_kitaev_qpe_error(num_rounds: int, overlap: float) -> float:
-    """Get the estimation error achieved by Kitaev single-ancilla QPE."""
-    return get_textbook_qpe_error(num_rounds, overlap)
+def get_success_probability(
+    *,
+    overlap: float,
+    tail_probability: float,
+    repetitions: int,
+    applications: int,
+    channel_error: float,
+) -> float:
+    """
+    Get a lower bound on the probability that the minimum reading is within the error.
+
+    By the union bound, the protocol fails only if no repetition lands on the ground
+    state within the precision window, if any repetition reads spuriously outside it,
+    or if the simulation channel error changes any repetition's outcome. The last term
+    is `2 x` the total diamond-distance error of the controlled applications
+    [Campbell2019, Eq. (E4)].
+    """
+    miss = (1 - overlap * (1 - tail_probability)) ** repetitions
+    tails = repetitions * tail_probability
+    channel = 2 * repetitions * applications * channel_error
+    return max(0.0, 1 - miss - tails - channel)

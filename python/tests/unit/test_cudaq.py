@@ -854,13 +854,17 @@ class TestEstimationToCudaq:
     ):
         h = _pauli_sum((0.6, "X"), (0.4, "Z"))
         if method is sim.Qubitised:
-            simulation = sim.Qubitised(hamiltonian=h, prepare_error=0.5)
+            simulation = sim.Qubitised(hamiltonian=h, error=0.5)
+        elif method is sim.QDRIFT:
+            simulation = sim.QDRIFT(hamiltonian=h, reps=20)
         else:
-            simulation = method(hamiltonian=h, error=0.5)
+            simulation = sim.Trotter(hamiltonian=h, error=0.5)
+        # A looser error for qubitisation keeps its walk ladder short (6 ancillas).
+        error = 4.0 if method is sim.Qubitised else 0.5
         if algorithm is est.Naive:
             qpe_method = est.Naive(simulation=simulation)
         else:
-            qpe_method = algorithm(simulation=simulation, overlap=0.5, error=0.5)
+            qpe_method = algorithm(simulation=simulation, overlap=0.5, error=error)
 
         prep = bitstring_kernel((0,))
         qpe = qpe_method.to_cudaq()
@@ -879,7 +883,7 @@ class TestEstimationToCudaq:
 
     def test_kitaev_not_implemented(self, h2: PauliSum):
         qpe = est.Kitaev(
-            simulation=sim.Trotter(hamiltonian=h2, reps=1), overlap=1, num_rounds=4
+            simulation=sim.Trotter(hamiltonian=h2, reps=1), overlap=1, num_rounds=6
         )
         with pytest.raises(NotImplementedError, match="Kitaev"):
             qpe.to_cudaq()
@@ -888,10 +892,79 @@ class TestEstimationToCudaq:
         qpe = est.Iterative(
             simulation=sim.Qubitised(hamiltonian=h2, num_phase_ancillas=2),
             overlap=1,
-            num_rounds=4,
+            num_rounds=6,
         )
         with pytest.raises(NotImplementedError, match="Qubitised"):
             qpe.to_cudaq()
+
+
+class TestRepeatedMinimum:
+    """`to_cudaq(state_prep)` runs the repeat-and-take-minimum protocol in-kernel."""
+
+    def _textbook(self, repetitions: int) -> est.Textbook:
+        # H = Z with time and ancillas placing both eigenvalues exactly on a bin.
+        h = _pauli_sum((1.0, "Z"))
+        time = 2 * np.pi * 5 / (1 << 6)
+        trotter = sim.Trotter(hamiltonian=h, time=time, reps=1)
+        return est.Textbook(
+            simulation=trotter, overlap=0.5, num_ancillas=6, repetitions=repetitions
+        )
+
+    def test_minimum_finds_ground_state(self, cudaq: ModuleType):
+        # |+> has overlap 1/2 with the ground state |1> (E = -1) and 1/2 with |0>
+        # (E = +1), so a single run reads +1 half the time; the minimum of 20 runs
+        # reads +1 only with probability 2^-20.
+        @cudaq.kernel
+        def plus(qubits: cudaq.qview) -> None:
+            h(qubits[0])  # noqa: F821 -- CUDA-Q intrinsic, not a real Python name
+
+        repeated = self._textbook(repetitions=20).to_cudaq(state_prep=plus)
+        energies = cudaq.run(repeated, shots_count=10)
+
+        np.testing.assert_allclose(energies, -1.0, atol=1e-9)
+
+    def test_single_repetition_matches_single_run(self, cudaq: ModuleType):
+        repeated = self._textbook(repetitions=1).to_cudaq(
+            state_prep=bitstring_kernel((0,))
+        )
+        energies = cudaq.run(repeated, shots_count=5)
+
+        np.testing.assert_allclose(energies, 1.0, atol=1e-9)
+
+    def test_naive_rejects_state_prep(self):
+        naive = est.Naive(simulation=sim.Trotter(hamiltonian=GENERAL, reps=1))
+        with pytest.raises(ValueError, match="no minimum"):
+            naive.to_cudaq(state_prep=bitstring_kernel((0, 0)))
+
+
+class TestDefaultTimeDoesNotWrap:
+    """The default time keeps phases unwrapped even with a large identity term."""
+
+    def test_eigenvalue_above_lambda(self, cudaq: ModuleType):
+        from cudaq_algorithms import sim_utils  # noqa: PLC0415
+
+        # Eigenvalues are +-1 + 0.7, so the top one, 1.7, exceeds lam = 1.4. With
+        # t = pi / lam its phase would wrap and decode as -1.1; the default
+        # t = pi / (lam + |c_I|) keeps it in range.
+        h = _pauli_sum((0.6, "X"), (0.8, "Z"), identity=0.7)
+        eigvals, eigvecs = np.linalg.eigh(h._to_matrix())
+        eigenvalue, eigenvector = eigvals[1], eigvecs[:, 1]
+        assert eigenvalue > h.lam
+
+        trotter = sim.Trotter(hamiltonian=h, reps=10)
+        qpe = est.Textbook(simulation=trotter, overlap=1, num_ancillas=6).to_cudaq()
+
+        @cudaq.kernel
+        def run(state: cudaq.State) -> float:
+            """Load the eigenstate, then run QPE on it."""
+            data = cudaq.qvector(state)
+            return qpe(data)
+
+        initial_state = sim_utils.state_from(eigenvector.astype(complex))
+        energies = cudaq.run(run, initial_state, shots_count=20)
+
+        bin_width = trotter.energy_scale / (1 << 6)
+        assert abs(statistics.mode(energies) - eigenvalue) < bin_width
 
 
 class TestSoftDependency:

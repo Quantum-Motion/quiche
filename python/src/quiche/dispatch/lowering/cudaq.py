@@ -16,32 +16,59 @@
 
 from quiche.cudaq import (
     CudaqKernel,
-    iterative_qpe_kernel,
+    iterative_qpe_core,
     naive_qpe_kernel,
     qubitised_naive_qpe_kernel,
-    qubitised_qpe_kernel,
-    textbook_qpe_kernel,
+    qubitised_qpe_core,
+    repeated_minimum_kernel,
+    single_run_kernel,
+    textbook_qpe_core,
 )
 from quiche.estimation import EstimationMethod, Iterative, Kitaev, Naive, Textbook
 from quiche.simulation import Qubitised
 
 
-def estimation(qpe: EstimationMethod) -> CudaqKernel:
-    """Build the `(data: cudaq.qview) -> float` QPE kernel; see `to_cudaq`."""
+def estimation(
+    qpe: EstimationMethod, state_prep: CudaqKernel | None = None
+) -> CudaqKernel:
+    """Build the QPE kernel, repeated with `state_prep` if given; see `to_cudaq`."""
+    if isinstance(qpe, Naive):
+        if state_prep is not None:
+            msg = (
+                "Naive QPE returns single-shot +-1 outcomes, not energies, so there "
+                "is no minimum to take over repetitions; call to_cudaq() without "
+                "state_prep."
+            )
+            raise ValueError(msg)
+        return _naive(qpe)
+
+    core, work_qubits = _core(qpe)
+    if state_prep is None:
+        return single_run_kernel(core, work_qubits)
+    return repeated_minimum_kernel(
+        core, work_qubits, state_prep, qpe.num_data, qpe.repetitions
+    )
+
+
+def _naive(qpe: Naive) -> CudaqKernel:
+    """Build the `(data: cudaq.qview) -> float` Hadamard-test kernel."""
+    match qpe.simulation:
+        case Qubitised() as sim:
+            return qubitised_naive_qpe_kernel(sim.hamiltonian, n_qubits=qpe.num_data)
+        case sim:
+            return naive_qpe_kernel(sim, n_qubits=qpe.num_data)
+
+
+def _core(qpe: Textbook | Kitaev | Iterative) -> tuple[CudaqKernel, int]:
+    """Build the `(data, work) -> float` core kernel and its work register size."""
     match qpe:
         case Textbook(simulation=Qubitised() as sim):
-            return qubitised_qpe_kernel(
+            return qubitised_qpe_core(
                 sim.hamiltonian, qpe.num_qpe_ancillas, n_qubits=qpe.num_data
             )
 
         case Textbook(simulation=sim):
-            return textbook_qpe_kernel(sim, qpe.num_qpe_ancillas, n_qubits=qpe.num_data)
-
-        case Naive(simulation=Qubitised() as sim):
-            return qubitised_naive_qpe_kernel(sim.hamiltonian, n_qubits=qpe.num_data)
-
-        case Naive(simulation=sim):
-            return naive_qpe_kernel(sim, n_qubits=qpe.num_data)
+            return textbook_qpe_core(sim, qpe.num_qpe_ancillas, n_qubits=qpe.num_data)
 
         case Iterative(simulation=Qubitised()):
             msg = (
@@ -51,7 +78,7 @@ def estimation(qpe: EstimationMethod) -> CudaqKernel:
             raise NotImplementedError(msg)
 
         case Iterative(simulation=sim):
-            return iterative_qpe_kernel(sim, qpe.num_rounds, n_qubits=qpe.num_data)
+            return iterative_qpe_core(sim, qpe.num_rounds, n_qubits=qpe.num_data)
 
         case Kitaev():
             msg = (

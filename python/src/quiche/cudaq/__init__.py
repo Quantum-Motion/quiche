@@ -30,10 +30,15 @@ opaquely inside MLIR initialisation.
 from quiche.cudaq._runtime import CudaqKernel
 from quiche.cudaq.estimation import (
     inverse_qft_kernel,
+    iterative_qpe_core,
     iterative_qpe_kernel,
     naive_qpe_kernel,
     qubitised_naive_qpe_kernel,
+    qubitised_qpe_core,
     qubitised_qpe_kernel,
+    repeated_minimum_kernel,
+    single_run_kernel,
+    textbook_qpe_core,
     textbook_qpe_kernel,
 )
 from quiche.cudaq.simulation import (
@@ -53,6 +58,7 @@ __all__ = [
     "CudaqKernel",
     "bitstring_kernel",
     "inverse_qft_kernel",
+    "iterative_qpe_core",
     "iterative_qpe_kernel",
     "naive_qpe_kernel",
     "qdrift_evolution",
@@ -61,9 +67,13 @@ __all__ = [
     "qubitised_encoding",
     "qubitised_kernel",
     "qubitised_naive_qpe_kernel",
+    "qubitised_qpe_core",
     "qubitised_qpe_kernel",
     "qubitised_walk",
+    "repeated_minimum_kernel",
     "simulation_kernel",
+    "single_run_kernel",
+    "textbook_qpe_core",
     "textbook_qpe_kernel",
     "trotter_evolution",
     "trotter_kernel",

@@ -16,9 +16,18 @@
 Phase estimation algorithms, each wrapping a Hamiltonian simulation method.
 
 Each algorithm is specified either by its size (ancillas or rounds) or by a target
-estimation error, never both; the other half is resolved on construction, as for the
-simulation methods in `quiche.simulation`. `error` is then the algorithm's own
-estimation error, and `total_error` adds the simulation error to it as an upper bound.
+estimation `error`, never both; the other half is resolved on construction, as for the
+simulation methods in `quiche.simulation`. All errors are energies, in the units of the
+Hamiltonian's coefficients (Hartree for HamLib or FCIDUMP inputs).
+
+The modelled protocol runs QPE `repetitions` times and keeps the minimum energy
+reading. `error` is the algorithm's own energy resolution, `total_error` adds the
+simulation's energy error to it, and `success_probability` lower-bounds the probability
+that the minimum reading lies within `total_error` of the ground-state energy. The
+bits are `precision_bits` (setting `error`), plus `ceil(log2(1 / overlap))` bits that
+keep the minimum over `~1/overlap` repetitions reliable, plus `extra_ancillas` bits that
+set the per-run tail probability. See `quiche.budget.estimation` for the bounds and
+their references.
 
 The data register width is `hamiltonian.n_qubits`, so the Hamiltonian is assumed to
 have no unused trailing qubits: the state preparation must act on exactly that many
@@ -29,7 +38,7 @@ externally-prepared state on the data register; compose it with a state preparat
 (e.g. `quiche.state_prep.HartreeFock`) using each backend's own tools.
 """
 
-from math import inf
+from math import inf, nan
 from typing import Annotated
 
 from pydantic import Field, PositiveFloat, PositiveInt
@@ -38,18 +47,22 @@ from qualtran import Bloq
 
 from quiche._validation import require_exactly_one
 from quiche.budget.estimation import (
-    get_kitaev_qpe_error,
-    get_kitaev_qpe_rounds,
-    get_textbook_qpe_ancillas,
-    get_textbook_qpe_error,
+    MIN_EXTRA_ANCILLAS,
+    get_default_repetitions,
+    get_estimation_error,
+    get_overlap_bits,
+    get_precision_bits,
+    get_success_probability,
+    get_tail_probability,
 )
 from quiche.cudaq import CudaqKernel
 from quiche.dispatch.spec import Spec
 from quiche.quest import QuestRoutine
 from quiche.simulation import SimulationMethod
 
-# Magnitude of the overlap of the prepared initial state with the target eigenstate.
+# Squared overlap |<psi|E0>|^2 of the prepared state with the ground state.
 type Overlap = Annotated[float, Field(gt=0, le=1)]
+type ExtraAncillas = Annotated[int, Field(ge=MIN_EXTRA_ANCILLAS)]
 
 
 class _PhaseEstimation(Spec):
@@ -80,7 +93,7 @@ class _PhaseEstimation(Spec):
 
     @property
     def total_error(self) -> float:
-        """Get the union-bound total of the estimation and simulation errors."""
+        """Get the bound on the energy error: estimation plus simulation error."""
         return self.error + self.simulation.error
 
     # The lowering modules match on the classes defined here, so they are imported
@@ -108,11 +121,18 @@ class _PhaseEstimation(Spec):
 
         return quest.estimation(self)
 
-    def to_cudaq(self) -> CudaqKernel:
+    def to_cudaq(self, state_prep: CudaqKernel | None = None) -> CudaqKernel:
         """
         Build the CUDA-Q kernel implementing the QPE algorithm.
 
-        The returned kernel has signature `(data: cudaq.qview) -> float`: it operates
+        Given a `state_prep` kernel `(qubits: cudaq.qview) -> None`, the returned kernel
+        has signature `() -> float` and runs the whole modelled protocol in-kernel: for
+        each of the `repetitions`, it allocates a fresh data register, prepares it, runs
+        one QPE, and keeps the minimum energy, which it returns. This is what
+        `success_probability` describes. `Naive` has no minimum to take, so raises.
+
+        Without `state_prep`, the returned kernel runs a single QPE and has signature
+        `(data: cudaq.qview) -> float`: it operates
         in place on an already-allocated data register (the same contract as
         `HartreeFock.to_cudaq()`'s kernel). Compose it with a state-preparation kernel
         by allocating the register once and calling both kernels on it inside one
@@ -151,30 +171,97 @@ class _PhaseEstimation(Spec):
         """
         from quiche.dispatch.lowering import cudaq  # noqa: PLC0415
 
-        return cudaq.estimation(self)
+        return cudaq.estimation(self, state_prep)
+
+
+class _Bounded(_PhaseEstimation):
+    """Error and success-probability bookkeeping for the bit-by-bit algorithms."""
+
+    overlap: float
+    extra_ancillas: int
+    repetitions: int
+
+    @property
+    def num_bits(self) -> int:
+        """Get the number of phase bits measured per run."""
+        raise NotImplementedError
+
+    def _resolve(self, bits_field: str) -> None:
+        """Resolve the bits or error from the other, then the repetitions."""
+        require_exactly_one(
+            **{bits_field: getattr(self, bits_field), "error": self.error}
+        )
+        protection = get_overlap_bits(self.overlap) + self.extra_ancillas
+        energy_scale = self.simulation.energy_scale
+        if getattr(self, bits_field) is None:
+            precision_bits = get_precision_bits(energy_scale, self.error)
+            object.__setattr__(self, bits_field, precision_bits + protection)
+        if self.precision_bits < 1:
+            msg = (
+                f"Need at least {protection + 1} bits for overlap {self.overlap} and "
+                f"{self.extra_ancillas} extra ancillas, got {self.num_bits}."
+            )
+            raise ValueError(msg)
+        error = get_estimation_error(energy_scale, self.precision_bits)
+        object.__setattr__(self, "error", error)
+        if self.repetitions is None:
+            repetitions = get_default_repetitions(self.overlap, self.tail_probability)
+            object.__setattr__(self, "repetitions", repetitions)
+
+    @property
+    def precision_bits(self) -> int:
+        """Get the number of bits setting the energy resolution `error`."""
+        return self.num_bits - get_overlap_bits(self.overlap) - self.extra_ancillas
+
+    @property
+    def tail_probability(self) -> float:
+        """Get the probability that one run reads outside the precision window."""
+        return get_tail_probability(
+            get_overlap_bits(self.overlap) + self.extra_ancillas
+        )
+
+    @property
+    def applications(self) -> int:
+        """Get the number of controlled applications of the simulation per run."""
+        return 2**self.num_bits - 1
+
+    @property
+    def success_probability(self) -> float:
+        """Get a lower bound on the probability that the minimum is within the error."""
+        return get_success_probability(
+            overlap=self.overlap,
+            tail_probability=self.tail_probability,
+            repetitions=self.repetitions,
+            applications=self.applications,
+            channel_error=self.simulation.channel_error,
+        )
 
 
 @dataclass(frozen=True)
-class Textbook(_PhaseEstimation):
+class Textbook(_Bounded):
     """
     Textbook QPE: multi-ancilla, using C-U^(2^k) gates and the inverse QFT.
 
-    Give exactly one of `num_ancillas` or the estimation `error`.
+    Give exactly one of `num_ancillas` or the energy `error`. `overlap` is the squared
+    overlap of the prepared state with the ground state. `repetitions` defaults to the
+    fewest runs missing the ground state with probability at most 5%.
     """
 
     simulation: SimulationMethod
     overlap: Overlap
     num_ancillas: PositiveInt | None = None
     error: PositiveFloat | None = None
+    extra_ancillas: ExtraAncillas = 4
+    repetitions: PositiveInt | None = None
 
     def __post_init__(self) -> None:
         """Resolve the ancillas or estimation error from the other."""
-        require_exactly_one(num_ancillas=self.num_ancillas, error=self.error)
-        if self.num_ancillas is None:
-            num_ancillas = get_textbook_qpe_ancillas(self.error, self.overlap)
-            object.__setattr__(self, "num_ancillas", num_ancillas)
-        error = get_textbook_qpe_error(self.num_ancillas, self.overlap)
-        object.__setattr__(self, "error", error)
+        self._resolve("num_ancillas")
+
+    @property
+    def num_bits(self) -> int:
+        """Get the number of phase bits measured per run."""
+        return self.num_ancillas
 
     @property
     def num_qpe_ancillas(self) -> int:
@@ -183,22 +270,24 @@ class Textbook(_PhaseEstimation):
 
 
 @dataclass(frozen=True)
-class _SingleAncilla(_PhaseEstimation):
+class _SingleAncilla(_Bounded):
     """Single-ancilla QPE over `num_rounds` rounds of C-U^(2^k)."""
 
     simulation: SimulationMethod
     overlap: Overlap
     num_rounds: PositiveInt | None = None
     error: PositiveFloat | None = None
+    extra_ancillas: ExtraAncillas = 4
+    repetitions: PositiveInt | None = None
 
     def __post_init__(self) -> None:
         """Resolve the rounds or estimation error from the other."""
-        require_exactly_one(num_rounds=self.num_rounds, error=self.error)
-        if self.num_rounds is None:
-            num_rounds = get_kitaev_qpe_rounds(self.error, self.overlap)
-            object.__setattr__(self, "num_rounds", num_rounds)
-        error = get_kitaev_qpe_error(self.num_rounds, self.overlap)
-        object.__setattr__(self, "error", error)
+        self._resolve("num_rounds")
+
+    @property
+    def num_bits(self) -> int:
+        """Get the number of phase bits measured per run."""
+        return self.num_rounds
 
 
 @dataclass(frozen=True)
@@ -206,7 +295,9 @@ class Kitaev(_SingleAncilla):
     """
     Kitaev QPE: single-ancilla, using C-U^(2^k) gates.
 
-    Give exactly one of `num_rounds` or the estimation `error`.
+    Give exactly one of `num_rounds` or the energy `error`. The error and success
+    bookkeeping is that of `Iterative`; the QuEST backend idealises each round with
+    exact expectation values, so its readout is deterministic.
     """
 
 
@@ -215,7 +306,8 @@ class Iterative(_SingleAncilla):
     """
     Iterative QPE: single-ancilla, using C-U^(2^k) gates and Rz for feedback.
 
-    Give exactly one of `num_rounds` or the estimation `error`.
+    Give exactly one of `num_rounds` or the energy `error`. Its readout has the same
+    distribution as `Textbook` with as many ancillas as rounds (semiclassical QFT).
     """
 
 
@@ -225,7 +317,8 @@ class Naive(_PhaseEstimation):
     Naive QPE: single-ancilla Hadamard test of a single C-U.
 
     One shot carries a single bit, so there is no a-priori bound on the estimation
-    error: `error` is infinite, and so is `total_error`.
+    error: `error` and `total_error` are infinite, and `success_probability` is
+    undefined (`nan`).
     """
 
     simulation: SimulationMethod
@@ -234,6 +327,11 @@ class Naive(_PhaseEstimation):
     def error(self) -> float:
         """Get the estimation error, which is unbounded for a Hadamard test."""
         return inf
+
+    @property
+    def success_probability(self) -> float:
+        """Get the success probability, undefined for a single Hadamard test."""
+        return nan
 
 
 type EstimationMethod = Textbook | Kitaev | Iterative | Naive

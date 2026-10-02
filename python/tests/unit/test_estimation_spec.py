@@ -27,11 +27,11 @@ from quiche.quest import QuestRoutine
 
 @pytest.fixture
 def textbook(h2: PauliSum) -> est.Textbook:
-    """Textbook QPE with qubitisation, sized as the old default error budget."""
+    """Textbook QPE with qubitisation."""
     return est.Textbook(
-        simulation=sim.Qubitised(hamiltonian=h2, prepare_error=0.16 / 3),
+        simulation=sim.Qubitised(hamiltonian=h2, error=0.05),
         overlap=1,
-        error=0.16 / 3,
+        error=0.05,
     )
 
 
@@ -57,7 +57,7 @@ class TestEstimationLowering:
     @pytest.mark.parametrize("method", [sim.Trotter, sim.QDRIFT])
     def test_to_quest_kitaev(self, h2: PauliSum, method: type[sim.SimulationMethod]):
         qpe = est.Kitaev(
-            simulation=method(hamiltonian=h2, reps=2), overlap=1, num_rounds=4
+            simulation=method(hamiltonian=h2, reps=2), overlap=1, num_rounds=6
         )
         assert len(qpe.to_quest().ops) == 1
 
@@ -67,7 +67,7 @@ class TestEstimationLowering:
         qpe = est.Kitaev(
             simulation=sim.Qubitised(hamiltonian=h2, num_phase_ancillas=2),
             overlap=1,
-            num_rounds=4,
+            num_rounds=6,
         )
         with pytest.raises(NotImplementedError, match="Qubitisation"):
             qpe.to_quest()
@@ -79,7 +79,7 @@ class TestEstimationLowering:
         self, h2: PauliSum, algorithm: type[est.Iterative | est.Kitaev]
     ):
         qpe = algorithm(
-            simulation=sim.Trotter(hamiltonian=h2, reps=1), overlap=1, num_rounds=4
+            simulation=sim.Trotter(hamiltonian=h2, reps=1), overlap=1, num_rounds=6
         )
         with pytest.raises(NotImplementedError, match=algorithm.__name__):
             qpe.to_qualtran()
@@ -88,7 +88,7 @@ class TestEstimationLowering:
         # Kitaev has no single-kernel decode (see `to_cudaq`'s docstring);
         # Naive and Iterative (Trotter/QDRIFT) are implemented and succeed.
         qpe = est.Kitaev(
-            simulation=sim.Trotter(hamiltonian=h2, reps=1), overlap=1, num_rounds=4
+            simulation=sim.Trotter(hamiltonian=h2, reps=1), overlap=1, num_rounds=6
         )
         with pytest.raises(NotImplementedError, match="Kitaev"):
             qpe.to_cudaq()

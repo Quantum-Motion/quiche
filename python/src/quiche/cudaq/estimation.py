@@ -108,7 +108,30 @@ def textbook_qpe_kernel(
     n_qubits: int | None = None,
 ) -> CudaqKernel:
     """
-    Build the Textbook QPE kernel for a `Trotter`/`QDRIFT` simulation.
+    Build the single-run Textbook QPE kernel for a `Trotter`/`QDRIFT` simulation.
+
+    The `(data: cudaq.qview) -> float` kernel allocates its own ancillas; see
+    `textbook_qpe_core` for the full contract.
+    """
+    return single_run_kernel(
+        *textbook_qpe_core(simulation, num_qpe_ancillas, n_qubits=n_qubits)
+    )
+
+
+def textbook_qpe_core(
+    simulation: Trotter | QDRIFT,
+    num_qpe_ancillas: int,
+    *,
+    n_qubits: int | None = None,
+) -> tuple[CudaqKernel, int]:
+    """
+    Build the Textbook QPE core kernel for a `Trotter`/`QDRIFT` simulation.
+
+    Returns the core kernel `(data: cudaq.qview, work: cudaq.qview) -> float` and the
+    size of its `work` register (here, the `num_qpe_ancillas` QPE ancillas). The core
+    uses but never allocates `work`, so a caller can reuse one register across
+    repetitions (see `repeated_minimum_kernel`); `textbook_qpe_kernel` wraps it as the
+    `(data) -> float` kernel described below.
 
     The Hamiltonian, `time`, steps (`reps`), `order` and QDRIFT `seed` all come from
     `simulation`.
@@ -195,9 +218,8 @@ def textbook_qpe_kernel(
     inverse_qft = inverse_qft_kernel()
 
     @cudaq.kernel
-    def qpe(data: cudaq.qview) -> float:
+    def core(data: cudaq.qview, ancilla: cudaq.qview) -> float:
         """Ladder controlled-U^(2^k), inverse QFT, then decode the energy in-kernel."""
-        ancilla = cudaq.qvector(num_qpe_ancillas)
         h(ancilla)
         for k in range(num_qpe_ancillas):
             power = 1 << k
@@ -224,7 +246,7 @@ def textbook_qpe_kernel(
             phase -= 1.0
         return -phase * (2.0 * pi / time)
 
-    return qpe
+    return core, num_qpe_ancillas
 
 
 def qubitised_qpe_kernel(
@@ -234,7 +256,28 @@ def qubitised_qpe_kernel(
     n_qubits: int | None = None,
 ) -> CudaqKernel:
     """
-    Build the Textbook QPE kernel for a `Qubitised` simulation.
+    Build the single-run Textbook QPE kernel for a `Qubitised` simulation.
+
+    The `(data: cudaq.qview) -> float` kernel allocates its own ancillas; see
+    `qubitised_qpe_core` for the full contract.
+    """
+    return single_run_kernel(
+        *qubitised_qpe_core(hamiltonian, num_qpe_ancillas, n_qubits=n_qubits)
+    )
+
+
+def qubitised_qpe_core(
+    hamiltonian: PauliSum,
+    num_qpe_ancillas: int,
+    *,
+    n_qubits: int | None = None,
+) -> tuple[CudaqKernel, int]:
+    """
+    Build the Textbook QPE core kernel for a `Qubitised` simulation.
+
+    Returns the core kernel `(data: cudaq.qview, work: cudaq.qview) -> float` and the
+    size of `work`: the QPE ancillas followed by the combined `[control, lcu_ancillas]`
+    register described below. As for `textbook_qpe_core`, the core never allocates.
 
     Same contract as `textbook_qpe_kernel`: signature `(data: cudaq.qview) ->
     float`, operates in place on an already-allocated register, decodes one
@@ -320,11 +363,11 @@ def qubitised_qpe_kernel(
     inverse_qft = inverse_qft_kernel()
 
     @cudaq.kernel
-    def qpe(data: cudaq.qview) -> float:
+    def core(data: cudaq.qview, work: cudaq.qview) -> float:
         """Ladder controlled-W^(2^k), inverse QFT, then decode the energy in-kernel."""
-        ancilla = cudaq.qvector(num_qpe_ancillas)
+        ancilla = work.front(num_qpe_ancillas)
+        combined = work.back(1 + n_anc)
         h(ancilla)
-        combined = cudaq.qvector(1 + n_anc)
         prep(combined.back(n_anc))
         for k in range(num_qpe_ancillas):
             power = 1 << k
@@ -341,7 +384,7 @@ def qubitised_qpe_kernel(
         phase = y / dimension
         return -alpha * np.cos(2.0 * pi * phase)
 
-    return qpe
+    return core, num_qpe_ancillas + 1 + n_anc
 
 
 def naive_qpe_kernel(
@@ -525,7 +568,27 @@ def iterative_qpe_kernel(
     n_qubits: int | None = None,
 ) -> CudaqKernel:
     """
-    Build the Iterative QPE kernel for a `Trotter`/`QDRIFT` simulation.
+    Build the single-run Iterative QPE kernel for a `Trotter`/`QDRIFT` simulation.
+
+    The `(data: cudaq.qview) -> float` kernel allocates its own ancilla; see
+    `iterative_qpe_core` for the full contract.
+    """
+    return single_run_kernel(
+        *iterative_qpe_core(simulation, num_rounds, n_qubits=n_qubits)
+    )
+
+
+def iterative_qpe_core(
+    simulation: Trotter | QDRIFT,
+    num_rounds: int,
+    *,
+    n_qubits: int | None = None,
+) -> tuple[CudaqKernel, int]:
+    """
+    Build the Iterative QPE core kernel for a `Trotter`/`QDRIFT` simulation.
+
+    Returns the core kernel `(data: cudaq.qview, work: cudaq.qview) -> float` and the
+    size of `work` (one ancilla). As for `textbook_qpe_core`, the core never allocates.
 
     Single ancilla, classical Rz feedback - IPEA, Dobsicek et al. 2007. Same
     evolution setup as `textbook_qpe_kernel`. Returns
@@ -586,9 +649,9 @@ def iterative_qpe_kernel(
     from cudaq_algorithms.trotter import apply_trotter  # noqa: PLC0415
 
     @cudaq.kernel
-    def qpe(data: cudaq.qview) -> float:
+    def core(data: cudaq.qview, work: cudaq.qview) -> float:
         """Single ancilla, num_rounds sequential rounds with classical Rz feedback."""
-        ancilla = cudaq.qubit()
+        ancilla = work[0]
         phase = 0.0
         for round_number in range(num_rounds):
             index = num_rounds - 1 - round_number
@@ -617,4 +680,59 @@ def iterative_qpe_kernel(
             phase -= 1.0
         return -phase * (2.0 * pi / time)
 
+    return core, 1
+
+
+def single_run_kernel(core: CudaqKernel, work_qubits: int) -> CudaqKernel:
+    """Wrap a QPE core kernel as a `(data: cudaq.qview) -> float` kernel."""
+    cudaq, _ = load_cudaq()
+
+    @cudaq.kernel
+    def qpe(data: cudaq.qview) -> float:
+        """Allocate the work register, then run one QPE."""
+        work = cudaq.qvector(work_qubits)
+        return core(data, work)
+
     return qpe
+
+
+def repeated_minimum_kernel(
+    core: CudaqKernel,
+    work_qubits: int,
+    state_prep: CudaqKernel,
+    num_data: int,
+    repetitions: int,
+) -> CudaqKernel:
+    """
+    Build a `() -> float` kernel returning the minimum energy over repeated QPE runs.
+
+    Runs the QPE `core` kernel (`(data, work) -> float`, from `textbook_qpe_core`,
+    `qubitised_qpe_core` or `iterative_qpe_core`) `repetitions` times, each on a freshly
+    reset `num_data`-qubit register prepared by `state_prep`
+    (`(qubits: cudaq.qview) -> None`), keeping the running minimum in-kernel. This is
+    the repeat-and-take-minimum protocol that `success_probability` describes
+    (`quiche.budget.estimation`).
+
+    The data and work registers are allocated once and reset between repetitions:
+    CUDA-Q keeps every allocated qubit until the kernel returns, so allocating per
+    repetition would grow the simulated register with each one.
+    """
+    cudaq, _ = load_cudaq()
+
+    @cudaq.kernel
+    def repeated() -> float:
+        """Run state preparation and QPE `repetitions` times, keeping the minimum."""
+        data = cudaq.qvector(num_data)
+        work = cudaq.qvector(work_qubits)
+        best = 1.0e300
+        for _ in range(repetitions):
+            reset(data)
+            reset(work)
+            state_prep(data)
+            energy = core(data, work)
+            # Kernel mode has no `min` builtin, so compare explicitly.
+            if energy < best:  # noqa: PLR1730
+                best = energy
+        return best
+
+    return repeated
