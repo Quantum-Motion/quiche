@@ -16,8 +16,6 @@
 
 /** @file
  * Demo app using QDRIFT to simulate a Hamiltonian.
- *
- * @author Vasco Ferreira
  */
 
 #include "quiche/qdrift.hpp"

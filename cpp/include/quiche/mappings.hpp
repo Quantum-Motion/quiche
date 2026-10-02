@@ -17,7 +17,6 @@
 /**
  * @file mappings.hpp
  * @brief Fermion-to-qubit mappings for simulations.
- * @author Vasco Ferreira
  */
 
 #pragma once

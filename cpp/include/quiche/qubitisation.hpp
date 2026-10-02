@@ -17,7 +17,6 @@
 /**
  * @file qubitisation.hpp
  * @brief Block encoding primitives for qubitisation.
- * @author Vasco Ferreira
  */
 
 #pragma once
