@@ -153,7 +153,7 @@ class TestLCUBlockEncodingWrapper:
         true_prep_coeffs = np.array(
             blockencoding.prepare.stateprep.state_coefficients, dtype=complex
         )
-        # Truncate to the non-zero words. All truncated coefficients are zero, which is
+        # Truncate to the non-zero terms. All truncated coefficients are zero, which is
         # tested separately in test_zerocoefficients. Truncate after
         # h2.num_words_with_identity in order to count the identity contribution.
         true_unitaries = true_unitaries[: h2.num_words_with_identity]
