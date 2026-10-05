@@ -68,30 +68,30 @@ int main() {
     std::mt19937_64 rng(rd());
     PauliStrSum hamiltonian = getRandomRealPauliStrSum(numTerms, numQubits, rng);
 
-    Qureg qdrift_qureg = createQureg(numQubits);
-    initPlusState(qdrift_qureg);
+    Qureg qdriftQureg = createQureg(numQubits);
+    initPlusState(qdriftQureg);
 
     qreal norm = qdrift::getPauliStrSumNorm(hamiltonian);
     int reps = std::ceil(2 * norm * norm * time * time / eps);
-    qdrift::applyQDRIFTUnitaryTimeEvolution(qdrift_qureg, hamiltonian, time, reps, rng);
+    qdrift::applyQDRIFTUnitaryTimeEvolution(qdriftQureg, hamiltonian, time, reps, rng);
 
     if (verbosity >= 2) {
-        reportQureg(qdrift_qureg);
+        reportQureg(qdriftQureg);
     }
 
-    Qureg trotter_qureg = createQureg(numQubits);
-    initPlusState(trotter_qureg);
-    applyTrotterizedUnitaryTimeEvolution(trotter_qureg, hamiltonian, time, 4, 100);
+    Qureg trotterQureg = createQureg(numQubits);
+    initPlusState(trotterQureg);
+    applyTrotterizedUnitaryTimeEvolution(trotterQureg, hamiltonian, time, 4, 100);
 
     if (verbosity >= 2) {
-        reportQureg(trotter_qureg);
+        reportQureg(trotterQureg);
     }
 
-    std::cout << "Fidelity = " << calcFidelity(qdrift_qureg, trotter_qureg) << '\n';
+    std::cout << "Fidelity = " << calcFidelity(qdriftQureg, trotterQureg) << '\n';
 
     destroyPauliStrSum(hamiltonian);
-    destroyQureg(qdrift_qureg);
-    destroyQureg(trotter_qureg);
+    destroyQureg(qdriftQureg);
+    destroyQureg(trotterQureg);
     finalizeQuESTEnv();
     return 0;
 }

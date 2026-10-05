@@ -46,7 +46,7 @@ TEST_CASE("getHartreeFockStateJW", "[mappings][jordan_wigner][hartree_fock]") {
 TEST_CASE("getHartreeFockStateBK", "[mappings][bravyi_kitaev][hartree_fock]") {
     int numElectrons = GENERATE(Gen::take(numSamples, Gen::random(0, numQubits)));
 
-    // Initalise bitstring to occupation
+    // Initialise bitstring to occupation
     std::bitset<64> bits;
     for (int i = 0; i < numElectrons; i++)
         bits.set(i);
