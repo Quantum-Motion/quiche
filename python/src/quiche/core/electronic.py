@@ -47,7 +47,8 @@ class FactorisedHamiltonian(BaseModel):
     """
     Class encompassing a Factorized Hamiltonian, generated from DFTHC output.
 
-    Contains number of orbitals, ranks, bases and copies, as well as the factors themselves.
+    Contains number of orbitals, ranks, bases and copies, 
+    as well as the factors themselves.
     """
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
@@ -63,7 +64,7 @@ class FactorisedHamiltonian(BaseModel):
     const: float  # constant energy
     electrons: int  # number of electrons
     job_id: int | None = (
-        None  # job ID in the original db file  # job ID in the original db file
+        None  # job ID in the original db file
     )
 
     @field_validator("U", "W", "bliss_matrix", "h1", mode="before")
@@ -105,10 +106,10 @@ class FactorisedHamiltonian(BaseModel):
         """
         Rebuild the integrals from the factors.
         """
-        U_normalized = self.U / np.linalg.norm(self.U, axis=2, keepdims=True)
+        u_normalized = self.U / np.linalg.norm(self.U, axis=2, keepdims=True)
 
         # W_rc[p,q] = sum_b W[r,b,c] * u[r,b,p] * u[r,b,q]
-        W_rc = np.einsum("rbp,rbq,rbc->rcpq", U_normalized, U_normalized, self.W)
+        W_rc = np.einsum("rbp,rbq,rbc->rcpq", u_normalized, u_normalized, self.W)
 
         # g_approx[p,q,t,s] = sum_{r,c} W_rc[p,q] * W_rc[t,s]
         g_approx = np.einsum("rcpq,rcts->pqts", W_rc, W_rc)

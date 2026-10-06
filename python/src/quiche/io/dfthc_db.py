@@ -34,10 +34,11 @@ from quiche.core.electronic import FactorisedHamiltonian
 
 def parse(path: str | Path, job_id: int) -> FactorisedHamiltonian:
     """
-    Return a dataclass object that could function as a potential quiche input for one completed job saved in the database file.
+    Return a FactorisedHamiltonian that functions as input for the resource estimation.
 
     :param path:        The database file generated with external DFTHC code.
-    :param job_id:      The ID of the job you want to extract. This selects the row (e.g. one of the 4 jobs run in this example).
+    :param job_id:      The ID of the job you want to extract. 
+                        This selects the row (e.g. one of the 4 jobs run in this example).
     """
     with sqlite3.connect(path) as con:
         row = con.execute(
@@ -45,25 +46,29 @@ def parse(path: str | Path, job_id: int) -> FactorisedHamiltonian:
             (job_id,),
         ).fetchone()
     if row is None:
-        raise ValueError(f"No job with id {job_id} in {path}")
+        error_msg = f"No job with id {job_id} in {path}"
+        raise ValueError(error_msg)
     status, inputs, results, blob = row
     if status != "completed":
-        raise ValueError(f"Job {job_id} has status '{status}', not 'completed'")
+        error_msg = f"Job {job_id} has status '{status}', not 'completed'"
+        raise ValueError(error_msg)
 
-    V, L, M = json.loads(inputs)["VLM"]
+    outer_rank, copies, inner_rank = json.loads(inputs)["VLM"]
     results = json.loads(results)
     t = np.load(io.BytesIO(blob))
 
-    # External code that generates the input uses convention VLM, which corresponds to RCB.
-    # Just for clarity's sake, we transpose and save in the RBC order, as used in ref. [1].
+    # External code that generates the input uses convention VLM, 
+    # which corresponds to RCB.
+    # Just for clarity's sake, we transpose and save in the RBC order, 
+    # as used in ref. [1].
     U = np.asarray(t["R_vpm"], dtype=np.float64).transpose(0, 2, 1)
     W = np.asarray(t["F_vlm"], dtype=np.float64).transpose(0, 2, 1)
 
     return FactorisedHamiltonian(
         N=results["num_orb"],
-        R=V,
-        B=M,
-        C=L,
+        R=outer_rank,
+        B=inner_rank,
+        C=copies,
         U=U,
         W=W,
         bliss_matrix=np.asarray(t["B_bliss"], dtype=np.float64),

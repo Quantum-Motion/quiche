@@ -422,7 +422,7 @@ class DFTHCBlockEncoding(BlockEncoding):
             raise ValueError(err_msg)
 
     @classmethod
-    def FromFactorisedHamiltonian(
+    def FromFactorisedHamiltonian(  # noqa: N802, PLR0913
         cls,
         hamiltonian: "FactorisedHamiltonian",
         *,
@@ -442,7 +442,8 @@ class DFTHCBlockEncoding(BlockEncoding):
         Parameters
         ----------
         hamiltonian : FactorisedHamiltonian
-            A FactorisedHamiltonian object that contains parameters of a second quantised Hamiltonian, after factorisation.
+            A FactorisedHamiltonian object that contains parameters of a 
+            second quantised Hamiltonian, after factorisation.
         num_bits_keep_inner : int
             Number of bits for inner coherent alias sampling keep probability,
             :math:`b_{k2}` in ref. [1].
@@ -450,8 +451,8 @@ class DFTHCBlockEncoding(BlockEncoding):
             Number of bits for outer coherent alias sampling keep probability,
             :math:`b_{k1}` in ref. [1].
         num_bits_phase_grad : int
-            Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-            ref. [1].
+            Total number of bits for persistent phase gradient register, 
+            :math:`b_{rot}` in ref. [1].
         num_bits_amp_rotations : int
             Number of bits used for amplitude amplification rotations during equal state
             preparation, :math:`s` in ref. [1].
@@ -475,7 +476,8 @@ class DFTHCBlockEncoding(BlockEncoding):
         References
         ----------
             [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-                Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+                Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, 
+                p. 041016, Oct. 2025.
 
         """
         return cls(
@@ -744,7 +746,7 @@ class DFTHCWalkOperator(Bloq):
     num_controls: int = 0
 
     @classmethod
-    def FromFactorisedHamiltonian(
+    def FromFactorisedHamiltonian(  # noqa: N802, PLR0913
         cls,
         hamiltonian: "FactorisedHamiltonian",
         *,
@@ -764,7 +766,8 @@ class DFTHCWalkOperator(Bloq):
         Parameters
         ----------
         hamiltonian : FactorisedHamiltonian
-            A FactorisedHamiltonian object that contains parameters of a second quantised Hamiltonian, after factorisation.
+            A FactorisedHamiltonian object that contains parameters of a 
+            second quantised Hamiltonian, after factorisation.
         num_bits_keep_inner : int
             Number of bits for inner coherent alias sampling keep probability,
             :math:`b_{k2}` in ref. [1].
@@ -772,8 +775,8 @@ class DFTHCWalkOperator(Bloq):
             Number of bits for outer coherent alias sampling keep probability,
             :math:`b_{k1}` in ref. [1].
         num_bits_phase_grad : int
-            Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-            ref. [1].
+            Total number of bits for persistent phase gradient register, 
+            :math:`b_{rot}` in ref. [1].
         num_bits_amp_rotations : int
             Number of bits used for amplitude amplification rotations during equal state
             preparation, :math:`s` in ref. [1].
@@ -797,7 +800,8 @@ class DFTHCWalkOperator(Bloq):
         References
         ----------
             [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-                Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+                Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, 
+                p. 041016, Oct. 2025.
 
         """
         return cls(
