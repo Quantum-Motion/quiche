@@ -33,8 +33,10 @@ from quiche.resources.bloqs.dfthc import (
     SelectDFTHC,
 )
 
-# FeMoco-54 parameters, from G. H. Low et al., "Fast Quantum Simulation of Electronic
-# Structure by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016
+# FeMoco-54 parameters, from G. H. Low et al., 
+# "Fast Quantum Simulation of Electronic
+# Structure by Spectral Amplification", 
+# Phys. Rev. X, vol. 15, no. 4, p. 041016
 N = 54
 R, B, C = 10, 27, 27
 B_ROT = B_K1 = B_K2 = 15
@@ -193,7 +195,7 @@ class TestDFTHCBlockEncoding:
         log_block_size_outer_adjoint=K_5,
     )
 
-    block_encoding_from_FH = DFTHCBlockEncoding.FromFactorisedHamiltonian(
+    block_encoding_from_fh = DFTHCBlockEncoding.FromFactorisedHamiltonian(
         hamiltonian=dummy_factorised_hamiltonian,
         num_bits_keep_inner=B_K2,
         num_bits_keep_outer=B_K1,
@@ -207,14 +209,14 @@ class TestDFTHCBlockEncoding:
 
     def test_decomposition(self):
         assert_valid_bloq_decomposition(self.block_encoding)
-        assert_valid_bloq_decomposition(self.block_encoding_from_FH)
+        assert_valid_bloq_decomposition(self.block_encoding_from_fh)
 
     def test_bloq_counts(self):
         assert_equivalent_bloq_counts(
             self.block_encoding, generalizer=[ignore_split_join, ignore_alloc_free]
         )
         assert_equivalent_bloq_counts(
-            self.block_encoding_from_FH,
+            self.block_encoding_from_fh,
             generalizer=[ignore_split_join, ignore_alloc_free],
         )
 
@@ -237,7 +239,7 @@ class TestDFTHCWalkOperator:
         log_block_size_outer_adjoint=K_5,
     )
 
-    walk_from_FH = DFTHCBlockEncoding.FromFactorisedHamiltonian(
+    walk_from_fh = DFTHCBlockEncoding.FromFactorisedHamiltonian(
         hamiltonian=dummy_factorised_hamiltonian,
         num_bits_keep_inner=B_K2,
         num_bits_keep_outer=B_K1,
@@ -251,14 +253,14 @@ class TestDFTHCWalkOperator:
 
     def test_decomposition(self):
         assert_valid_bloq_decomposition(self.walk)
-        assert_valid_bloq_decomposition(self.walk_from_FH)
+        assert_valid_bloq_decomposition(self.walk_from_fh)
 
     def test_bloq_counts(self):
         assert_equivalent_bloq_counts(
             self.walk, generalizer=[ignore_split_join, ignore_alloc_free]
         )
         assert_equivalent_bloq_counts(
-            self.walk_from_FH, generalizer=[ignore_split_join, ignore_alloc_free]
+            self.walk_from_fh, generalizer=[ignore_split_join, ignore_alloc_free]
         )
 
 

@@ -36,9 +36,13 @@ def parse(path: str | Path, job_id: int) -> FactorisedHamiltonian:
     """
     Return a FactorisedHamiltonian that functions as input for the resource estimation.
 
-    :param path:        The database file generated with external DFTHC code.
-    :param job_id:      The ID of the job you want to extract.
-                        This selects the row (e.g. one of the 4 jobs run in this example).
+    Parameters
+    ----------
+    path : str
+        The database file generated with external DFTHC code.
+    job_id : int
+        The ID of the job you want to extract.
+        This selects the row (e.g. one of the 4 jobs run in this example).
     """
     with sqlite3.connect(path) as con:
         row = con.execute(
@@ -61,16 +65,16 @@ def parse(path: str | Path, job_id: int) -> FactorisedHamiltonian:
     # which corresponds to RCB.
     # Just for clarity's sake, we transpose and save in the RBC order,
     # as used in ref. [1].
-    U = np.asarray(t["R_vpm"], dtype=np.float64).transpose(0, 2, 1)
-    W = np.asarray(t["F_vlm"], dtype=np.float64).transpose(0, 2, 1)
+    u = np.asarray(t["R_vpm"], dtype=np.float64).transpose(0, 2, 1)
+    w = np.asarray(t["F_vlm"], dtype=np.float64).transpose(0, 2, 1)
 
     return FactorisedHamiltonian(
         N=results["num_orb"],
         R=outer_rank,
         B=inner_rank,
         C=copies,
-        U=U,
-        W=W,
+        U=u,
+        W=w,
         bliss_matrix=np.asarray(t["B_bliss"], dtype=np.float64),
         h1=np.asarray(t["h1_exact"], dtype=np.float64),
         const=float(t["const"]),
