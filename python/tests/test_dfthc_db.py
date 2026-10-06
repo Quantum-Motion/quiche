@@ -30,16 +30,18 @@ def db_input_file() -> str:
 
 def test_dfthc_db_parsing(db_input_file: str):
     """Test the parsing of the database file."""
-    factorised_Hamiltonian = dfthc_db.parse(db_input_file, 1)
+    factorised_hamiltonian = dfthc_db.parse(db_input_file, 1)
 
     # The data is calculated using external partner's code.
-    # The system is a H_3 chain (3 electrons), in a double zeta basis set (5 AO's per H).
-    # RBC values are taken from the input of their code. integral value references are taken from their factorisation.
-    assert factorised_Hamiltonian.N == 15
-    assert factorised_Hamiltonian.R == 1
-    assert factorised_Hamiltonian.B == 40
-    assert factorised_Hamiltonian.C == 40
-    assert factorised_Hamiltonian.electrons == 3
-    assert np.isclose(factorised_Hamiltonian.const, 1.250005222563424, 1e-8)
-    assert np.allclose(factorised_Hamiltonian.U.shape, (1, 40, 15), 1e-16)
-    assert np.allclose(factorised_Hamiltonian.W.shape, (1, 40, 40), 1e-16)
+    # The system is a H_3 chain (3 electrons),
+    # in a double zeta basis set (5 AO's per H).
+    # RBC values are taken from the input of their code.
+    # Integral value references are taken from their factorisation.
+    assert factorised_hamiltonian.N == 15
+    assert factorised_hamiltonian.R == 1
+    assert factorised_hamiltonian.B == 40
+    assert factorised_hamiltonian.C == 40
+    assert factorised_hamiltonian.electrons == 3
+    assert np.isclose(factorised_hamiltonian.const, 1.250005222563424, 1e-8)
+    assert np.allclose(factorised_hamiltonian.U.shape, (1, 40, 15), 1e-16)
+    assert np.allclose(factorised_hamiltonian.W.shape, (1, 40, 40), 1e-16)

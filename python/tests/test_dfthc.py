@@ -14,6 +14,8 @@
 
 """Tests for the DFTHC bloqs."""
 
+from typing import ClassVar
+
 import numpy as np
 from qualtran.resource_counting.generalizers import ignore_alloc_free, ignore_split_join
 from qualtran.testing import (
@@ -265,7 +267,7 @@ class TestDFTHCWalkOperator:
 
 
 class TestEquivalence:
-    kwargs = {
+    kwargs: ClassVar[dict[str, int]] = {
         "num_bits_keep_inner": B_K2,
         "num_bits_keep_outer": B_K1,
         "num_bits_phase_grad": B_ROT,
