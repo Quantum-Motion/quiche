@@ -20,9 +20,6 @@ import cirq
 import numpy as np
 import pytest
 from qualtran import QAny, Side
-from qualtran.bloqs.chemistry.trotter.trotterized_unitary import (
-    TrotterizedUnitary,
-)
 from qualtran.resource_counting.generalizers import ignore_split_join
 from qualtran.testing import (
     assert_equivalent_bloq_counts,
@@ -38,6 +35,7 @@ from quiche.resources.bloqs import (
     SelectPauliLCUWrapper,
     Trotterisation,
 )
+from quiche.resources.bloqs.simulation import PauliWordRotationSequence
 
 
 @pytest.fixture
@@ -48,19 +46,6 @@ def h_single() -> PauliSum:
         words=(PauliWord(paulis=(Pauli.X,), qubits=(0,)),),
         identity_coefficient=0.3,
     )
-
-
-def _flatten_trotterizedunitary(bloq_counts: dict) -> dict:
-    """Unpack the TrotterizedUnitary entry of a bloq count dictionary."""
-    flat_bloq_counts = {}
-    for key, count in bloq_counts.items():
-        if isinstance(key, TrotterizedUnitary):
-            tmp = key.bloq_counts()
-            tmp.update((k, tmp[k] * count) for k in tmp)
-            flat_bloq_counts |= tmp
-        else:
-            flat_bloq_counts[key] = count
-    return flat_bloq_counts
 
 
 class TestSelectPauliLCUWrapper:
@@ -75,7 +60,7 @@ class TestSelectPauliLCUWrapper:
         return SelectPauliLCUWrapper(
             selection_bitsize=num_select_qubits + phase_bitsize,
             target_bitsize=h2.num_qubits,
-            select_unitaries=words,
+            select_unitaries=tuple(words),
         )
 
     @pytest.mark.parametrize("controlled", [False, True])
@@ -243,28 +228,47 @@ class TestPauliWordRotation:
         assert manual_counts == decomp_counts
 
 
+class TestPauliWordRotationSequence:
+    @pytest.fixture
+    def sequence(self) -> PauliWordRotationSequence:
+        num_qubits = 4
+        word1 = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
+        word2 = PauliWord(paulis=(Pauli.Y, Pauli.Z, Pauli.X), qubits=(1, 2, 3))
+        word3 = PauliWord(paulis=(Pauli.Z,), qubits=(1,))
+        rotations = (
+            PauliWordRotation(word1, 0.3, num_qubits),
+            PauliWordRotation(word2, -0.7, num_qubits),
+            PauliWordRotation(word3, 0.5, num_qubits),
+            PauliWordRotation(word1, 0.3, num_qubits),
+        )
+        return PauliWordRotationSequence(rotations)
+
+    def test_bloq_counts(self, sequence: PauliWordRotationSequence):
+        assert_equivalent_bloq_counts(sequence, generalizer=[ignore_split_join])
+
+    def test_qubit_counts(self, sequence: PauliWordRotationSequence):
+        manual_counts = logical_qubit_resources(sequence)
+        decomp_counts = logical_qubit_resources(sequence.decompose_bloq())
+        assert manual_counts == decomp_counts
+
+
 class TestQDRIFT:
     @pytest.fixture
     def qdrift(self, h2: PauliSum) -> QDRIFT:
-        return QDRIFT(h2, t=5, num_samples=20, seed=1024)
+        return QDRIFT(h2, time=5, num_samples=20, seed=1024)
 
     def test_invalid_negative_num_samples(self, h2: PauliSum):
         with pytest.raises(ValueError, match="Choose positive num_samples"):
-            QDRIFT(h2, t=5, num_samples=-10, seed=1024)
+            QDRIFT(h2, time=5, num_samples=-10, seed=1024)
 
     def test_invalid_negative_time(self, h2: PauliSum):
         with pytest.raises(ValueError, match="Choose positive evolution time"):
-            QDRIFT(h2, t=-5, num_samples=4, seed=1024)
+            QDRIFT(h2, time=-5, num_samples=4, seed=1024)
 
     @pytest.mark.parametrize("controlled", [False, True])
     def test_bloq_counts(self, qdrift: QDRIFT, *, controlled: bool):
         bloq = qdrift.controlled() if controlled else qdrift
-        manual_counts = bloq.bloq_counts(generalizer=[ignore_split_join])
-        decomp_counts = bloq.decompose_bloq().bloq_counts(
-            generalizer=[ignore_split_join]
-        )
-        decomp_unpack = _flatten_trotterizedunitary(decomp_counts)
-        assert manual_counts == decomp_unpack
+        assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
     @pytest.mark.parametrize("controlled", [False, True])
     def test_qubit_counts(self, qdrift: QDRIFT, *, controlled: bool):
@@ -277,7 +281,7 @@ class TestQDRIFT:
     @pytest.mark.parametrize("controlled", [False, True])
     def test_analytic(self, h_single: PauliSum, t: float, *, controlled: bool):
         """Check QDRIFT against the exact matrix exponential."""
-        qdrift = QDRIFT(h_single, t=t, num_samples=3, seed=1024)
+        qdrift = QDRIFT(h_single, time=t, num_samples=3, seed=1024)
         bloq = qdrift.controlled() if controlled else qdrift
         actual = bloq.tensor_contract()
 
@@ -293,8 +297,8 @@ class TestQDRIFT:
     @pytest.mark.parametrize("t", [0.5, 5.0])
     def test_trotter(self, h_single: PauliSum, t: float):
         """Check QDRIFT against Trotterisation."""
-        qdrift = QDRIFT(h_single, t=t, num_samples=3, seed=1024)
-        trotter = Trotterisation(h_single, t=t, num_steps=1, order=1)
+        qdrift = QDRIFT(h_single, time=t, num_samples=3, seed=1024)
+        trotter = Trotterisation(h_single, time=t, num_steps=1, order=1)
 
         np.testing.assert_allclose(
             qdrift.tensor_contract(),
@@ -306,12 +310,12 @@ class TestQDRIFT:
 class TestTrotterisation:
     @pytest.fixture
     def trotter(self, h2: PauliSum, request: pytest.FixtureRequest) -> Trotterisation:
-        return Trotterisation(h2, t=5, num_steps=10, order=request.param)
+        return Trotterisation(h2, time=5, num_steps=10, order=request.param)
 
     @pytest.mark.parametrize("num_steps", [-10, 0])
     def test_invalid_num_steps(self, h2: PauliSum, num_steps: int):
         with pytest.raises(ValueError, match="Choose positive num_steps"):
-            Trotterisation(h2, t=1, num_steps=num_steps, order=2)
+            Trotterisation(h2, time=1, num_steps=num_steps, order=2)
 
     @pytest.mark.parametrize(
         ("order", "error_msg"),
@@ -323,7 +327,7 @@ class TestTrotterisation:
     )
     def test_invalid_trotter_order(self, h2: PauliSum, order: int, error_msg: str):
         with pytest.raises(ValueError, match=error_msg):
-            Trotterisation(h2, t=0.2, num_steps=23, order=order)
+            Trotterisation(h2, time=0.2, num_steps=23, order=order)
 
     def test_coeffs_indices_lie_trotter(self):
         word1 = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
@@ -333,8 +337,9 @@ class TestTrotterisation:
             identity_coefficient=0,
         )
 
-        trotterisation = Trotterisation(h, t=42.0, num_steps=10, order=1)
-        coeffs, indices = trotterisation.get_coeffs_indices()
+        trotterisation = Trotterisation(h, time=42.0, num_steps=10, order=1)
+        coeffs = trotterisation.trotter_coeffs
+        indices = trotterisation.trotter_indices
 
         np.testing.assert_equal(indices, [0, 1, 2, 3])
         np.testing.assert_allclose(coeffs, (1.0, 1.0, 1.0, 1.0))
@@ -347,11 +352,12 @@ class TestTrotterisation:
             identity_coefficient=0,
         )
 
-        trotterisation = Trotterisation(h, t=10, num_steps=100, order=2)
-        coeffs, indices = trotterisation.get_coeffs_indices()
+        trotterisation = Trotterisation(h, time=10, num_steps=100, order=2)
+        coeffs = trotterisation.trotter_coeffs
+        indices = trotterisation.trotter_indices
 
-        np.testing.assert_equal(indices, [0, 1, 2, 3, 2, 1, 0])
-        np.testing.assert_allclose(coeffs, [0.5, 0.5, 0.5, 1.0, 0.5, 0.5, 0.5])
+        np.testing.assert_equal(indices, [0, 1, 2, 3, 3, 2, 1, 0])
+        np.testing.assert_allclose(coeffs, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
 
     def test_coeffs_indices_suzuki_4(self):
         word1 = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
@@ -362,34 +368,13 @@ class TestTrotterisation:
         )
 
         order = 4
-        trotterisation = Trotterisation(h, t=5.0, num_steps=15, order=order)
-        coeffs_actual, indices_actual = trotterisation.get_coeffs_indices()
+        trotterisation = Trotterisation(h, time=5.0, num_steps=15, order=order)
+        coeffs_actual = trotterisation.trotter_coeffs
+        indices_actual = trotterisation.trotter_indices
 
-        indices_expect = [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0]
+        indices_expect = [0, 1, 2, 2, 1, 0] * 5
         uk = 1.0 / (4 - 4 ** (1 / (order - 1)))
-        coeffs_expect = [
-            0.5 * uk,
-            0.5 * uk,
-            uk,
-            0.5 * uk,
-            uk,
-            0.5 * uk,
-            uk,
-            0.5 * uk,
-            0.5 * (1 - 3 * uk),
-            0.5 * (1 - 4 * uk),
-            (1 - 4 * uk),
-            0.5 * (1 - 4 * uk),
-            0.5 * (1 - 3 * uk),
-            0.5 * uk,
-            uk,
-            0.5 * uk,
-            uk,
-            0.5 * uk,
-            uk,
-            0.5 * uk,
-            0.5 * uk,
-        ]
+        coeffs_expect = [0.5 * uk] * 12 + [0.5 * (1 - 4 * uk)] * 6 + [0.5 * uk] * 12
 
         np.testing.assert_equal(indices_actual, indices_expect)
         np.testing.assert_allclose(coeffs_actual, coeffs_expect)
@@ -403,7 +388,7 @@ class TestTrotterisation:
         words = (word1, word2, word3)
         h = PauliSum(coefficients=coeffs, words=words, identity_coefficient=0)
 
-        trotterisation = Trotterisation(h, t=10, num_steps=20, order=1)
+        trotterisation = Trotterisation(h, time=10, num_steps=20, order=1)
 
         h1 = coeffs[0] * word1._to_matrix(ignore_idle_qubits=False)
         h2 = coeffs[1] * word2._to_matrix(ignore_idle_qubits=False)
@@ -416,7 +401,7 @@ class TestTrotterisation:
             u_target = np.dot(u_target, expm(-1j * h1 * trotterisation.dt))
 
         circ = trotterisation.decompose_bloq().to_cirq_circuit(
-            cirq_quregs={"simulation": cirq.LineQubit.range(h.num_qubits)},
+            cirq_quregs={"system": cirq.LineQubit.range(h.num_qubits)},
         )
         u = circ.unitary()
         np.testing.assert_allclose(u, u_target)
@@ -430,7 +415,7 @@ class TestTrotterisation:
             identity_coefficient=0,
         )
         num_qubits = h.num_qubits
-        trotterisation = Trotterisation(h, t=7.5, num_steps=10, order=1)
+        trotterisation = Trotterisation(h, time=7.5, num_steps=10, order=1)
 
         h1 = h.coefficients[0] * word1._to_matrix(
             length=num_qubits, ignore_idle_qubits=False
@@ -445,7 +430,7 @@ class TestTrotterisation:
             u_target = np.dot(u_target, expm(-1j * h1 * trotterisation.dt))
 
         circ = trotterisation.decompose_bloq().to_cirq_circuit(
-            cirq_quregs={"simulation": cirq.LineQubit.range(num_qubits)},
+            cirq_quregs={"system": cirq.LineQubit.range(num_qubits)},
         )
         u = circ.unitary()
 
@@ -461,7 +446,7 @@ class TestTrotterisation:
         h = PauliSum(coefficients=coeffs, words=words, identity_coefficient=0)
         num_qubits = h.num_qubits
 
-        trotterisation = Trotterisation(h, t=10, num_steps=20, order=2)
+        trotterisation = Trotterisation(h, time=10, num_steps=20, order=2)
 
         h1 = coeffs[0] * word1._to_matrix(ignore_idle_qubits=False)
         h2 = coeffs[1] * word2._to_matrix(ignore_idle_qubits=False)
@@ -476,7 +461,7 @@ class TestTrotterisation:
             u_target = np.dot(u_target, expm(-0.5j * h1 * trotterisation.dt))
 
         circ = trotterisation.decompose_bloq().to_cirq_circuit(
-            cirq_quregs={"simulation": cirq.LineQubit.range(num_qubits)},
+            cirq_quregs={"system": cirq.LineQubit.range(num_qubits)},
         )
         u = circ.unitary()
 
@@ -494,7 +479,7 @@ class TestTrotterisation:
         )
         num_qubits = h.num_qubits
 
-        trotterisation = Trotterisation(h, t=10, num_steps=10, order=2)
+        trotterisation = Trotterisation(h, time=10, num_steps=10, order=2)
 
         h1 = h.coefficients[0] * word1._to_matrix(
             length=num_qubits, ignore_idle_qubits=False
@@ -515,7 +500,7 @@ class TestTrotterisation:
             u_target = np.dot(u_target, expm(-0.5j * h1 * trotterisation.dt))
 
         circ = trotterisation.decompose_bloq().to_cirq_circuit(
-            cirq_quregs={"simulation": cirq.LineQubit.range(num_qubits)},
+            cirq_quregs={"system": cirq.LineQubit.range(num_qubits)},
         )
         u = circ.unitary()
 
@@ -529,7 +514,7 @@ class TestTrotterisation:
         )
         num_qubits = h.num_qubits
         t = 12
-        trotterisation = Trotterisation(h, t=t, num_steps=20, order=1)
+        trotterisation = Trotterisation(h, time=t, num_steps=20, order=1)
 
         h1 = h.coefficients[0] * word1._to_matrix(
             length=num_qubits, ignore_idle_qubits=False
@@ -544,7 +529,7 @@ class TestTrotterisation:
             u_target = np.dot(u_target, expm(-1j * h1 * trotterisation.dt))
 
         circ = trotterisation.decompose_bloq().to_cirq_circuit(
-            cirq_quregs={"simulation": cirq.LineQubit.range(num_qubits)},
+            cirq_quregs={"system": cirq.LineQubit.range(num_qubits)},
         )
         u = circ.unitary()
 
@@ -554,12 +539,7 @@ class TestTrotterisation:
     @pytest.mark.parametrize("controlled", [False, True])
     def test_bloq_counts(self, trotter: Trotterisation, *, controlled: bool):
         bloq = trotter.controlled() if controlled else trotter
-        manual_counts = bloq.bloq_counts(generalizer=[ignore_split_join])
-        decomp_counts = bloq.decompose_bloq().bloq_counts(
-            generalizer=[ignore_split_join]
-        )
-        decomp_unpack = _flatten_trotterizedunitary(decomp_counts)
-        assert manual_counts == decomp_unpack
+        assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
     @pytest.mark.parametrize("trotter", [2, 4], indirect=True)
     @pytest.mark.parametrize("controlled", [False, True])
