@@ -43,6 +43,7 @@ def parse(path: str | Path, job_id: int) -> FactorisedHamiltonian:
     job_id : int
         The ID of the job you want to extract.
         This selects the row (e.g. one of the 4 jobs run in this example).
+
     """
     with sqlite3.connect(path) as con:
         row = con.execute(
