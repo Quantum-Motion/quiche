@@ -38,8 +38,9 @@ externally-prepared state on the data register; compose it with a state preparat
 (e.g. `quiche.state_prep.HartreeFock`) using each backend's own tools.
 """
 
+from collections.abc import Callable
 from math import inf, nan
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field, PositiveFloat, PositiveInt
 from pydantic.dataclasses import dataclass
@@ -121,9 +122,37 @@ class _PhaseEstimation(Spec):
 
         return quest.estimation(self)
 
-    def to_cudaq(self, state_prep: CudaqKernel | None = None) -> CudaqKernel:
+    def to_cudaq(
+        self,
+        state_prep: CudaqKernel | None = None,
+        *,
+        kernel: Literal["all", "circuit", "post"] = "all",
+    ) -> CudaqKernel | Callable:
         """
         Build the CUDA-Q kernel implementing the QPE algorithm.
+
+        `kernel` selects what is built:
+
+        - `"all"` (default): the whole algorithm in one kernel, including measuring and
+          decoding the energy in-kernel (described below). This is the form for
+          hardware-style execution and for algorithms that need mid-circuit feedback,
+          such as `Iterative`. Simulators run it once per shot via `cudaq.run`.
+        - `"circuit"`: `Textbook` only. The QPE circuit followed by a measurement of the
+          QPE ancillas, with no measurement-dependent logic or return value:
+          `() -> None` given `state_prep`, otherwise `(data: cudaq.qview) -> None`.
+          `cudaq.sample` simulates it once for any number of shots, and it suits
+          compilers that reject measurement feedback, such as CUDA-Q Logical.
+        - `"post"`: `Textbook` only. A host-side function (not a kernel) turning the
+          `cudaq.sample` result of the `"circuit"` kernel into energies, keeping the
+          minimum over each block of `repetitions` shots:
+
+          ```python
+          circuit = qpe.to_cudaq(hf.to_cudaq(), kernel="circuit")
+          post = qpe.to_cudaq(kernel="post")
+          energies = post(cudaq.sample(circuit, shots_count=shots * qpe.repetitions))
+          ```
+
+        The rest of this docstring describes `"all"`.
 
         Given a `state_prep` kernel `(qubits: cudaq.qview) -> None`, the returned kernel
         has signature `() -> float` and runs the whole modelled protocol in-kernel: for
@@ -171,7 +200,7 @@ class _PhaseEstimation(Spec):
         """
         from quiche.dispatch.lowering import cudaq  # noqa: PLC0415
 
-        return cudaq.estimation(self, state_prep)
+        return cudaq.estimation(self, state_prep, kernel)
 
 
 class _Bounded(_PhaseEstimation):

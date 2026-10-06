@@ -23,6 +23,7 @@
 # equally wide `getPhaseTextbook*` signatures in quiche.quest.estimation.
 # ruff: noqa: F821
 
+from collections.abc import Callable, Sequence
 from math import pi
 from typing import TYPE_CHECKING
 
@@ -38,6 +39,7 @@ from quiche.cudaq.simulation import (
 from quiche.simulation import QDRIFT, Qubitised, Trotter
 
 if TYPE_CHECKING:
+    import cudaq
     from cudaq_algorithms.trotter import Trotter as CudaqTrotter
 
 
@@ -118,6 +120,75 @@ def textbook_qpe_kernel(
     )
 
 
+def textbook_qpe_circuit(
+    simulation: Trotter | QDRIFT,
+    num_qpe_ancillas: int,
+    *,
+    n_qubits: int | None = None,
+) -> tuple[CudaqKernel, int, Callable[[int], float]]:
+    """
+    Build the measurement-free Textbook QPE circuit for a `Trotter`/`QDRIFT` simulation.
+
+    Returns:
+    - the circuit kernel `(data: cudaq.qview, ancilla: cudaq.qview) -> None`: Hadamards,
+      the controlled-U^(2^k) ladder with its per-rung identity correction, and the
+      inverse QFT (see `textbook_qpe_core` for the details of each);
+    - the size of its `ancilla` register;
+    - `decode(y) -> float`, the host-side twin of the core's in-kernel decode, where
+      `y` is the measured ancilla register as an integer, ancilla `k` weighted `2**k`.
+
+    Measuring the ancillas after the circuit and decoding on the host gives the same
+    energies as `textbook_qpe_core`, without any measurement-dependent logic in-kernel.
+
+    """
+    msg = (
+        "Qubitised simulation has no (time, reps, order, seed) shape "
+        "to share with Trotter/QDRIFT - use "
+        "quiche.cudaq.estimation.qubitised_qpe_kernel directly."
+    )
+    evolution, base_steps, base_order = _product_formula(simulation, msg, n_qubits)
+    time = simulation.time
+
+    cudaq, _ = load_cudaq()
+
+    coefficients = evolution.coefficients
+    words = [cudaq.pauli_word(word) for word in evolution.words]
+    identity_coefficient = evolution.identity_coefficient
+
+    from cudaq_algorithms.trotter import apply_trotter  # noqa: PLC0415
+
+    inverse_qft = inverse_qft_kernel()
+
+    @cudaq.kernel
+    def circuit(data: cudaq.qview, ancilla: cudaq.qview) -> None:
+        """Ladder controlled-U^(2^k), then the inverse QFT."""
+        h(ancilla)
+        for k in range(num_qpe_ancillas):
+            power = 1 << k
+            for _ in range(power):
+                cudaq.control(
+                    apply_trotter,
+                    ancilla[k],
+                    coefficients,
+                    words,
+                    time,
+                    base_steps,
+                    base_order,
+                    data,
+                )
+            r1(-identity_coefficient * time * power, ancilla[k])
+        inverse_qft(ancilla)
+
+    def decode(y: int) -> float:
+        """Convert the measured ancilla integer to an energy."""
+        phase = y / 2**num_qpe_ancillas
+        if phase >= 0.5:
+            phase -= 1.0
+        return -phase * (2.0 * pi / time)
+
+    return circuit, num_qpe_ancillas, decode
+
+
 def textbook_qpe_core(
     simulation: Trotter | QDRIFT,
     num_qpe_ancillas: int,
@@ -195,47 +266,22 @@ def textbook_qpe_core(
     seed)` shape to share with this function (no evolution-time concept for a
     qubitisation walk operator) - use `qubitised_qpe_kernel` directly instead.
     """
-    msg = (
-        "Qubitised simulation has no (time, reps, order, seed) shape "
-        "to share with Trotter/QDRIFT - use "
-        "quiche.cudaq.estimation.qubitised_qpe_kernel directly."
+    circuit, work_qubits, _ = textbook_qpe_circuit(
+        simulation, num_qpe_ancillas, n_qubits=n_qubits
     )
-    evolution, base_steps, base_order = _product_formula(simulation, msg, n_qubits)
     time = simulation.time
 
     cudaq, _ = load_cudaq()
 
-    coefficients = evolution.coefficients
-    words = [cudaq.pauli_word(word) for word in evolution.words]
-    identity_coefficient = evolution.identity_coefficient
     # A plain Python float, computed host-side: kernel-mode has no `float()` cast
     # (confirmed - it fails to compile), so the divisor is precomputed here and
     # captured as a constant rather than derived from `num_qpe_ancillas` in-kernel.
     dimension = float(1 << num_qpe_ancillas)
 
-    from cudaq_algorithms.trotter import apply_trotter  # noqa: PLC0415
-
-    inverse_qft = inverse_qft_kernel()
-
     @cudaq.kernel
     def core(data: cudaq.qview, ancilla: cudaq.qview) -> float:
-        """Ladder controlled-U^(2^k), inverse QFT, then decode the energy in-kernel."""
-        h(ancilla)
-        for k in range(num_qpe_ancillas):
-            power = 1 << k
-            for _ in range(power):
-                cudaq.control(
-                    apply_trotter,
-                    ancilla[k],
-                    coefficients,
-                    words,
-                    time,
-                    base_steps,
-                    base_order,
-                    data,
-                )
-            r1(-identity_coefficient * time * power, ancilla[k])
-        inverse_qft(ancilla)
+        """Run the QPE circuit, then decode the energy in-kernel."""
+        circuit(data, ancilla)
 
         y = 0.0
         for k in range(num_qpe_ancillas):
@@ -246,7 +292,7 @@ def textbook_qpe_core(
             phase -= 1.0
         return -phase * (2.0 * pi / time)
 
-    return core, num_qpe_ancillas
+    return core, work_qubits
 
 
 def qubitised_qpe_kernel(
@@ -264,6 +310,53 @@ def qubitised_qpe_kernel(
     return single_run_kernel(
         *qubitised_qpe_core(hamiltonian, num_qpe_ancillas, n_qubits=n_qubits)
     )
+
+
+def qubitised_qpe_circuit(
+    hamiltonian: PauliSum,
+    num_qpe_ancillas: int,
+    *,
+    n_qubits: int | None = None,
+) -> tuple[CudaqKernel, int, Callable[[int], float]]:
+    """
+    Build the measurement-free Textbook QPE circuit for a `Qubitised` simulation.
+
+    Returns the same three parts as `textbook_qpe_circuit`: the circuit kernel
+    `(data: cudaq.qview, work: cudaq.qview) -> None` (see `qubitised_qpe_core` for its
+    construction), the size of `work` (the QPE ancillas, which come first, then the
+    combined `[control, lcu_ancillas]` register), and the host-side `decode(y)`.
+    """
+    cudaq, _ = load_cudaq()
+
+    encoding = qubitised_encoding(hamiltonian, n_qubits=n_qubits)
+    n_anc = encoding.num_ancilla
+    alpha = encoding.alpha
+
+    prep = encoding.prepare_kernel()
+    controlled_step = encoding.controlled_walk_step_kernel()
+    inverse_qft = inverse_qft_kernel()
+
+    @cudaq.kernel
+    def circuit(data: cudaq.qview, work: cudaq.qview) -> None:
+        """Ladder controlled-W^(2^k), then the inverse QFT."""
+        ancilla = work.front(num_qpe_ancillas)
+        combined = work.back(1 + n_anc)
+        h(ancilla)
+        prep(combined.back(n_anc))
+        for k in range(num_qpe_ancillas):
+            power = 1 << k
+            x.ctrl(ancilla[k], combined[0])
+            for _ in range(power):
+                controlled_step(combined, data)
+            x.ctrl(ancilla[k], combined[0])
+        inverse_qft(ancilla)
+
+    def decode(y: int) -> float:
+        """Convert the measured ancilla integer to an energy."""
+        phase = y / 2**num_qpe_ancillas
+        return -alpha * np.cos(2.0 * pi * phase)
+
+    return circuit, num_qpe_ancillas + 1 + n_anc, decode
 
 
 def qubitised_qpe_core(
@@ -350,33 +443,22 @@ def qubitised_qpe_core(
     exactly 0.0, confirming no double-count; a two-qubit `H = ZI - IZ`'s
     `|11>` eigenstate (eigenvalue 0, alpha=2) also recovers exactly 0.0.
     """
+    circuit, work_qubits, _ = qubitised_qpe_circuit(
+        hamiltonian, num_qpe_ancillas, n_qubits=n_qubits
+    )
+    alpha = qubitised_encoding(hamiltonian, n_qubits=n_qubits).alpha
+
     cudaq, _ = load_cudaq()
 
-    encoding = qubitised_encoding(hamiltonian, n_qubits=n_qubits)
-    n_anc = encoding.num_ancilla
-    alpha = encoding.alpha
-    # See textbook_qpe_kernel's identical comment: no float() cast in-kernel.
+    # See textbook_qpe_core's identical comment: no float() cast in-kernel.
     dimension = float(1 << num_qpe_ancillas)
-
-    prep = encoding.prepare_kernel()
-    controlled_step = encoding.controlled_walk_step_kernel()
-    inverse_qft = inverse_qft_kernel()
 
     @cudaq.kernel
     def core(data: cudaq.qview, work: cudaq.qview) -> float:
-        """Ladder controlled-W^(2^k), inverse QFT, then decode the energy in-kernel."""
-        ancilla = work.front(num_qpe_ancillas)
-        combined = work.back(1 + n_anc)
-        h(ancilla)
-        prep(combined.back(n_anc))
-        for k in range(num_qpe_ancillas):
-            power = 1 << k
-            x.ctrl(ancilla[k], combined[0])
-            for _ in range(power):
-                controlled_step(combined, data)
-            x.ctrl(ancilla[k], combined[0])
-        inverse_qft(ancilla)
+        """Run the QPE circuit, then decode the energy in-kernel."""
+        circuit(data, work)
 
+        ancilla = work.front(num_qpe_ancillas)
         y = 0.0
         for k in range(num_qpe_ancillas):
             if mz(ancilla[k]):
@@ -384,7 +466,7 @@ def qubitised_qpe_core(
         phase = y / dimension
         return -alpha * np.cos(2.0 * pi * phase)
 
-    return core, num_qpe_ancillas + 1 + n_anc
+    return core, work_qubits
 
 
 def naive_qpe_kernel(
@@ -736,3 +818,91 @@ def repeated_minimum_kernel(
         return best
 
     return repeated
+
+
+def measured_circuit_kernel(
+    circuit: CudaqKernel,
+    work_qubits: int,
+    num_qpe_ancillas: int,
+    *,
+    state_prep: CudaqKernel | None = None,
+    num_data: int | None = None,
+) -> CudaqKernel:
+    """
+    Wrap a QPE circuit kernel so that it ends by measuring the QPE ancillas.
+
+    The circuit is one from `textbook_qpe_circuit` or `qubitised_qpe_circuit`, whose
+    first `num_qpe_ancillas` work qubits are the QPE ancillas. The result has no
+    measurement-dependent logic and no return value, so `cudaq.sample` simulates it once
+    for any number of shots; decode the samples with `sample_post_processor`.
+
+    Given `state_prep` (`(qubits: cudaq.qview) -> None`) and `num_data`, the returned
+    kernel is `() -> None` and allocates and prepares the data register itself.
+    Otherwise it is `(data: cudaq.qview) -> None`, acting on a prepared register.
+    """
+    cudaq, _ = load_cudaq()
+
+    if state_prep is not None:
+        if num_data is None:
+            msg = "num_data is required with state_prep."
+            raise ValueError(msg)
+
+        @cudaq.kernel
+        def prepared() -> None:
+            """Prepare the data register, run the QPE circuit, measure the ancillas."""
+            data = cudaq.qvector(num_data)
+            work = cudaq.qvector(work_qubits)
+            state_prep(data)
+            circuit(data, work)
+            mz(work.front(num_qpe_ancillas))
+
+        return prepared
+
+    @cudaq.kernel
+    def measured(data: cudaq.qview) -> None:
+        """Run the QPE circuit on a prepared register, then measure the ancillas."""
+        work = cudaq.qvector(work_qubits)
+        circuit(data, work)
+        mz(work.front(num_qpe_ancillas))
+
+    return measured
+
+
+def sample_post_processor(
+    decode: Callable[[int], float], repetitions: int
+) -> Callable[..., list[float]]:
+    """
+    Build the host-side decoder for samples of a `measured_circuit_kernel`.
+
+    The returned `post(result, seed=None)` takes a `cudaq.SampleResult` (or a sequence
+    of per-shot ancilla bitstrings) and decodes each shot to an energy with `decode`;
+    character `k` of a bitstring is ancilla `k`, weighted `2**k`. It then keeps the
+    minimum of each block of `repetitions` shots, reproducing the repeat-and-take-
+    minimum protocol of `repeated_minimum_kernel` from a single simulation: sample
+    `shots * repetitions` times to get `shots` energies.
+
+    Shots are shuffled uniformly at random (seeded by `seed`) before grouping, since
+    simulators may report them grouped by outcome rather than in sampling order. The
+    shots are independent and identically distributed, so a random order of the
+    observed outcomes is distributed exactly like a genuine sequence of shots.
+    """
+
+    def post(
+        result: "cudaq.SampleResult | Sequence[str]", seed: int | None = None
+    ) -> list[float]:
+        """Decode sampled bitstrings and keep the minimum over each repetition block."""
+        if hasattr(result, "items"):
+            bitstrings = [bits for bits, count in result.items() for _ in range(count)]
+        else:
+            bitstrings = list(result)
+        if len(bitstrings) % repetitions != 0:
+            msg = (
+                f"Got {len(bitstrings)} shots, which is not a multiple of "
+                f"repetitions={repetitions}; sample shots * repetitions times."
+            )
+            raise ValueError(msg)
+        energies = np.array([decode(int(bits[::-1], 2)) for bits in bitstrings])
+        energies = np.random.default_rng(seed).permutation(energies)
+        return energies.reshape(-1, repetitions).min(axis=1).tolist()
+
+    return post

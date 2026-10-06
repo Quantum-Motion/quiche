@@ -178,6 +178,13 @@ def _run_qpe_on_bitstring(
     return cudaq.run(run, shots_count=shots_count)
 
 
+def cudaq_sample(kernel: CudaqKernel, shots: int) -> object:
+    """Sample a no-argument kernel with CUDA-Q."""
+    import cudaq  # noqa: PLC0415
+
+    return cudaq.sample(kernel, shots_count=shots)
+
+
 def _run(cudaq: ModuleType, kernel: CudaqKernel) -> NDArray[np.complex128]:
     """Execute a no-argument kernel and return its statevector, big-endian."""
     return _big_endian(np.asarray(cudaq.get_state(kernel)))
@@ -935,6 +942,123 @@ class TestRepeatedMinimum:
         naive = est.Naive(simulation=sim.Trotter(hamiltonian=GENERAL, reps=1))
         with pytest.raises(ValueError, match="no minimum"):
             naive.to_cudaq(state_prep=bitstring_kernel((0, 0)))
+
+
+class TestCircuitAndPost:
+    """`to_cudaq(kernel="circuit")` sampled once, decoded by `kernel="post"`."""
+
+    @staticmethod
+    def _sample(qpe: est.Textbook, state_prep: CudaqKernel, shots: int) -> list[float]:
+        circuit = qpe.to_cudaq(state_prep, kernel="circuit")
+        post = qpe.to_cudaq(kernel="post")
+        return post(cudaq_sample(circuit, shots * qpe.repetitions))
+
+    @pytest.mark.parametrize("method", [sim.Trotter, sim.QDRIFT])
+    @pytest.mark.parametrize(
+        ("identity", "target", "expected"), [(0.0, 5, -1.0), (0.3, 11, -0.7)]
+    )
+    def test_exact_eigenstate(
+        self,
+        cudaq: ModuleType,  # noqa: ARG002 -- skips without cudaq
+        method: type[sim.Trotter | sim.QDRIFT],
+        identity: float,
+        target: int,
+        expected: float,
+    ):
+        # Same exact-bin construction as TestTextbookQPEKernel: the readout `target`
+        # is not a palindrome in 6 bits, so this also pins the bit order.
+        h = _pauli_sum((1.0, "Z"), identity=identity)
+        time = 2 * np.pi * target / ((1 << 6) * (1.0 - identity))
+        qpe = est.Textbook(
+            simulation=method(hamiltonian=h, time=time, reps=1),
+            overlap=1,
+            num_ancillas=6,
+        )
+        energies = self._sample(qpe, bitstring_kernel((1,)), shots=20)
+        np.testing.assert_allclose(energies, expected, atol=1e-9)
+
+    @pytest.mark.parametrize(
+        ("terms", "identity", "bits", "expected"),
+        [
+            (((1.0, "ZI"), (-1.0, "IZ")), 0.0, (1, 1), 0.0),
+            (((1.0, "Z"),), 1.0, (1,), 0.0),
+            (((1.0, "Z"),), 0.0, (0,), 1.0),
+        ],
+    )
+    def test_qubitised_exact_eigenstate(
+        self,
+        cudaq: ModuleType,  # noqa: ARG002 -- skips without cudaq
+        terms: tuple[tuple[float, str], ...],
+        identity: float,
+        bits: tuple[int, ...],
+        expected: float,
+    ):
+        # The cases of TestQubitisedQPEKernel, via the sampled circuit.
+        h = _pauli_sum(*terms, identity=identity)
+        qubitised = sim.Qubitised(hamiltonian=h, num_phase_ancillas=3)
+        qpe = est.Textbook(simulation=qubitised, overlap=1, num_ancillas=5)
+        energies = self._sample(qpe, bitstring_kernel(bits), shots=20)
+        np.testing.assert_allclose(energies, expected, atol=1e-9)
+
+    def _plus_textbook(self, repetitions: int) -> est.Textbook:
+        h = _pauli_sum((1.0, "Z"))
+        time = 2 * np.pi * 5 / (1 << 6)
+        trotter = sim.Trotter(hamiltonian=h, time=time, reps=1)
+        return est.Textbook(
+            simulation=trotter, overlap=0.5, num_ancillas=6, repetitions=repetitions
+        )
+
+    def test_statistics_match_overlap(self, cudaq: ModuleType):
+        # |+> reads the ground state (E = -1) or |0> (E = +1), each with probability ½.
+        @cudaq.kernel
+        def plus(qubits: cudaq.qview) -> None:
+            h(qubits[0])  # noqa: F821 -- CUDA-Q intrinsic, not a real Python name
+
+        shots = 400
+        energies = np.array(self._sample(self._plus_textbook(1), plus, shots))
+        assert set(np.round(energies, 9)) <= {-1.0, 1.0}
+        assert abs(np.mean(energies == -1.0) - 0.5) < 6 * 0.5 / np.sqrt(shots)
+
+    def test_minimum_over_repetitions(self, cudaq: ModuleType):
+        @cudaq.kernel
+        def plus(qubits: cudaq.qview) -> None:
+            h(qubits[0])  # noqa: F821 -- CUDA-Q intrinsic, not a real Python name
+
+        energies = self._sample(self._plus_textbook(20), plus, shots=10)
+        assert len(energies) == 10
+        np.testing.assert_allclose(energies, -1.0, atol=1e-9)
+
+    def test_post_rejects_partial_block(self):
+        post = self._plus_textbook(3).to_cudaq(kernel="post")
+        with pytest.raises(ValueError, match="multiple of repetitions=3"):
+            post(["000000"] * 4)
+
+    def test_post_decodes_bitstrings(self):
+        # Character k is ancilla k, weighted 2^k: "101000" reads y = 5.
+        post = self._plus_textbook(1).to_cudaq(kernel="post")
+        np.testing.assert_allclose(post(["101000"]), -1.0, atol=1e-9)
+
+    def test_post_rejects_state_prep(self):
+        with pytest.raises(ValueError, match="no state_prep"):
+            self._plus_textbook(1).to_cudaq(bitstring_kernel((1,)), kernel="post")
+
+    def test_unknown_kernel(self):
+        textbook = self._plus_textbook(1)
+        with pytest.raises(ValueError, match="kernel must be"):
+            textbook.to_cudaq(kernel="everything")  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("kernel", ["circuit", "post"])
+    def test_iterative_has_no_circuit(self, kernel: str):
+        iterative = est.Iterative(
+            simulation=sim.Trotter(hamiltonian=GENERAL, reps=1), overlap=1, num_rounds=6
+        )
+        with pytest.raises(ValueError, match="mid-circuit"):
+            iterative.to_cudaq(kernel=kernel)  # type: ignore[arg-type]
+
+    def test_naive_not_implemented(self):
+        naive = est.Naive(simulation=sim.Trotter(hamiltonian=GENERAL, reps=1))
+        with pytest.raises(NotImplementedError, match="Naive"):
+            naive.to_cudaq(kernel="circuit")
 
 
 class TestDefaultTimeDoesNotWrap:

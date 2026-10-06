@@ -14,14 +14,21 @@
 
 """Lowering of phase estimation algorithms to CUDA-Q kernels."""
 
+from collections.abc import Callable
+from typing import Literal
+
 from quiche.cudaq import (
     CudaqKernel,
     iterative_qpe_core,
+    measured_circuit_kernel,
     naive_qpe_kernel,
     qubitised_naive_qpe_kernel,
+    qubitised_qpe_circuit,
     qubitised_qpe_core,
     repeated_minimum_kernel,
+    sample_post_processor,
     single_run_kernel,
+    textbook_qpe_circuit,
     textbook_qpe_core,
 )
 from quiche.estimation import EstimationMethod, Iterative, Kitaev, Naive, Textbook
@@ -29,9 +36,17 @@ from quiche.simulation import Qubitised
 
 
 def estimation(
-    qpe: EstimationMethod, state_prep: CudaqKernel | None = None
-) -> CudaqKernel:
-    """Build the QPE kernel, repeated with `state_prep` if given; see `to_cudaq`."""
+    qpe: EstimationMethod,
+    state_prep: CudaqKernel | None = None,
+    kernel: Literal["all", "circuit", "post"] = "all",
+) -> CudaqKernel | Callable:
+    """Build the QPE kernel or post-processor selected by `kernel`; see `to_cudaq`."""
+    if kernel in {"circuit", "post"}:
+        return _sampled(qpe, state_prep, kernel)
+    if kernel != "all":
+        msg = f"kernel must be 'all', 'circuit' or 'post', got {kernel!r}."
+        raise ValueError(msg)
+
     if isinstance(qpe, Naive):
         if state_prep is not None:
             msg = (
@@ -47,6 +62,46 @@ def estimation(
         return single_run_kernel(core, work_qubits)
     return repeated_minimum_kernel(
         core, work_qubits, state_prep, qpe.num_data, qpe.repetitions
+    )
+
+
+def _sampled(
+    qpe: EstimationMethod,
+    state_prep: CudaqKernel | None,
+    kernel: Literal["circuit", "post"],
+) -> CudaqKernel | Callable:
+    """Build the measured circuit kernel or its host-side post-processor."""
+    match qpe:
+        case Textbook(simulation=Qubitised() as sim):
+            circuit, work_qubits, decode = qubitised_qpe_circuit(
+                sim.hamiltonian, qpe.num_qpe_ancillas, n_qubits=qpe.num_data
+            )
+        case Textbook(simulation=sim):
+            circuit, work_qubits, decode = textbook_qpe_circuit(
+                sim, qpe.num_qpe_ancillas, n_qubits=qpe.num_data
+            )
+        case Iterative():
+            msg = (
+                "Iterative QPE needs mid-circuit measurement feedback, so it has no "
+                "circuit-only form; use kernel='all'."
+            )
+            raise ValueError(msg)
+        case _:
+            msg = f"kernel={kernel!r} is not yet implemented for {type(qpe).__name__}."
+            raise NotImplementedError(msg)
+
+    if kernel == "post":
+        if state_prep is not None:
+            msg = "kernel='post' is a host-side decoder and takes no state_prep."
+            raise ValueError(msg)
+        return sample_post_processor(decode, qpe.repetitions)
+
+    return measured_circuit_kernel(
+        circuit,
+        work_qubits,
+        qpe.num_qpe_ancillas,
+        state_prep=state_prep,
+        num_data=qpe.num_data,
     )
 
 
