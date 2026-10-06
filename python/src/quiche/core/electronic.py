@@ -17,9 +17,10 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import TYPE_CHECKING, Self
+from typing import Self
 
 import numpy as np
+from numpy.typing import NDArray
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -29,11 +30,8 @@ from pydantic import (
 )
 from pydantic.dataclasses import dataclass
 
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
-
-    from .algorithms import Mapping
-    from .paulis import PauliSum
+from .algorithms import Mapping
+from .paulis import PauliSum
 
 
 @dataclass(frozen=True)
