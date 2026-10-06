@@ -30,7 +30,6 @@ def db_input_file() -> str:
 
 def test_dfthc_db_parsing(db_input_file: str):
     """Test the parsing of the database file."""
-
     factorised_Hamiltonian = dfthc_db.parse(db_input_file, 1)
 
     # The data is calculated using external partner's code.

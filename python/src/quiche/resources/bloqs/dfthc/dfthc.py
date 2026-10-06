@@ -438,7 +438,7 @@ class DFTHCBlockEncoding(BlockEncoding):
     ) -> Self:
         """
         Complete DFTHC Hamiltonian block encoding.
-            
+
         Parameters
         ----------
         hamiltonian : FactorisedHamiltonian
@@ -455,7 +455,7 @@ class DFTHCBlockEncoding(BlockEncoding):
         num_bits_amp_rotations : int
             Number of bits used for amplitude amplification rotations during equal state
             preparation, :math:`s` in ref. [1].
-    
+
         log_block_size_inner : int
             Log of the block size for inner QROAM, :math:`k_2` in ref. [1].
         log_block_size_inner_adjoint : int
@@ -464,19 +464,19 @@ class DFTHCBlockEncoding(BlockEncoding):
             Log of the block size for outer QROAM, :math:`k_1` in ref. [1].
         log_block_size_outer_adjoint : int
             Log of the block size for outer QROAM adjoint, :math:`k_5` in ref. [1].
-    
+
         num_controls : int, optional
             Number of control qubits (default = 0).
-    
+
         Registers
         ---------
         `block_encoding`'s registers, preceded by `ctrl` if `num_controls` > 0.
-    
+
         References
         ----------
             [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
                 Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-            
+
         """
         return cls(
             num_orbitals=hamiltonian.N,
@@ -491,7 +491,8 @@ class DFTHCBlockEncoding(BlockEncoding):
             log_block_size_inner_adjoint=log_block_size_inner_adjoint,
             log_block_size_outer=log_block_size_outer,
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
-            num_controls=num_controls)
+            num_controls=num_controls,
+        )
 
     @property
     def num_outer(self) -> int:
@@ -759,7 +760,7 @@ class DFTHCWalkOperator(Bloq):
     ) -> Self:
         """
         Qubitisation walk operator for the DFTHC block encoding.
-    
+
         Parameters
         ----------
         hamiltonian : FactorisedHamiltonian
@@ -776,7 +777,7 @@ class DFTHCWalkOperator(Bloq):
         num_bits_amp_rotations : int
             Number of bits used for amplitude amplification rotations during equal state
             preparation, :math:`s` in ref. [1].
-    
+
         log_block_size_inner : int
             Log of the block size for inner QROAM, :math:`k_2` in ref. [1].
         log_block_size_inner_adjoint : int
@@ -785,19 +786,19 @@ class DFTHCWalkOperator(Bloq):
             Log of the block size for outer QROAM, :math:`k_1` in ref. [1].
         log_block_size_outer_adjoint : int
             Log of the block size for outer QROAM adjoint, :math:`k_5` in ref. [1].
-    
+
         num_controls : int, optional
             Number of control qubits (default = 0).
-    
+
         Registers
         ---------
         `block_encoding`'s registers, preceded by `ctrl` if `num_controls` > 0.
-    
+
         References
         ----------
             [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
                 Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-    
+
         """
         return cls(
             num_orbitals=hamiltonian.N,
@@ -812,7 +813,8 @@ class DFTHCWalkOperator(Bloq):
             log_block_size_inner_adjoint=log_block_size_inner_adjoint,
             log_block_size_outer=log_block_size_outer,
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
-            num_controls=num_controls)
+            num_controls=num_controls,
+        )
 
     @property
     def control_registers(self) -> tuple[Register, ...]:

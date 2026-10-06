@@ -15,6 +15,7 @@
 """Structures for specifying electronic systems."""
 
 from __future__ import annotations
+
 from functools import cached_property
 from typing import Self
 
@@ -46,11 +47,11 @@ class FactorisedHamiltonian(BaseModel):
     """
     Class encompassing a Factorized Hamiltonian, generated from DFTHC output.
 
-    Contains number of orbitals, ranks, bases and copies, as well as the factors themselves. 
+    Contains number of orbitals, ranks, bases and copies, as well as the factors themselves.
     """
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
-    
+
     N: int  # number of spatial orbitals
     R: int  # outer rank
     B: int  # inner rank
@@ -61,7 +62,9 @@ class FactorisedHamiltonian(BaseModel):
     h1: NDArray[np.float64]  # (N, N) one-body matrix, without the const/N shift
     const: float  # constant energy
     electrons: int  # number of electrons
-    job_id: int | None = None  # job ID in the original db file  # job ID in the original db file
+    job_id: int | None = (
+        None  # job ID in the original db file  # job ID in the original db file
+    )
 
     @field_validator("U", "W", "bliss_matrix", "h1", mode="before")
     @classmethod

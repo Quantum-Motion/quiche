@@ -15,7 +15,6 @@
 """Tests for the DFTHC bloqs."""
 
 import numpy as np
-
 from qualtran.resource_counting.generalizers import ignore_alloc_free, ignore_split_join
 from qualtran.testing import (
     assert_equivalent_bloq_counts,
@@ -44,8 +43,11 @@ K_2 = K_5 = 4
 S = 7
 
 dummy_factorised_hamiltonian = FactorisedHamiltonian(
-    N=N, R=R, B=B, C=C,
-    U=np.ones((R, B, N)),   # non-zero, so unit-vector validation (if added) passes
+    N=N,
+    R=R,
+    B=B,
+    C=C,
+    U=np.ones((R, B, N)),  # non-zero, so unit-vector validation (if added) passes
     W=np.ones((R, B, C)),
     bliss_matrix=np.zeros((N, N)),
     h1=np.eye(N),
@@ -53,6 +55,7 @@ dummy_factorised_hamiltonian = FactorisedHamiltonian(
     electrons=N,
     job_id=0,
 )
+
 
 class TestOuterPrepareDFTHC:
     """Tests for the outer index state preparation."""
@@ -211,7 +214,8 @@ class TestDFTHCBlockEncoding:
             self.block_encoding, generalizer=[ignore_split_join, ignore_alloc_free]
         )
         assert_equivalent_bloq_counts(
-            self.block_encoding_from_FH, generalizer=[ignore_split_join, ignore_alloc_free]
+            self.block_encoding_from_FH,
+            generalizer=[ignore_split_join, ignore_alloc_free],
         )
 
 
@@ -234,16 +238,16 @@ class TestDFTHCWalkOperator:
     )
 
     walk_from_FH = DFTHCBlockEncoding.FromFactorisedHamiltonian(
-            hamiltonian=dummy_factorised_hamiltonian,
-            num_bits_keep_inner=B_K2,
-            num_bits_keep_outer=B_K1,
-            num_bits_phase_grad=B_ROT,
-            num_bits_amp_rotations=S,
-            log_block_size_inner=K_2,
-            log_block_size_inner_adjoint=K_4,
-            log_block_size_outer=K_1,
-            log_block_size_outer_adjoint=K_5,
-        )
+        hamiltonian=dummy_factorised_hamiltonian,
+        num_bits_keep_inner=B_K2,
+        num_bits_keep_outer=B_K1,
+        num_bits_phase_grad=B_ROT,
+        num_bits_amp_rotations=S,
+        log_block_size_inner=K_2,
+        log_block_size_inner_adjoint=K_4,
+        log_block_size_outer=K_1,
+        log_block_size_outer_adjoint=K_5,
+    )
 
     def test_decomposition(self):
         assert_valid_bloq_decomposition(self.walk)
@@ -257,17 +261,23 @@ class TestDFTHCWalkOperator:
             self.walk_from_FH, generalizer=[ignore_split_join, ignore_alloc_free]
         )
 
-class TestEquivalence:
 
+class TestEquivalence:
     kwargs = dict(
-            num_bits_keep_inner=B_K2, num_bits_keep_outer=B_K1,
-            num_bits_phase_grad=B_ROT, num_bits_amp_rotations=S,
-            log_block_size_inner=K_2, log_block_size_inner_adjoint=K_4,
-            log_block_size_outer=K_1, log_block_size_outer_adjoint=K_5,
-        )
-    
+        num_bits_keep_inner=B_K2,
+        num_bits_keep_outer=B_K1,
+        num_bits_phase_grad=B_ROT,
+        num_bits_amp_rotations=S,
+        log_block_size_inner=K_2,
+        log_block_size_inner_adjoint=K_4,
+        log_block_size_outer=K_1,
+        log_block_size_outer_adjoint=K_5,
+    )
+
     def test_from_hamiltonian_equivalencet(self):
-        
-        assert DFTHCBlockEncoding.FromFactorisedHamiltonian(dummy_factorised_hamiltonian, **self.kwargs) == DFTHCBlockEncoding(
+
+        assert DFTHCBlockEncoding.FromFactorisedHamiltonian(
+            dummy_factorised_hamiltonian, **self.kwargs
+        ) == DFTHCBlockEncoding(
             num_orbitals=N, num_ranks=R, num_bases=B, num_copies=C, **self.kwargs
         )
