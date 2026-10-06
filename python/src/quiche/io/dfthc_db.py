@@ -37,7 +37,7 @@ def parse(path: str | Path, job_id: int) -> FactorisedHamiltonian:
     Return a FactorisedHamiltonian that functions as input for the resource estimation.
 
     :param path:        The database file generated with external DFTHC code.
-    :param job_id:      The ID of the job you want to extract. 
+    :param job_id:      The ID of the job you want to extract.
                         This selects the row (e.g. one of the 4 jobs run in this example).
     """
     with sqlite3.connect(path) as con:
@@ -57,9 +57,9 @@ def parse(path: str | Path, job_id: int) -> FactorisedHamiltonian:
     results = json.loads(results)
     t = np.load(io.BytesIO(blob))
 
-    # External code that generates the input uses convention VLM, 
+    # External code that generates the input uses convention VLM,
     # which corresponds to RCB.
-    # Just for clarity's sake, we transpose and save in the RBC order, 
+    # Just for clarity's sake, we transpose and save in the RBC order,
     # as used in ref. [1].
     U = np.asarray(t["R_vpm"], dtype=np.float64).transpose(0, 2, 1)
     W = np.asarray(t["F_vlm"], dtype=np.float64).transpose(0, 2, 1)

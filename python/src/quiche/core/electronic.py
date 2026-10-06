@@ -17,10 +17,9 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 import numpy as np
-from numpy.typing import NDArray
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -30,8 +29,11 @@ from pydantic import (
 )
 from pydantic.dataclasses import dataclass
 
-from .algorithms import Mapping
-from .paulis import PauliSum
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from .algorithms import Mapping
+    from .paulis import PauliSum
 
 
 @dataclass(frozen=True)
@@ -47,7 +49,7 @@ class FactorisedHamiltonian(BaseModel):
     """
     Class encompassing a Factorized Hamiltonian, generated from DFTHC output.
 
-    Contains number of orbitals, ranks, bases and copies, 
+    Contains number of orbitals, ranks, bases and copies,
     as well as the factors themselves.
     """
 
@@ -63,9 +65,7 @@ class FactorisedHamiltonian(BaseModel):
     h1: NDArray[np.float64]  # (N, N) one-body matrix, without the const/N shift
     const: float  # constant energy
     electrons: int  # number of electrons
-    job_id: int | None = (
-        None  # job ID in the original db file
-    )
+    job_id: int | None = None  # job ID in the original db file
 
     @field_validator("U", "W", "bliss_matrix", "h1", mode="before")
     @classmethod
@@ -103,16 +103,14 @@ class FactorisedHamiltonian(BaseModel):
         return self
 
     def reconstruct(self) -> SecondQuantisedHamiltonian:
-        """
-        Rebuild the integrals from the factors.
-        """
+        """Rebuild the integrals from the factors."""
         u_normalized = self.U / np.linalg.norm(self.U, axis=2, keepdims=True)
 
         # W_rc[p,q] = sum_b W[r,b,c] * u[r,b,p] * u[r,b,q]
-        W_rc = np.einsum("rbp,rbq,rbc->rcpq", u_normalized, u_normalized, self.W)
+        w_rc = np.einsum("rbp,rbq,rbc->rcpq", u_normalized, u_normalized, self.W)
 
         # g_approx[p,q,t,s] = sum_{r,c} W_rc[p,q] * W_rc[t,s]
-        g_approx = np.einsum("rcpq,rcts->pqts", W_rc, W_rc)
+        g_approx = np.einsum("rcpq,rcts->pqts", w_rc, w_rc)
 
         # Remove the BLISS symmetry shift: g = g_approx - 1/2 (B x I + I x B)
         identity = np.eye(self.N)

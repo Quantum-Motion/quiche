@@ -263,16 +263,16 @@ class TestDFTHCWalkOperator:
 
 
 class TestEquivalence:
-    kwargs = dict(
-        num_bits_keep_inner=B_K2,
-        num_bits_keep_outer=B_K1,
-        num_bits_phase_grad=B_ROT,
-        num_bits_amp_rotations=S,
-        log_block_size_inner=K_2,
-        log_block_size_inner_adjoint=K_4,
-        log_block_size_outer=K_1,
-        log_block_size_outer_adjoint=K_5,
-    )
+    kwargs = {
+        "num_bits_keep_inner": B_K2,
+        "num_bits_keep_outer": B_K1,
+        "num_bits_phase_grad": B_ROT,
+        "num_bits_amp_rotations": S,
+        "log_block_size_inner": K_2,
+        "log_block_size_inner_adjoint": K_4,
+        "log_block_size_outer": K_1,
+        "log_block_size_outer_adjoint": K_5,
+    }
 
     def test_from_hamiltonian_equivalencet(self):
 

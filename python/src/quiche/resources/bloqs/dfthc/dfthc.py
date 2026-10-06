@@ -442,7 +442,7 @@ class DFTHCBlockEncoding(BlockEncoding):
         Parameters
         ----------
         hamiltonian : FactorisedHamiltonian
-            A FactorisedHamiltonian object that contains parameters of a 
+            A FactorisedHamiltonian object that contains parameters of a
             second quantised Hamiltonian, after factorisation.
         num_bits_keep_inner : int
             Number of bits for inner coherent alias sampling keep probability,
@@ -451,7 +451,7 @@ class DFTHCBlockEncoding(BlockEncoding):
             Number of bits for outer coherent alias sampling keep probability,
             :math:`b_{k1}` in ref. [1].
         num_bits_phase_grad : int
-            Total number of bits for persistent phase gradient register, 
+            Total number of bits for persistent phase gradient register,
             :math:`b_{rot}` in ref. [1].
         num_bits_amp_rotations : int
             Number of bits used for amplitude amplification rotations during equal state
@@ -476,7 +476,7 @@ class DFTHCBlockEncoding(BlockEncoding):
         References
         ----------
             [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-                Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, 
+                Spectral Amplification", Phys. Rev. X, vol. 15, no. 4,
                 p. 041016, Oct. 2025.
 
         """
@@ -766,7 +766,7 @@ class DFTHCWalkOperator(Bloq):
         Parameters
         ----------
         hamiltonian : FactorisedHamiltonian
-            A FactorisedHamiltonian object that contains parameters of a 
+            A FactorisedHamiltonian object that contains parameters of a
             second quantised Hamiltonian, after factorisation.
         num_bits_keep_inner : int
             Number of bits for inner coherent alias sampling keep probability,
@@ -775,7 +775,7 @@ class DFTHCWalkOperator(Bloq):
             Number of bits for outer coherent alias sampling keep probability,
             :math:`b_{k1}` in ref. [1].
         num_bits_phase_grad : int
-            Total number of bits for persistent phase gradient register, 
+            Total number of bits for persistent phase gradient register,
             :math:`b_{rot}` in ref. [1].
         num_bits_amp_rotations : int
             Number of bits used for amplitude amplification rotations during equal state
@@ -800,7 +800,7 @@ class DFTHCWalkOperator(Bloq):
         References
         ----------
             [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-                Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, 
+                Spectral Amplification", Phys. Rev. X, vol. 15, no. 4,
                 p. 041016, Oct. 2025.
 
         """
