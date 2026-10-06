@@ -14,8 +14,6 @@
 
 """Structures for specifying electronic systems."""
 
-from __future__ import annotations
-
 from functools import cached_property
 from typing import Self
 
@@ -41,91 +39,6 @@ class ElectronicHamiltonian:
     electrons: int
     mapping: Mapping
     paulis: PauliSum
-
-
-class FactorisedHamiltonian(BaseModel):
-    """
-    Class encompassing a Factorized Hamiltonian, generated from DFTHC output.
-
-    Contains number of orbitals, ranks, bases and copies,
-    as well as the factors themselves.
-    """
-
-    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
-
-    N: int  # number of spatial orbitals
-    R: int  # outer rank
-    B: int  # inner rank
-    C: int  # copies
-    U: NDArray[np.float64]  # (R, B, N) unit vectors
-    W: NDArray[np.float64]  # (R, B, C) weights
-    bliss_matrix: NDArray[np.float64]  # (N, N) symmetric BLISS matrix
-    h1: NDArray[np.float64]  # (N, N) one-body matrix, without the const/N shift
-    const: float  # constant energy
-    electrons: int  # number of electrons
-    job_id: int | None = None  # job ID in the original db file
-
-    @field_validator("U", "W", "bliss_matrix", "h1", mode="before")
-    @classmethod
-    def as_immutable_array(cls, value: object) -> NDArray[np.float64]:
-        """Coerce the factors to an immutable real float array."""
-        array = np.asarray(value)
-        if np.issubdtype(array.dtype, np.complexfloating):
-            error_msg = "The factors must be real, got complex values."
-            raise ValueError(error_msg)
-        array = np.array(array, dtype=float)
-        array.flags.writeable = False
-        return array
-
-    @model_validator(mode="after")
-    def check_shapes(self) -> Self:
-        """Validate the factor shapes are consistent with N, R, B and C."""
-        expected = {
-            "U": (self.R, self.B, self.N),
-            "W": (self.R, self.B, self.C),
-            "bliss_matrix": (self.N, self.N),
-            "h1": (self.N, self.N),
-        }
-        for name, shape in expected.items():
-            if getattr(self, name).shape != shape:
-                error_msg = (
-                    f"{name} has shape {getattr(self, name).shape}, expected {shape}."
-                )
-                raise ValueError(error_msg)
-
-        # Reconstruct divides by U, so a zero column would result in NaNs.
-        if np.any(np.linalg.norm(self.U, axis=2) == 0.0):
-            error_msg = "U contains a zero vector, which cannot be normalised."
-            raise ValueError(error_msg)
-
-        return self
-
-    def reconstruct(self) -> SecondQuantisedHamiltonian:
-        """Rebuild the integrals from the factors."""
-        u_normalized = self.U / np.linalg.norm(self.U, axis=2, keepdims=True)
-
-        # W_rc[p,q] = sum_b W[r,b,c] * u[r,b,p] * u[r,b,q]
-        w_rc = np.einsum("rbp,rbq,rbc->rcpq", u_normalized, u_normalized, self.W)
-
-        # g_approx[p,q,t,s] = sum_{r,c} W_rc[p,q] * W_rc[t,s]
-        g_approx = np.einsum("rcpq,rcts->pqts", w_rc, w_rc)
-
-        # Remove the BLISS symmetry shift: g = g_approx - 1/2 (B x I + I x B)
-        identity = np.eye(self.N)
-        shift = np.einsum("pq,rs->pqrs", self.bliss_matrix, identity) + np.einsum(
-            "pq,rs->pqrs", identity, self.bliss_matrix
-        )
-        two_body = g_approx - 0.5 * shift
-
-        # E-form -> bare one-body integrals: t1 = h1 + 1/2 sum_r (pr|rq)
-        one_body = self.h1 + 0.5 * np.einsum("prrq->pq", two_body)
-
-        return SecondQuantisedHamiltonian(
-            one_body=one_body,
-            two_body=two_body,
-            electrons=self.electrons,
-            core_energy=self.const,
-        )
 
 
 class SecondQuantisedHamiltonian(BaseModel):
@@ -253,3 +166,88 @@ class SecondQuantisedHamiltonian(BaseModel):
         )
 
         return _second_quantised_to_electronic_hamiltonian(self, mapping)
+
+
+class FactorisedHamiltonian(BaseModel):
+    """
+    Class encompassing a Factorized Hamiltonian, generated from DFTHC output.
+
+    Contains number of orbitals, ranks, bases and copies,
+    as well as the factors themselves.
+    """
+
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    N: int  # number of spatial orbitals
+    R: int  # outer rank
+    B: int  # inner rank
+    C: int  # copies
+    U: NDArray[np.float64]  # (R, B, N) unit vectors
+    W: NDArray[np.float64]  # (R, B, C) weights
+    bliss_matrix: NDArray[np.float64]  # (N, N) symmetric BLISS matrix
+    h1: NDArray[np.float64]  # (N, N) one-body matrix, without the const/N shift
+    const: float  # constant energy
+    electrons: int  # number of electrons
+    job_id: int | None = None  # job ID in the original db file
+
+    @field_validator("U", "W", "bliss_matrix", "h1", mode="before")
+    @classmethod
+    def as_immutable_array(cls, value: object) -> NDArray[np.float64]:
+        """Coerce the factors to an immutable real float array."""
+        array = np.asarray(value)
+        if np.issubdtype(array.dtype, np.complexfloating):
+            error_msg = "The factors must be real, got complex values."
+            raise ValueError(error_msg)
+        array = np.array(array, dtype=float)
+        array.flags.writeable = False
+        return array
+
+    @model_validator(mode="after")
+    def check_shapes(self) -> Self:
+        """Validate the factor shapes are consistent with N, R, B and C."""
+        expected = {
+            "U": (self.R, self.B, self.N),
+            "W": (self.R, self.B, self.C),
+            "bliss_matrix": (self.N, self.N),
+            "h1": (self.N, self.N),
+        }
+        for name, shape in expected.items():
+            if getattr(self, name).shape != shape:
+                error_msg = (
+                    f"{name} has shape {getattr(self, name).shape}, expected {shape}."
+                )
+                raise ValueError(error_msg)
+
+        # Reconstruct divides by U, so a zero column would result in NaNs.
+        if np.any(np.linalg.norm(self.U, axis=2) == 0.0):
+            error_msg = "U contains a zero vector, which cannot be normalised."
+            raise ValueError(error_msg)
+
+        return self
+
+    def reconstruct(self) -> SecondQuantisedHamiltonian:
+        """Rebuild the integrals from the factors."""
+        u_normalized = self.U / np.linalg.norm(self.U, axis=2, keepdims=True)
+
+        # W_rc[p,q] = sum_b W[r,b,c] * u[r,b,p] * u[r,b,q]
+        w_rc = np.einsum("rbp,rbq,rbc->rcpq", u_normalized, u_normalized, self.W)
+
+        # g_approx[p,q,t,s] = sum_{r,c} W_rc[p,q] * W_rc[t,s]
+        g_approx = np.einsum("rcpq,rcts->pqts", w_rc, w_rc)
+
+        # Remove the BLISS symmetry shift: g = g_approx - 1/2 (B x I + I x B)
+        identity = np.eye(self.N)
+        shift = np.einsum("pq,rs->pqrs", self.bliss_matrix, identity) + np.einsum(
+            "pq,rs->pqrs", identity, self.bliss_matrix
+        )
+        two_body = g_approx - 0.5 * shift
+
+        # E-form -> bare one-body integrals: t1 = h1 + 1/2 sum_r (pr|rq)
+        one_body = self.h1 + 0.5 * np.einsum("prrq->pq", two_body)
+
+        return SecondQuantisedHamiltonian(
+            one_body=one_body,
+            two_body=two_body,
+            electrons=self.electrons,
+            core_energy=self.const,
+        )
