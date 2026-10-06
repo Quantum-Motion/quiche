@@ -117,7 +117,7 @@ Although not strictly enforced we recommend following the [Conventional Commits]
 Changes to the API, behaviour, packaging or build requirements should be recorded in the `Unreleased` section of `CHANGELOG.md`, following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 ### Docstrings
-Python docstrings should follow [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html) (with the addition of `Properties` and `Resources` sections used for Qualtran `bloq`s).
+Python docstrings should follow [numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html) (with the addition of `Registers` sections used for Qualtran `bloq`s).
 
 ---
 

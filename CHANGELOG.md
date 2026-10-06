@@ -13,6 +13,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ### Added
 - Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
 - Added QUICHE documentation site.
+- Added `Trotterisation.trotter_coeffs`, `Trotterisation.trotter_indices` and `Trotterisation.rotation_sequence`.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
@@ -26,10 +27,16 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Renamed `NaiveQPE`, `KitaevQPE` and `IterativeQPE`'s `n_simulation_qubits` and `n_estimation_bits` to `num_simulation_qubits` and `num_estimation_bits`.
 - Renamed `ElectronicHamiltonian` and `SecondQuantisedHamiltonian`'s `electrons` to `num_electrons`.
 - Renamed `HartreeFockState.closed_shell`'s `electrons` and `spin_orbitals` to `num_electrons` and `num_spin_orbitals`.
+- Renamed the `h` and `t` fields of `QDRIFT` and `Trotterisation` to `sum` and `time`.
+- Renamed the `simulation` register of `QDRIFT`, `Trotterisation`, `NaiveQPE`, `KitaevQPE` and `IterativeQPE` to `system`.
+- `QDRIFT` now decomposes directly into `PauliWordRotation`s, and `Trotterisation` into repeated `PauliWordRotationSequence`s, rather than Qualtran's `TrotterizedUnitary`.
+- Suzuki-Trotter expansion in `Trotterisation` no longer merges adjacent rotations on the same term.
+- `QDRIFT.sampled_indices` now returns a NumPy array rather than a tuple.
 
 ### Deprecated
 
 ### Removed
+- Removed `Trotterisation.get_coeffs_indices()` (use `trotter_coeffs` and `trotter_indices` instead).
 
 ### Fixed
 
