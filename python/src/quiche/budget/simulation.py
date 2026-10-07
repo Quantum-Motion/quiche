@@ -23,6 +23,8 @@ References
 ----------
 [Childs2021] Childs, Su, Tran, Wiebe, Zhu, "Theory of Trotter error with commutator
     scaling", Phys. Rev. X 11, 011020 (2021), arXiv:1912.08854.
+[Schubert2023] Schubert, Mendl, "Trotter error with commutator scaling for the
+    Fermi-Hubbard model", arXiv:2306.10603 (2023).
 [Campbell2019] Campbell, "Random compiler for fast Hamiltonian simulation",
     Phys. Rev. Lett. 123, 070503 (2019), arXiv:1811.08017.
 [Bhatia1984] Bhatia, Davis, "A bound for the spectral variation of a unitary operator",
@@ -30,11 +32,20 @@ References
 
 """
 
+from functools import lru_cache
 from math import asin, ceil, exp, factorial, log2, pi, sin
 
 from quiche.core import PauliSum
 
+from ._commutators import first_order_constant, second_order_constant
+
 _MIN_PHASE_ANCILLAS = 2
+
+# Largest number of terms for which the commutator Trotter constant is computed, per
+# order. Order 1 costs O(n_terms^2 n_qubits) time; order 2 costs O(n_terms^3) time and
+# O(n_terms^2) memory, a few seconds and ~200 MB at the cap. Larger Hamiltonians fall
+# back to the coefficient-magnitude bound.
+_MAX_COMMUTATOR_TERMS = {1: 20_000, 2: 5_000}
 
 
 def get_alpha(paulis: PauliSum) -> float:
@@ -52,12 +63,31 @@ def get_simulation_time(paulis: PauliSum) -> float:
     return pi / get_alpha(paulis)
 
 
+@lru_cache(maxsize=32)
 def get_trotter_constant(paulis: PauliSum, order: int) -> float:
     """
     Get `C` such that a Trotter step of size `dt` has unitary error `<= C dt^(order+1)`.
 
-    Uses only the coefficient magnitudes, with `||[A, B]|| <= 2 ||A|| ||B||`. The
-    identity term commutes with everything and is applied exactly, so it is excluded.
+    The identity term commutes with everything and is applied exactly, so it is
+    excluded. Orders 1 and 2 use the exact nested commutators of the Pauli terms
+    [Childs2021, Props. 9-10], as evaluated in [Schubert2023] (see `_commutators`),
+    which assumes the terms are applied in `PauliSum` order, as every backend does.
+    Hamiltonians above `_MAX_COMMUTATOR_TERMS`, and higher orders, use
+    `get_trotter_norm_constant`.
+    """
+    if paulis.n_terms <= _MAX_COMMUTATOR_TERMS.get(order, 0):
+        if order == 1:
+            return first_order_constant(paulis)
+        return second_order_constant(paulis)
+    return get_trotter_norm_constant(paulis, order)
+
+
+def get_trotter_norm_constant(paulis: PauliSum, order: int) -> float:
+    """
+    Get the Trotter constant `C` from the coefficient magnitudes alone.
+
+    Uses `||[A, B]|| <= 2 ||A|| ||B||`, so it holds for any term order and is never
+    smaller than the commutator constant of `get_trotter_constant`.
 
     - Order 1: [Childs2021, Prop. 15].
     - Order 2: [Childs2021, Prop. 16].

@@ -24,6 +24,8 @@ from scipy.linalg import expm
 
 from quiche import estimation as est
 from quiche import simulation as sim
+from quiche.budget import simulation as budget
+from quiche.budget._commutators import anticommutation_matrix
 from quiche.core import PauliSum, PauliWord
 
 # Fourth-order splitting weights: Suzuki's recursion (QuEST, Qualtran) and the
@@ -122,6 +124,68 @@ class TestTrotterBound:
         # Each eigenvalue of the simulated Hamiltonian is within `error` of one of H.
         gap = _eigenphase_gap(approx, exact) / trotter.time
         assert gap <= trotter.error
+
+
+def _commutator(a: NDArray, b: NDArray) -> NDArray:
+    return a @ b - b @ a
+
+
+def _dense_constants(h: PauliSum) -> tuple[float, float]:
+    """Get [Childs2021, Props. 9-10] term by term, from dense nested commutators."""
+    terms = _term_matrices(h)
+    n = len(terms)
+    first = second = 0.0
+    for i in range(n):
+        for j in range(i + 1, n):
+            inner = _commutator(terms[j], terms[i])
+            first += np.linalg.norm(inner, 2) / 2
+            second += np.linalg.norm(_commutator(terms[i], inner), 2) / 24
+            second += sum(
+                np.linalg.norm(_commutator(terms[k], inner), 2) / 12
+                for k in range(i + 1, n)
+            )
+    return first, second
+
+
+class TestTrotterConstant:
+    """The commutator Trotter constants match their dense definitions."""
+
+    @pytest.mark.parametrize("seed", range(5))
+    def test_anticommutation_matrix(self, seed: int):
+        h = _random_hamiltonian(seed, n_qubits=3, n_terms=8)
+        terms = _term_matrices(h)
+        expected = [[np.allclose(a @ b + b @ a, 0) for b in terms] for a in terms]
+        assert np.array_equal(anticommutation_matrix(h), expected)
+
+    @pytest.mark.parametrize("seed", range(5))
+    def test_matches_dense(self, seed: int):
+        h = _random_hamiltonian(seed, n_qubits=3, n_terms=8)
+        first, second = _dense_constants(h)
+        assert np.isclose(budget.get_trotter_constant(h, 1), first)
+        assert np.isclose(budget.get_trotter_constant(h, 2), second)
+
+    @pytest.mark.parametrize("order", [1, 2, 4])
+    @pytest.mark.parametrize("seed", range(5))
+    def test_at_most_norm_constant(self, seed: int, order: int):
+        h = _random_hamiltonian(seed, n_qubits=3, n_terms=8)
+        assert budget.get_trotter_constant(
+            h, order
+        ) <= budget.get_trotter_norm_constant(h, order) * (1 + 1e-12)
+
+    def test_h2(self, h2: PauliSum):
+        assert np.isclose(budget.get_trotter_constant(h2, 1), 0.0321479281505)
+        assert np.isclose(budget.get_trotter_constant(h2, 2), 0.0064375526625)
+
+    @pytest.mark.parametrize("order", [1, 2])
+    def test_falls_back_above_cap(self, monkeypatch: pytest.MonkeyPatch, order: int):
+        h = _random_hamiltonian(0, n_qubits=3, n_terms=8)
+        monkeypatch.setitem(budget._MAX_COMMUTATOR_TERMS, order, h.n_terms - 1)
+        budget.get_trotter_constant.cache_clear()
+        try:
+            constant = budget.get_trotter_constant(h, order)
+        finally:
+            budget.get_trotter_constant.cache_clear()
+        assert constant == budget.get_trotter_norm_constant(h, order)
 
 
 class TestQubitisedBound:

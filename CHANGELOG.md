@@ -21,6 +21,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Moved `quiche.dispatch.budget` to `quiche.budget`; its functions take error values instead of an `Errors` budget.
 - `logical_rotations_to_tgates` takes a `rotation_error` value instead of an `Errors` budget.
 - The default evolution time is `pi / (lam + |identity_coefficient|)`, so the measured phase can no longer wrap when a backend (CUDA-Q) folds the identity coefficient into it.
+- First- and second-order Trotter bounds use the exact nested commutators of the Pauli terms (Childs et al. 2021, Props. 9-10), so `Trotter(error=...)` needs fewer `reps` (H2 at 1 mHa: 1211 → 61 at order 1, 42 → 5 at order 2). Hamiltonians above 20,000 (order 1) or 5,000 (order 2) terms, and higher orders, keep the coefficient-magnitude bound, now `get_trotter_norm_constant`.
 - `QDRIFT` takes `reps` only: its error reduces `success_probability` rather than shifting the energy. `Qubitised` takes `error` (an energy) in place of `prepare_error`. `Trotter` rejects odd orders above 1.
 
 ### Deprecated
