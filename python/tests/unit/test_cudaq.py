@@ -481,7 +481,7 @@ class TestInverseQFT:
         # unlike some textbook-diagram conventions.
         n = 3
         dim = 1 << n
-        inverse_qft = inverse_qft_kernel()
+        inverse_qft = inverse_qft_kernel(n)
 
         @cudaq.kernel
         def prep_and_iqft(target: int) -> None:
@@ -499,6 +499,20 @@ class TestInverseQFT:
         row, col = np.meshgrid(np.arange(dim), np.arange(dim), indexing="ij")
         expected = np.exp(-2j * np.pi * col * row / dim) / np.sqrt(dim)
         np.testing.assert_allclose(matrix, expected, atol=1e-9)
+
+    def test_angles_are_not_computed_in_kernel(self, cudaq: ModuleType):
+        # CUDA-Q Logical's Quake import rejects in-kernel powers such as
+        # `math.fpowi`, so the rotation angles must arrive precomputed.
+        inverse_qft = inverse_qft_kernel(4)
+
+        @cudaq.kernel
+        def iqft() -> None:
+            """Apply the inverse QFT to a fresh register."""
+            inverse_qft(cudaq.qvector(4))
+
+        quake = str(iqft) + str(inverse_qft)
+        assert "fpowi" not in quake
+        assert "powf" not in quake
 
 
 class TestTextbookQPEKernel:

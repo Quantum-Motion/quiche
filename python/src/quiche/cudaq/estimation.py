@@ -71,9 +71,14 @@ def _product_formula(
             raise NotImplementedError(qubitised_msg)
 
 
-def inverse_qft_kernel() -> CudaqKernel:
+def inverse_qft_kernel(num_qubits: int) -> CudaqKernel:
     """
     Build a `(qubits: cudaq.qview)` kernel applying the inverse QFT.
+
+    `num_qubits` is the size of the register it acts on. The controlled-rotation
+    angles `-pi / 2^d` are computed here on the host rather than in-kernel, so the
+    compiled kernel holds them as constants: compilers that require static angles,
+    such as CUDA-Q Logical's Quake import, reject an in-kernel `2.0 ** d`.
 
     CUDA-Q Algorithms has no QFT primitive; this is a from-scratch
     implementation (bit-reversal swaps, then the standard controlled-rotation
@@ -88,6 +93,9 @@ def inverse_qft_kernel() -> CudaqKernel:
     """
     cudaq, _ = load_cudaq()
 
+    # angles[d] = -pi / 2^d, for every qubit distance d in the register.
+    angles = [-pi / 2.0**d for d in range(num_qubits)]
+
     @cudaq.kernel
     def inverse_qft(qubits: cudaq.qview) -> None:
         """Apply the inverse QFT: bit-reversal swaps, then rotations and Hadamards."""
@@ -96,8 +104,7 @@ def inverse_qft_kernel() -> CudaqKernel:
             swap(qubits[i], qubits[n - 1 - i])
         for j in range(n):
             for k in range(j):
-                angle = -pi / (2.0 ** (j - k))
-                r1.ctrl(angle, qubits[j], qubits[k])
+                r1.ctrl(angles[j - k], qubits[j], qubits[k])
             h(qubits[j])
 
     return inverse_qft
@@ -157,7 +164,7 @@ def textbook_qpe_circuit(
 
     from cudaq_algorithms.trotter import apply_trotter  # noqa: PLC0415
 
-    inverse_qft = inverse_qft_kernel()
+    inverse_qft = inverse_qft_kernel(num_qpe_ancillas)
 
     @cudaq.kernel
     def circuit(data: cudaq.qview, ancilla: cudaq.qview) -> None:
@@ -334,7 +341,7 @@ def qubitised_qpe_circuit(
 
     prep = encoding.prepare_kernel()
     controlled_step = encoding.controlled_walk_step_kernel()
-    inverse_qft = inverse_qft_kernel()
+    inverse_qft = inverse_qft_kernel(num_qpe_ancillas)
 
     @cudaq.kernel
     def circuit(data: cudaq.qview, work: cudaq.qview) -> None:
