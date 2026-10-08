@@ -187,7 +187,7 @@ class FactorisedHamiltonian(BaseModel):
     bliss_matrix: NDArray[np.float64]  # (N, N) symmetric BLISS matrix
     h1: NDArray[np.float64]  # (N, N) one-body matrix, without the const/N shift
     const: float  # constant energy
-    electrons: int  # number of electrons
+    num_electrons: int  # number of electrons
     job_id: int | None = None  # job ID in the original db file
 
     @field_validator("U", "W", "bliss_matrix", "h1", mode="before")
@@ -248,6 +248,6 @@ class FactorisedHamiltonian(BaseModel):
         return SecondQuantisedHamiltonian(
             one_body=one_body,
             two_body=two_body,
-            electrons=self.electrons,
+            num_electrons=self.num_electrons,
             core_energy=self.const,
         )
