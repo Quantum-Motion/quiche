@@ -22,21 +22,21 @@ from quiche.core import Errors, PauliSum, PauliWord
 @pytest.fixture(scope="session")
 def h2() -> PauliSum:
     """Minimal basis H2 Hamiltonian in Jordan-Wigner mapping."""
-    terms = (
-        PauliWord(terms=("X", "X", "Y", "Y"), qubits=(0, 1, 2, 3)),
-        PauliWord(terms=("X", "Y", "Y", "X"), qubits=(0, 1, 2, 3)),
-        PauliWord(terms=("Y", "X", "X", "Y"), qubits=(0, 1, 2, 3)),
-        PauliWord(terms=("Y", "Y", "X", "X"), qubits=(0, 1, 2, 3)),
-        PauliWord(terms=("Z", "Z"), qubits=(0, 1)),
-        PauliWord(terms=("Z", "Z"), qubits=(0, 2)),
-        PauliWord(terms=("Z", "Z"), qubits=(0, 3)),
-        PauliWord(terms=("Z", "Z"), qubits=(1, 2)),
-        PauliWord(terms=("Z", "Z"), qubits=(1, 3)),
-        PauliWord(terms=("Z", "Z"), qubits=(2, 3)),
-        PauliWord(terms=("Z",), qubits=(0,)),
-        PauliWord(terms=("Z",), qubits=(1,)),
-        PauliWord(terms=("Z",), qubits=(2,)),
-        PauliWord(terms=("Z",), qubits=(3,)),
+    words = (
+        PauliWord(paulis=("X", "X", "Y", "Y"), qubits=(0, 1, 2, 3)),
+        PauliWord(paulis=("X", "Y", "Y", "X"), qubits=(0, 1, 2, 3)),
+        PauliWord(paulis=("Y", "X", "X", "Y"), qubits=(0, 1, 2, 3)),
+        PauliWord(paulis=("Y", "Y", "X", "X"), qubits=(0, 1, 2, 3)),
+        PauliWord(paulis=("Z", "Z"), qubits=(0, 1)),
+        PauliWord(paulis=("Z", "Z"), qubits=(0, 2)),
+        PauliWord(paulis=("Z", "Z"), qubits=(0, 3)),
+        PauliWord(paulis=("Z", "Z"), qubits=(1, 2)),
+        PauliWord(paulis=("Z", "Z"), qubits=(1, 3)),
+        PauliWord(paulis=("Z", "Z"), qubits=(2, 3)),
+        PauliWord(paulis=("Z",), qubits=(0,)),
+        PauliWord(paulis=("Z",), qubits=(1,)),
+        PauliWord(paulis=("Z",), qubits=(2,)),
+        PauliWord(paulis=("Z",), qubits=(3,)),
     )
 
     coeffs = (
@@ -58,7 +58,7 @@ def h2() -> PauliSum:
 
     id_coeff = -0.098864
 
-    return PauliSum(coefficients=coeffs, terms=terms, identity_coefficient=id_coeff)
+    return PauliSum(coefficients=coeffs, words=words, identity_coefficient=id_coeff)
 
 
 @pytest.fixture

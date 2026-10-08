@@ -17,7 +17,6 @@
 /**
  * @file qpe.hpp
  * @brief Quantum phase estimation algorithms.
- * @author Vasco Ferreira
  */
 
 #pragma once

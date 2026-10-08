@@ -17,7 +17,6 @@
 /**
  * @file utils.hpp
  * @brief Helpers and utilities for QUICHE.
- * @author Vasco Ferreira
  */
 
 #pragma once

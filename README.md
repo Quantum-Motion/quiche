@@ -52,11 +52,11 @@ paulis = hamlib.parse(hamlib.read_dataset("H2.hdf5", "ham_JW-4"))
 
 spec = QPESpec(
     hamiltonian=ElectronicHamiltonian(
-        electrons=2,
+        num_electrons=2,
         paulis=paulis,
         mapping=Mapping.JordanWigner,
     ),
-    state_prep=HartreeFockState.closed_shell(electrons=2, spin_orbitals=4),
+    state_prep=HartreeFockState.closed_shell(num_electrons=2, num_spin_orbitals=4),
     algorithm=PhaseEstimation.Textbook,
     simulation=Simulation.Qubitised,
     error_budget=Errors(

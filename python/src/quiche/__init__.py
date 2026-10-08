@@ -79,8 +79,8 @@ def __getattr__(name: str) -> object:
     if name in __all__:
         return importlib.import_module(f".{name}", __name__)
 
-    err_msg = f"module {__name__!r} has no attribute {name!r}"
-    raise AttributeError(err_msg)
+    error_msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(error_msg)
 
 
 def __dir__() -> list[str]:

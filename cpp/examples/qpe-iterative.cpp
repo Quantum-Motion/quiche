@@ -17,8 +17,6 @@
 /** @file
  * Demo simulation of single-ancilla iterative quantum phase estimation using Trotterisation for
  * Hamiltonian simulation with a minimal basis set H2 molecule.
- *
- * @author Vasco Ferreira
  */
 
 #include <iostream>

@@ -56,12 +56,12 @@ class TestBitstringStatePrep:
 class TestIdentityStatePrep:
     """Tests for identity state prep."""
 
-    n_qubits = 5
-    bloq = IdentityStatePrep(n_qubits)
+    num_qubits = 5
+    bloq = IdentityStatePrep(num_qubits)
 
     def test_num_qubits(self):
         actual = self.bloq.my_static_costs(QubitCount())
-        expected = self.n_qubits
+        expected = self.num_qubits
         assert actual == expected
 
     def test_bloq_counts(self):

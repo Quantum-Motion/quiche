@@ -2,11 +2,7 @@
 name = "pyquiche"
 dynamic = ["version"]
 description = "QUantum Integrated CHEmistry toolkit."
-authors = [
-    { name = "Thomas Bromley", email = "thomas@quantummotion.tech"},
-    { name = "Annina Lieberherr", email = "annina@quantummotion.tech"},
-    { name = "Vasco Ferreira", email = "vasco.ferreira@quantummotion.tech"}
-]
+authors = [{ name = "Quantum Motion Technologies Ltd." }]
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "licenses/*.txt"]
@@ -95,9 +91,6 @@ BUILD_SHARED_LIBS = "ON"
 FLOAT_PRECISION = "2"
 ENABLE_MULTITHREADING = "ON"
 ENABLE_DISTRIBUTION = "OFF"
-
-[tool.uv]
-compile-bytecode = true
 
 [tool.ruff]
 src = ["python", "python/src"]

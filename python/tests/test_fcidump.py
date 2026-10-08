@@ -49,7 +49,7 @@ def test_fcidump_parsing(h2_fcidump: str):
 
     hamiltonian = fcidump.parse(h2_fcidump)
 
-    assert hamiltonian.electrons == 2
+    assert hamiltonian.num_electrons == 2
     assert hamiltonian.two_body.shape == (2, 2, 2, 2)
     assert hamiltonian.core_energy == pytest.approx(0.714139282456140)
     np.testing.assert_allclose(hamiltonian.one_body, expected_one_body)
@@ -86,7 +86,7 @@ def test_two_body_integrals(h2_fcidump: str, indices: tuple[int, ...], expected:
 def test_header_variants(text: str):
     """Test accepted namelist formats all parse."""
     hamiltonian = fcidump.parse(text)
-    assert hamiltonian.electrons == 2
+    assert hamiltonian.num_electrons == 2
     assert hamiltonian.two_body[0, 0, 0, 0] == pytest.approx(1.0)
 
 

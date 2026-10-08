@@ -88,12 +88,12 @@ class QPESpec:
         if self.state_prep is not None and not isinstance(
             self.state_prep, HartreeFockState
         ):
-            err_msg = f"Invalid state preparation {self.state_prep}"
-            raise ValueError(err_msg)
+            error_msg = f"Invalid state preparation {self.state_prep}"
+            raise ValueError(error_msg)
 
         if isinstance(self.state_prep, HartreeFockState) and (
-            (self.state_prep.num_spin_orbitals != self.hamiltonian.paulis.n_qubits)
-            or (self.state_prep.num_electrons != self.hamiltonian.electrons)
+            (self.state_prep.num_spin_orbitals != self.hamiltonian.paulis.num_qubits)
+            or (self.state_prep.num_electrons != self.hamiltonian.num_electrons)
         ):
             error_msg = (
                 "Provided HartreeFockState is inconsistent with ElectronicHamiltonian."
@@ -118,8 +118,8 @@ class QPESpec:
         match self.simulation:
             case Simulation.QDRIFT:
                 if self.seed is None:
-                    err_msg = "QDRIFT requires a seed."
-                    raise ValueError(err_msg)
+                    error_msg = "QDRIFT requires a seed."
+                    raise ValueError(error_msg)
 
                 self.time, self.reps = get_qdrift_params(
                     self.hamiltonian.paulis,
@@ -139,7 +139,7 @@ class QPESpec:
                     self.error_budget,
                 )
 
-        self.num_data = self.hamiltonian.paulis.n_qubits
+        self.num_data = self.hamiltonian.paulis.num_qubits
         self.num_simulation_ancillas = self.num_index_ancillas + self.num_phase_ancillas
         self.num_qubits = (
             self.num_data + self.num_qpe_ancillas + self.num_simulation_ancillas
@@ -171,7 +171,7 @@ class QPESpec:
                 bloq = QDRIFT(
                     h=self.hamiltonian.paulis,
                     t=self.time,
-                    n_terms=self.reps,
+                    num_samples=self.reps,
                     seed=self.seed,
                 )
 
@@ -200,7 +200,7 @@ class QPESpec:
                 bloq = Trotterisation(
                     h=self.hamiltonian.paulis,
                     t=self.time,
-                    n_steps=self.reps,
+                    num_steps=self.reps,
                     order=self.order,
                 )
 
