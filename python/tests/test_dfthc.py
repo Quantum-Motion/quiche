@@ -54,7 +54,7 @@ dummy_factorised_hamiltonian = FactorisedHamiltonian(
     bliss_matrix=np.zeros((N, N)),
     h1=np.eye(N),
     const=0.0,
-    electrons=N,
+    num_electrons=N,
     job_id=0,
 )
 
