@@ -50,7 +50,8 @@ class PrepareUniformSuperpositionDFTHC(Bloq):
     """
     Uniform superposition preparation with success flag.
 
-    Placeholder for the amplitude-amplified equal superposition preparation of ref. [1].
+    Placeholder for the amplitude-amplified equal superposition preparation of
+    [Low2025]_.
 
     Parameters
     ----------
@@ -58,10 +59,10 @@ class PrepareUniformSuperpositionDFTHC(Bloq):
         Number of terms in the superposition.
     num_bits_amp_rotations : int
         Number of bits used for amplitude amplification rotations during equal state
-        preparation, :math:`s` in ref. [1].
+        preparation, :math:`s` in [Low2025]_.
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
 
     Registers
     ---------
@@ -77,8 +78,8 @@ class PrepareUniformSuperpositionDFTHC(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 
@@ -121,26 +122,26 @@ class OuterPrepareDFTHC(Bloq):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_ranks : int
-        DFTHC rank, :math:`R` in ref. [1].
+        DFTHC rank, :math:`R` in [Low2025]_.
     num_copies : int
-        Number of copies per rank component, :math:`C` in ref. [1].
+        Number of copies per rank component, :math:`C` in [Low2025]_.
 
     num_bits_keep : int
         Number of bits for coherent alias sampling keep probability, :math:`b_{k1}` in
-        ref. [1].
+        [Low2025]_.
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
     num_bits_amp_rotations : int
         Number of bits used for amplitude amplification rotations during equal state
-        preparation, :math:`s` in ref. [1].
+        preparation, :math:`s` in [Low2025]_.
 
     log_block_size : int
-        Log of the block size for QROAM, :math:`k_1` in ref. [1].
+        Log of the block size for QROAM, :math:`k_1` in [Low2025]_.
     log_block_size_adjoint : int
-        Log of the block size for QROAM adjoint, :math:`k_5` in ref. [1].
+        Log of the block size for QROAM adjoint, :math:`k_5` in [Low2025]_.
 
     Registers
     ---------
@@ -152,7 +153,7 @@ class OuterPrepareDFTHC(Bloq):
         preparation.
     succ_outer : QBit
         Success flag for the uniform state preparation over the outer index,
-        :math:`succ_{x_o}` in ref. [1].
+        :math:`succ_{x_o}` in [Low2025]_.
 
     phase_grad : QAny
         Phase gradient register used throughout the circuit.
@@ -173,8 +174,8 @@ class OuterPrepareDFTHC(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 
@@ -333,8 +334,8 @@ class OuterPrepareDFTHCAdjoint(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 
@@ -375,28 +376,28 @@ class InnerPrepareDFTHC(Bloq):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_ranks : int
-        DFTHC rank, :math:`R` in ref. [1].
+        DFTHC rank, :math:`R` in [Low2025]_.
     num_bases : int
-        Number of bases per rank component, :math:`B` in ref. [1].
+        Number of bases per rank component, :math:`B` in [Low2025]_.
     num_copies : int
-        Number of copies per rank component, :math:`C` in ref. [1].
+        Number of copies per rank component, :math:`C` in [Low2025]_.
 
     num_bits_keep : int
         Number of bits for coherent alias sampling keep probability, :math:`b_{k2}` in
-        ref. [1].
+        [Low2025]_.
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
     num_bits_amp_rotations : int
         Number of bits used for amplitude amplification rotations during equal state
-        preparation, :math:`s` in ref. [1].
+        preparation, :math:`s` in [Low2025]_.
 
     log_block_size : int
-        Log of the block size for QROAM, :math:`k_2` in ref. [1].
+        Log of the block size for QROAM, :math:`k_2` in [Low2025]_.
     log_block_size_adjoint : int
-        Log of the block size for QROAM adjoint, :math:`k_4` in ref. [1].
+        Log of the block size for QROAM adjoint, :math:`k_4` in [Low2025]_.
 
     Registers
     ---------
@@ -437,8 +438,8 @@ class InnerPrepareDFTHC(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 
@@ -661,15 +662,15 @@ class RotationPrepareDFTHC(Bloq):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_ranks : int
-        DFTHC rank, :math:`R` in ref. [1].
+        DFTHC rank, :math:`R` in [Low2025]_.
     num_bases : int
-        Number of bases per rank component, :math:`B` in ref. [1].
+        Number of bases per rank component, :math:`B` in [Low2025]_.
 
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
 
     Registers
     ---------
@@ -688,8 +689,8 @@ class RotationPrepareDFTHC(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 

@@ -47,10 +47,10 @@ class GivensLadder(Bloq):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
 
     Registers
     ---------
@@ -63,8 +63,8 @@ class GivensLadder(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 
@@ -143,7 +143,7 @@ class SpinSelectSwap(Bloq):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
 
     Registers
     ---------
@@ -165,8 +165,8 @@ class SpinSelectSwap(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 
@@ -248,22 +248,22 @@ class MajoranaDFTHC(Bloq):
         Non-identity flag qubit.
     s : QBit
         Superposition qubit selecting :math:`X` or :math:`iY` for :math:`D_1/Q_1`,
-        :math:`\varsigma` in ref. [2].
+        :math:`\varsigma` in [Low2026]_.
     target : QBit
         Qubit to apply Majorana operator to.
 
     Notes
     -----
     Polarity of `G_0`: we use `G_0` = 0 for SF and `G_0` = 1 for :math:`D_1/Q_1`, as in
-    ref. [1] fig. 2 and appendix B7. Fig. 4 appears to use the opposite polarity. It is
-    not followed here, so that this bloq stays consistent with the others.
+    [Low2025]_ fig. 2 and appendix B7. Fig. 4 appears to use the opposite polarity. It
+    is not followed here, so that this bloq stays consistent with the others.
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-        [2] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026, arXiv:
-            2605.30455.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
+       arXiv: 2605.30455.
 
     """
 
@@ -330,20 +330,20 @@ class RotatedMajorana(Bloq):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
 
     Registers
     ---------
     succ_outer : QBit
         Success flag for the uniform state preparation over the outer index,
-        :math:`succ_{x_o}` in ref. [1].
+        :math:`succ_{x_o}` in [Low2025]_.
 
     succ_inner : QBit
         Success flag for the uniform state preparation over the inner index,
-        :math:`succ_b` in ref. [1].
+        :math:`succ_b` in [Low2025]_.
 
     G_0 : QBit
         Qubit selecting between SF and :math:`D_1/Q_1`.
@@ -353,7 +353,7 @@ class RotatedMajorana(Bloq):
         Non-identity flag qubit.
     s : QBit
         Superposition qubit selecting :math:`X` or :math:`iY` for :math:`D_1/Q_1`,
-        :math:`\varsigma` in ref. [2].
+        :math:`\varsigma` in [Low2026]_.
 
     rotations : QAny
         Givens rotation angles for the basis rotation.
@@ -366,10 +366,10 @@ class RotatedMajorana(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-        [2] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026, arXiv:
-            2605.30455.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
+       arXiv: 2605.30455.
 
     """
 
@@ -455,19 +455,19 @@ class SelectDFTHC(Bloq):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
 
     Registers
     ---------
     succ_outer : QBit
         Success flag for the uniform state preparation over the outer index,
-        :math:`succ_{x_o}` in ref. [1].
+        :math:`succ_{x_o}` in [Low2025]_.
     succ_inner : QBit
         Success flag for the uniform state preparation over the inner index,
-        :math:`succ_b` in ref. [1].
+        :math:`succ_b` in [Low2025]_.
 
     G_0 : QBit
         Qubit selecting between SF and :math:`D_1/Q_1`.
@@ -488,7 +488,7 @@ class SelectDFTHC(Bloq):
         Selected spin, copied from spin_0 (SF) or spin_1 (:math:`D_1/Q_1`).
     s : QBit
         Superposition qubit selecting :math:`X` or :math:`iY` for :math:`D_1/Q_1`,
-        :math:`\varsigma` in ref. [2].
+        :math:`\varsigma` in [Low2026]_.
 
     phase_grad : QAny
         Phase gradient register used throughout the circuit.
@@ -499,10 +499,10 @@ class SelectDFTHC(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-        [2] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026, arXiv:
-            2605.30455.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
+       arXiv: 2605.30455.
 
     """
 
