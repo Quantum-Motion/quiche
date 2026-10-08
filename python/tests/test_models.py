@@ -130,9 +130,149 @@ class TestPauliWord:
         )
         np.testing.assert_equal(actual, expected)
 
+    @pytest.mark.parametrize(
+        ("string", "big_endian", "expected"),
+        [
+            ("X", True, PauliWord(paulis=("X",), qubits=(0,))),
+            ("XIZ", True, PauliWord(paulis=("X", "Z"), qubits=(0, 2))),
+            ("XIZ", False, PauliWord(paulis=("Z", "X"), qubits=(0, 2))),
+            ("XYZ", False, PauliWord(paulis=("Z", "Y", "X"), qubits=(0, 1, 2))),
+            ("IIY", True, PauliWord(paulis=("Y",), qubits=(2,))),
+            ("IIY", False, PauliWord(paulis=("Y",), qubits=(0,))),
+            ("  XZ  ", True, PauliWord(paulis=("X", "Z"), qubits=(0, 1))),
+        ],
+    )
+    def test_from_dense_string(
+        self, string: str, *, big_endian: bool, expected: PauliWord
+    ):
+        assert PauliWord.from_dense_string(string, big_endian=big_endian) == expected
+
+    @pytest.mark.parametrize(
+        ("string", "error_msg"),
+        [
+            ("XAZ", "Invalid Pauli 'A'"),
+            ("xz", "Invalid Pauli 'x'"),
+            ("X Z", "Invalid Pauli ' '"),
+            ("X(0)", r"Invalid Pauli '\('"),
+            ("", "no non-identity Paulis"),
+            ("III", "no non-identity Paulis"),
+        ],
+    )
+    def test_from_dense_string_invalid(self, string: str, error_msg: str):
+        with pytest.raises(ValueError, match=error_msg):
+            PauliWord.from_dense_string(string, big_endian=True)
+
+    @pytest.mark.parametrize(
+        ("string", "expected"),
+        [
+            ("X(0)", PauliWord(paulis=("X",), qubits=(0,))),
+            ("X(0) Z(2)", PauliWord(paulis=("X", "Z"), qubits=(0, 2))),
+            ("Z(2) X(0)", PauliWord(paulis=("X", "Z"), qubits=(0, 2))),
+            ("Y(12)", PauliWord(paulis=("Y",), qubits=(12,))),
+            ("X(007)", PauliWord(paulis=("X",), qubits=(7,))),
+            ("  X(0)   Y(3) ", PauliWord(paulis=("X", "Y"), qubits=(0, 3))),
+        ],
+    )
+    def test_from_sparse_string(self, string: str, expected: PauliWord):
+        assert PauliWord.from_sparse_string(string) == expected
+
+    @pytest.mark.parametrize(
+        ("string", "error_msg"),
+        [
+            ("", "no non-identity Paulis"),
+            ("I", "Invalid sparse Pauli"),
+            ("I(0)", "Invalid sparse Pauli"),
+            ("XIZ", "Invalid sparse Pauli"),
+            ("X0", "Invalid sparse Pauli"),
+            ("x(0)", "Invalid sparse Pauli"),
+            ("A(0)", "Invalid sparse Pauli"),
+            ("X(-1)", "Invalid sparse Pauli"),
+            ("X(a)", "Invalid sparse Pauli"),
+            ("X(0", "Invalid sparse Pauli"),
+            ("X(0)Y(1)", "Invalid sparse Pauli"),
+            ("X(0) Y(0)", "Qubit 0 appears more than once"),
+            ("X(0) Y(00)", "Qubit 0 appears more than once"),
+        ],
+    )
+    def test_from_sparse_string_invalid(self, string: str, error_msg: str):
+        with pytest.raises(ValueError, match=error_msg):
+            PauliWord.from_sparse_string(string)
+
+    @pytest.mark.parametrize(
+        ("word", "expected"),
+        [
+            (PauliWord(paulis=("X",), qubits=(0,)), "X(0)"),
+            (
+                PauliWord(paulis=("X", "Y", "Z"), qubits=(0, 1, 2)),
+                "X(0) Y(1) Z(2)",
+            ),
+            (PauliWord(paulis=("X", "Z"), qubits=(0, 2)), "X(0) Z(2)"),
+            (PauliWord(paulis=("Y", "X"), qubits=(3, 12)), "Y(3) X(12)"),
+        ],
+    )
+    def test_to_sparse_string(self, word: PauliWord, expected: str):
+        assert word.to_sparse_string() == expected
+
+    @pytest.mark.parametrize(
+        ("word", "length", "big_endian", "expected"),
+        [
+            (PauliWord(paulis=("Y",), qubits=(0,)), None, True, "Y"),
+            (PauliWord(paulis=("Y",), qubits=(0,)), None, False, "Y"),
+            (PauliWord(paulis=("X", "Z"), qubits=(0, 2)), None, True, "XIZ"),
+            (PauliWord(paulis=("X", "Z"), qubits=(0, 2)), None, False, "ZIX"),
+            (PauliWord(paulis=("Z",), qubits=(3,)), None, False, "ZIII"),
+            (PauliWord(paulis=("X",), qubits=(0,)), 4, True, "XIII"),
+        ],
+    )
+    def test_to_dense_string(
+        self, word: PauliWord, length: int | None, *, big_endian: bool, expected: str
+    ):
+        assert word.to_dense_string(length, big_endian=big_endian) == expected
+
+    @pytest.mark.parametrize("length", [-2, 0, 4])
+    def test_to_dense_string_invalid_length(self, length: int):
+        word = PauliWord(paulis=("X", "Y", "Z"), qubits=(1, 3, 4))
+        error_msg = "Length must be greater than the maximum target qubit"
+        with pytest.raises(ValueError, match=error_msg):
+            word.to_dense_string(length, big_endian=True)
+
+    @pytest.mark.parametrize("big_endian", [True, False])
+    @pytest.mark.parametrize(
+        "word",
+        [
+            PauliWord(paulis=("X",), qubits=(0,)),
+            PauliWord(paulis=("X", "Y", "Z"), qubits=(1, 2, 5)),
+        ],
+    )
+    def test_dense_round_trip(self, word: PauliWord, *, big_endian: bool):
+        string = word.to_dense_string(big_endian=big_endian)
+        assert PauliWord.from_dense_string(string, big_endian=big_endian) == word
+
+    @pytest.mark.parametrize(
+        "word",
+        [
+            PauliWord(paulis=("X",), qubits=(0,)),
+            PauliWord(paulis=("X", "Y", "Z"), qubits=(1, 2, 5)),
+        ],
+    )
+    def test_sparse_round_trip(self, word: PauliWord):
+        string = word.to_sparse_string()
+        assert PauliWord.from_sparse_string(string) == word
+
 
 class TestPauliSum:
     """Test PauliSum class."""
+
+    @pytest.fixture
+    def example_sum(self) -> PauliSum:
+        return PauliSum(
+            coefficients=(5.0, -2.0),
+            words=(
+                PauliWord(paulis=("X", "Z"), qubits=(0, 2)),
+                PauliWord(paulis=("Z", "Y"), qubits=(0, 1)),
+            ),
+            identity_coefficient=10.0,
+        )
 
     def test_no_words(self):
         error_msg = "The number of words of the PauliSum must be nonzero."
@@ -176,3 +316,114 @@ class TestPauliSum:
         )
 
         np.testing.assert_equal(actual, expected)
+
+    def test_to_sparse_string(self, example_sum: PauliSum):
+        expected = "+10.0\n+5.0 X(0) Z(2)\n-2.0 Z(0) Y(1)"
+        actual = example_sum.to_sparse_string()
+        assert actual == expected
+
+    def test_to_sparse_string_zero_identity(self):
+        pauli_sum = PauliSum(
+            coefficients=(1.5,), words=(PauliWord(paulis=("X",), qubits=(0,)),)
+        )
+        expected = "+0.0\n+1.5 X(0)"
+        actual = pauli_sum.to_sparse_string()
+        assert actual == expected
+
+    @pytest.mark.parametrize(
+        ("length", "big_endian", "expected"),
+        [
+            (None, True, "+10.0 III\n+5.0 XIZ\n-2.0 ZYI"),
+            (None, False, "+10.0 III\n+5.0 ZIX\n-2.0 IYZ"),
+            (4, True, "+10.0 IIII\n+5.0 XIZI\n-2.0 ZYII"),
+            (4, False, "+10.0 IIII\n+5.0 IZIX\n-2.0 IIYZ"),
+        ],
+    )
+    def test_to_dense_string(
+        self,
+        example_sum: PauliSum,
+        length: int | None,
+        expected: str,
+        *,
+        big_endian: bool,
+    ):
+        assert example_sum.to_dense_string(length, big_endian=big_endian) == expected
+
+    @pytest.mark.parametrize("length", [-1, 0, 2])
+    def test_to_dense_string_invalid_length(self, example_sum: PauliSum, length: int):
+        with pytest.raises(ValueError, match="Length must be greater"):
+            example_sum.to_dense_string(length, big_endian=True)
+
+    @pytest.mark.parametrize(
+        "string",
+        [
+            "+10.0 \n+5.0 X(0) Z(2)\n-2.0 Z(0) Y(1)",
+            "10.0 \n5.0 X(0) Z(2)\n-2e0 Z(0) Y(1)",
+            "4.0 \n6.0 \n5.0 X(0) Z(2)\n-2.0 Z(0) Y(1)",
+            "\n  10.0   \n\n5.0 Z(2) X(0)\n-2.0 Y(1) Z(0)\n",
+        ],
+    )
+    def test_from_sparse_string(self, example_sum: PauliSum, string: str):
+        assert PauliSum.from_sparse_string(string) == example_sum
+
+    def test_from_sparse_string_no_identity_line(self):
+        pauli_sum = PauliSum.from_sparse_string("1.5 X(0)")
+        assert pauli_sum.identity_coefficient == 0.0
+
+    @pytest.mark.parametrize(
+        ("string", "error_msg"),
+        [
+            ("X(0)", "Invalid PauliSum line"),
+            ("abc X(0)", "Invalid PauliSum line"),
+            ("1.0 A(0)", "Invalid sparse Pauli"),
+            ("1.0 X0", "Invalid sparse Pauli"),
+            ("1.0 X(0) Y(0)", "appears more than once"),
+            ("0 X(0)", "zero-valued coefficients"),
+            ("", "must be nonzero"),
+            ("1.0 ", "must be nonzero"),
+            ("1.0 \n 2.0", "must be nonzero"),
+        ],
+    )
+    def test_from_sparse_string_invalid(self, string: str, error_msg: str):
+        with pytest.raises(ValueError, match=error_msg):
+            PauliSum.from_sparse_string(string)
+
+    @pytest.mark.parametrize(
+        ("string", "big_endian"),
+        [
+            ("10 III\n5 XIZ\n-2 ZYI", True),
+            ("10 III\n5 ZIX\n-2 IYZ", False),
+        ],
+    )
+    def test_from_dense_string(
+        self, example_sum: PauliSum, string: str, *, big_endian: bool
+    ):
+        assert PauliSum.from_dense_string(string, big_endian=big_endian) == example_sum
+
+    @pytest.mark.parametrize(
+        ("string", "error_msg"),
+        [
+            ("XZ", "Invalid PauliSum line"),
+            ("abc XZ", "Invalid PauliSum line"),
+            ("1.0 XAZ", "Invalid Pauli 'A'"),
+            ("1.0 xz", "Invalid Pauli 'x'"),
+            ("1.0 X Z", "Invalid Pauli ' '"),
+            ("0 XZ", "zero-valued coefficients"),
+            ("", "must be nonzero"),
+            ("1.0 III", "must be nonzero"),
+            ("10 I\n5 XIZ\n-2 ZY", "must have the same length"),
+            ("10.0\n5.0 XIZ", "must have the same length"),
+        ],
+    )
+    def test_from_dense_string_invalid(self, string: str, error_msg: str):
+        with pytest.raises(ValueError, match=error_msg):
+            PauliSum.from_dense_string(string, big_endian=True)
+
+    @pytest.mark.parametrize("big_endian", [True, False])
+    def test_dense_round_trip(self, example_sum: PauliSum, *, big_endian: bool):
+        string = example_sum.to_dense_string(big_endian=big_endian)
+        assert PauliSum.from_dense_string(string, big_endian=big_endian) == example_sum
+
+    def test_sparse_round_trip(self, example_sum: PauliSum):
+        string = example_sum.to_sparse_string()
+        assert PauliSum.from_sparse_string(string) == example_sum
