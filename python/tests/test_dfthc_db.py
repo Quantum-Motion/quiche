@@ -41,7 +41,7 @@ def test_dfthc_db_parsing(db_input_file: str):
     assert factorised_hamiltonian.R == 1
     assert factorised_hamiltonian.B == 40
     assert factorised_hamiltonian.C == 40
-    assert factorised_hamiltonian.electrons == 3
+    assert factorised_hamiltonian.num_electrons == 3
     assert np.isclose(factorised_hamiltonian.const, 1.250005222563424, 1e-8)
     assert np.allclose(factorised_hamiltonian.U.shape, (1, 40, 15), 1e-16)
     assert np.allclose(factorised_hamiltonian.W.shape, (1, 40, 40), 1e-16)
