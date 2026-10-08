@@ -20,10 +20,10 @@ from numpy.typing import NDArray
 
 from quiche.core import Pauli, PauliSum, PauliWord
 
-ID = np.identity(2)
-X = np.array([[0, 1], [1, 0]])
-Y = np.array([[0, -1j], [1j, 0]])
-Z = np.array([[1, 0], [0, -1]])
+I_MATRIX = np.identity(2)
+X_MATRIX = np.array([[0, 1], [1, 0]])
+Y_MATRIX = np.array([[0, -1j], [1j, 0]])
+Z_MATRIX = np.array([[1, 0], [0, -1]])
 
 
 class TestPauli:
@@ -37,14 +37,14 @@ class TestPauli:
     @pytest.mark.parametrize(
         ("pauli", "expected"),
         [
-            (Pauli.X, X),
-            (Pauli.Y, Y),
-            (Pauli.Z, Z),
+            (Pauli.X, X_MATRIX),
+            (Pauli.Y, Y_MATRIX),
+            (Pauli.Z, Z_MATRIX),
         ],
     )
     def test_to_matrix(self, pauli: Pauli, expected: NDArray):
         """Test that Paulis correctly convert to their matrix representations."""
-        np.testing.assert_equal(pauli._to_matrix(), expected)
+        np.testing.assert_equal(pauli.to_matrix(), expected)
 
 
 class TestPauliWord:
@@ -71,21 +71,23 @@ class TestPauliWord:
             PauliWord(paulis=("L",), qubits=(1,))
 
     def test_to_matrix(self):
-        word = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 1, 2))
-        actual = word._to_matrix(ignore_idle_qubits=True)
-        expected = np.kron(np.kron(X, Y), Z)
+        word = PauliWord(paulis=("X", "Y", "Z"), qubits=(0, 1, 2))
+        actual = word.to_matrix(ignore_idle_qubits=True)
+        expected = np.kron(np.kron(X_MATRIX, Y_MATRIX), Z_MATRIX)
         np.testing.assert_equal(actual, expected)
 
     def test_to_matrix_include_idle_qubits(self):
-        word = PauliWord(paulis=(Pauli.X, Pauli.Z), qubits=(0, 2))
-        actual = word._to_matrix(ignore_idle_qubits=False)
-        expected = np.kron(np.kron(X, ID), Z)
+        word = PauliWord(paulis=("X", "Z"), qubits=(0, 2))
+        actual = word.to_matrix(ignore_idle_qubits=False)
+        expected = np.kron(np.kron(X_MATRIX, I_MATRIX), Z_MATRIX)
         np.testing.assert_equal(actual, expected)
 
     def test_to_matrix_length(self):
-        word = PauliWord(paulis=(Pauli.X, Pauli.X, Pauli.Y), qubits=(0, 1, 3))
-        actual = word._to_matrix(length=5, ignore_idle_qubits=False)
-        expected = np.kron(np.kron(np.kron(np.kron(X, X), ID), Y), ID)
+        word = PauliWord(paulis=("X", "X", "Y"), qubits=(0, 1, 3))
+        actual = word.to_matrix(length=5, ignore_idle_qubits=False)
+        expected = np.kron(
+            np.kron(np.kron(np.kron(X_MATRIX, X_MATRIX), I_MATRIX), Y_MATRIX), I_MATRIX
+        )
         np.testing.assert_equal(actual, expected)
 
 
@@ -115,22 +117,22 @@ class TestPauliSum:
         assert filtered.lam == pytest.approx(h2.lam - abs(h2.identity_coefficient))
 
     def test_to_matrix(self):
-        word1 = PauliWord(paulis=(Pauli.X, Pauli.Z), qubits=(0, 2))
-        word2 = PauliWord(paulis=(Pauli.Z, Pauli.Y), qubits=(0, 1))
+        word1 = PauliWord(paulis=("X", "Z"), qubits=(0, 2))
+        word2 = PauliWord(paulis=("Z", "Y"), qubits=(0, 1))
         coeffs = (5.0, 2.0)
         id_coeff = 10.0
 
-        psum = PauliSum(
+        pauli_sum = PauliSum(
             coefficients=(5.0, 2.0),
             words=(word1, word2),
             identity_coefficient=id_coeff,
         )
 
-        actual = psum._to_matrix()
+        actual = pauli_sum.to_matrix()
         expected = (
-            id_coeff * np.identity(2**psum.num_qubits)
-            + coeffs[0] * np.kron(np.kron(X, ID), Z)
-            + coeffs[1] * np.kron(np.kron(Z, Y), ID)
+            id_coeff * np.identity(2**pauli_sum.num_qubits)
+            + coeffs[0] * np.kron(np.kron(X_MATRIX, I_MATRIX), Z_MATRIX)
+            + coeffs[1] * np.kron(np.kron(Z_MATRIX, Y_MATRIX), I_MATRIX)
         )
 
         np.testing.assert_equal(actual, expected)

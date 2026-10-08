@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from functools import cached_property
+from functools import cached_property, reduce
 from math import isclose
 from typing import TYPE_CHECKING, Self
 
@@ -38,14 +38,15 @@ class Pauli(StrEnum):
     Y = "Y"
     Z = "Z"
 
-    def _to_matrix(self) -> NDArray:
+    def to_matrix(self) -> NDArray:
+        """Get the matrix representation of the Pauli."""
         match self:
             case Pauli.X:
-                return np.array([[0, 1], [1, 0]])
+                return np.array([[0, 1], [1, 0]], dtype=complex)
             case Pauli.Y:
-                return np.array([[0, -1j], [1j, 0]])
+                return np.array([[0, -1j], [1j, 0]], dtype=complex)
             case Pauli.Z:
-                return np.array([[1, 0], [0, -1]])
+                return np.array([[1, 0], [0, -1]], dtype=complex)
 
 
 class PauliWord(BaseModel):
@@ -95,6 +96,14 @@ class PauliWord(BaseModel):
         length = self.greatest_qubit + 1
         return self.to_str(length, big_endian=True)
 
+    def _resolve_length(self, length: int | None) -> int:
+        if length is None:
+            return self.greatest_qubit + 1
+        if length <= self.greatest_qubit:
+            error_msg = "Length must be greater than the maximum target qubit."
+            raise ValueError(error_msg)
+        return length
+
     def to_str(self, length: int | None = None, *, big_endian: bool) -> str:
         """
         Get the string representation of a PauliWord for a given register size.
@@ -133,27 +142,17 @@ class PauliWord(BaseModel):
         string = self.to_str(length, big_endian=False)  # validates length
         return PauliStr(string)
 
-    def _to_matrix(
+    def to_matrix(
         self, length: int | None = None, *, ignore_idle_qubits: bool
     ) -> NDArray:
-        """Transform PauliWord to matrix."""
-        identity = 1 if ignore_idle_qubits else np.identity(2)
+        """Get the matrix representation of the PauliWord."""
+        length = self._resolve_length(length)
+        identity = np.identity(1) if ignore_idle_qubits else np.identity(2)
+        matrices = [identity] * length
 
-        if length is None:
-            length = self.greatest_qubit + 1
-        if length <= self.greatest_qubit:
-            error_msg = "String length must be greater than the maximum target qubit."
-            raise ValueError(error_msg)
-
-        result = 1.0
-        for ii in range(length):
-            if ii in self.qubits:
-                idx = self.qubits.index(ii)
-                curr = self.paulis[idx]._to_matrix()  # noqa: SLF001
-            else:
-                curr = identity
-            result = np.kron(result, curr)
-        return result
+        for qubit, pauli in zip(self.qubits, self.paulis, strict=True):
+            matrices[qubit] = pauli.to_matrix()
+        return reduce(np.kron, matrices)
 
 
 class PauliSum(BaseModel):
@@ -268,12 +267,11 @@ class PauliSum(BaseModel):
 
         return PauliStrSum(strings, coefficients)
 
-    def _to_matrix(self) -> NDArray:
-        total = self.identity_coefficient * np.identity(
-            2**self.num_qubits, dtype=complex
-        )
+    def to_matrix(self) -> NDArray:
+        """Get the matrix representation of the PauliSum."""
+        id_mat = np.identity(2**self.num_qubits, dtype=complex)
+        total = self.identity_coefficient * id_mat
         for word, coeff in zip(self.words, self.coefficients, strict=True):
-            total += coeff * word._to_matrix(  # noqa: SLF001
-                length=self.num_qubits, ignore_idle_qubits=False
-            )
+            mat = word.to_matrix(length=self.num_qubits, ignore_idle_qubits=False)
+            total += coeff * mat
         return total
