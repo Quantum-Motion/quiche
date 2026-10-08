@@ -278,7 +278,7 @@ class TestEquivalence:
         "log_block_size_outer_adjoint": K_5,
     }
 
-    def test_from_hamiltonian_equivalencet(self):
+    def test_from_hamiltonian_equivalence(self):
 
         assert DFTHCBlockEncoding.FromFactorisedHamiltonian(
             dummy_factorised_hamiltonian, **self.kwargs
