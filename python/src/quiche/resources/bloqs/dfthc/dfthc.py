@@ -647,6 +647,25 @@ class DFTHCWalkOperator(Bloq):
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
+    Examples
+    --------
+    Using the FeMoco-54 parameters from [Low2025]_:
+
+    >>> walk = DFTHCWalkOperator(
+    ...     num_orbitals=54,
+    ...     num_ranks=10,
+    ...     num_bases=27,
+    ...     num_copies=27,
+    ...     num_bits_keep_inner=15,
+    ...     num_bits_keep_outer=15,
+    ...     num_bits_phase_grad=15,
+    ...     num_bits_amp_rotations=7,
+    ...     log_block_size_inner=4,
+    ...     log_block_size_inner_adjoint=2,
+    ...     log_block_size_outer=2,
+    ...     log_block_size_outer_adjoint=4,
+    ... )
+
     """
 
     num_orbitals: int
