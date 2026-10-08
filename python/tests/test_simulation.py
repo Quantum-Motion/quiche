@@ -225,7 +225,7 @@ class TestPauliWordRotation:
         )
         u = circ.unitary()
 
-        h = rotation.word._to_matrix(ignore_idle_qubits=True)
+        h = rotation.word.to_matrix(ignore_idle_qubits=True)
         u_target = expm(-1j * h * rotation.angle / 2)
 
         np.testing.assert_allclose(u, u_target)
@@ -281,7 +281,7 @@ class TestQDRIFT:
         bloq = qdrift.controlled() if controlled else qdrift
         actual = bloq.tensor_contract()
 
-        exponential = expm(-1j * t * h_single._to_matrix())
+        exponential = expm(-1j * t * h_single.to_matrix())
         expected = (
             block_diag(np.eye(len(exponential)), exponential)
             if controlled
@@ -405,9 +405,9 @@ class TestTrotterisation:
 
         trotterisation = Trotterisation(h, t=10, num_steps=20, order=1)
 
-        h1 = coeffs[0] * word1._to_matrix(ignore_idle_qubits=False)
-        h2 = coeffs[1] * word2._to_matrix(ignore_idle_qubits=False)
-        h3 = coeffs[2] * word3._to_matrix(ignore_idle_qubits=False)
+        h1 = coeffs[0] * word1.to_matrix(ignore_idle_qubits=False)
+        h2 = coeffs[1] * word2.to_matrix(ignore_idle_qubits=False)
+        h3 = coeffs[2] * word3.to_matrix(ignore_idle_qubits=False)
 
         u_target = np.identity(2**h.num_qubits)
         for _ in range(trotterisation.num_steps):
@@ -432,10 +432,10 @@ class TestTrotterisation:
         num_qubits = h.num_qubits
         trotterisation = Trotterisation(h, t=7.5, num_steps=10, order=1)
 
-        h1 = h.coefficients[0] * word1._to_matrix(
+        h1 = h.coefficients[0] * word1.to_matrix(
             length=num_qubits, ignore_idle_qubits=False
         )
-        h2 = h.coefficients[1] * word2._to_matrix(
+        h2 = h.coefficients[1] * word2.to_matrix(
             length=num_qubits, ignore_idle_qubits=False
         )
 
@@ -463,9 +463,9 @@ class TestTrotterisation:
 
         trotterisation = Trotterisation(h, t=10, num_steps=20, order=2)
 
-        h1 = coeffs[0] * word1._to_matrix(ignore_idle_qubits=False)
-        h2 = coeffs[1] * word2._to_matrix(ignore_idle_qubits=False)
-        h3 = coeffs[2] * word3._to_matrix(ignore_idle_qubits=False)
+        h1 = coeffs[0] * word1.to_matrix(ignore_idle_qubits=False)
+        h2 = coeffs[1] * word2.to_matrix(ignore_idle_qubits=False)
+        h3 = coeffs[2] * word3.to_matrix(ignore_idle_qubits=False)
 
         u_target = np.identity(2**num_qubits)
         for _ in range(trotterisation.num_steps):
@@ -496,13 +496,13 @@ class TestTrotterisation:
 
         trotterisation = Trotterisation(h, t=10, num_steps=10, order=2)
 
-        h1 = h.coefficients[0] * word1._to_matrix(
+        h1 = h.coefficients[0] * word1.to_matrix(
             length=num_qubits, ignore_idle_qubits=False
         )
-        h2 = h.coefficients[1] * word2._to_matrix(
+        h2 = h.coefficients[1] * word2.to_matrix(
             length=num_qubits, ignore_idle_qubits=False
         )
-        h3 = h.coefficients[2] * word3._to_matrix(
+        h3 = h.coefficients[2] * word3.to_matrix(
             length=num_qubits, ignore_idle_qubits=False
         )
 
@@ -531,10 +531,10 @@ class TestTrotterisation:
         t = 12
         trotterisation = Trotterisation(h, t=t, num_steps=20, order=1)
 
-        h1 = h.coefficients[0] * word1._to_matrix(
+        h1 = h.coefficients[0] * word1.to_matrix(
             length=num_qubits, ignore_idle_qubits=False
         )
-        h2 = h.coefficients[1] * word2._to_matrix(
+        h2 = h.coefficients[1] * word2.to_matrix(
             length=num_qubits, ignore_idle_qubits=False
         )
 

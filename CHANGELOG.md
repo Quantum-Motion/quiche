@@ -14,6 +14,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
 - Added QUICHE documentation site.
 - Added DFTHC block encoding and walk operator bloqs.
+- Added `from_sparse_string`, `from_dense_string` and `to_sparse_string` to `PauliWord` and `PauliSum`, and `to_dense_string` to `PauliSum`.
+- Added `to_matrix` to `Pauli`, `PauliWord` and `PauliSum`.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
@@ -27,6 +29,10 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Renamed `NaiveQPE`, `KitaevQPE` and `IterativeQPE`'s `n_simulation_qubits` and `n_estimation_bits` to `num_simulation_qubits` and `num_estimation_bits`.
 - Renamed `ElectronicHamiltonian` and `SecondQuantisedHamiltonian`'s `electrons` to `num_electrons`.
 - Renamed `HartreeFockState.closed_shell`'s `electrons` and `spin_orbitals` to `num_electrons` and `num_spin_orbitals`.
+- Changed the default string representation of `PauliWord` and `PauliSum` to the sparse string format.
+- Renamed `PauliWord.to_str` to `to_dense_string`.
+- Updated `PauliWord` to sort its `paulis` and `qubits` by increasing qubit index.
+- Updated `PauliWord` validation to reject negative qubit indices.
 
 ### Deprecated
 
