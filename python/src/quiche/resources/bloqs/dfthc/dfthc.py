@@ -15,6 +15,7 @@
 """Main routines for the block encoding of the DFTHC Hamiltonian."""
 
 from functools import cached_property
+from typing import TYPE_CHECKING, Self
 
 import attrs
 from qualtran import (
