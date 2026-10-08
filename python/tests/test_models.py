@@ -50,25 +50,65 @@ class TestPauli:
 class TestPauliWord:
     """Test PauliWord class."""
 
+    def test_string_paulis_coerced(self):
+        actual = PauliWord(paulis=("X", "Y", "Z"), qubits=(0, 1, 2))
+        expected = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 1, 2))
+        assert actual == expected
+        # Ensure actually coerced since StrEnums compare equal to strings
+        assert all(type(p) is Pauli for p in actual.paulis)
+
     def test_length_mismatch(self):
         error_msg = "The paulis and qubits of the PauliWord must be the same length"
         with pytest.raises(ValueError, match=error_msg):
-            PauliWord(paulis=(Pauli.X, Pauli.Y), qubits=(1,))
+            PauliWord(paulis=("X", "Y"), qubits=(1,))
 
     def test_duplicate_qubits(self):
         error_msg = "The target qubits of the PauliWord must be unique."
         with pytest.raises(ValueError, match=error_msg):
-            PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 1, 0))
+            PauliWord(paulis=("X", "Y", "Z"), qubits=(0, 1, 0))
 
-    def test_invalid_qubit(self):
-        error_msg = "should be a valid integer, got a number with a fractional part"
+    @pytest.mark.parametrize(
+        ("qubit", "error_msg"),
+        [
+            (-1, "greater than or equal to 0"),
+            (1.5, "valid integer"),
+            ("c", "valid integer"),
+        ],
+    )
+    def test_invalid_qubit(self, qubit: object, error_msg: str):
         with pytest.raises(ValueError, match=error_msg):
-            PauliWord(paulis=(Pauli.X,), qubits=(1.5,))
+            PauliWord(paulis=("X",), qubits=(qubit,))
 
     def test_invalid_pauli(self):
         error_msg = "Input should be 'X', 'Y' or 'Z'"
         with pytest.raises(ValueError, match=error_msg):
             PauliWord(paulis=("L",), qubits=(1,))
+
+    @pytest.mark.parametrize(
+        ("paulis", "qubits", "expected_paulis", "expected_qubits"),
+        [
+            (("X", "Z"), (0, 2), ("X", "Z"), (0, 2)),
+            (("Z", "X"), (2, 0), ("X", "Z"), (0, 2)),
+            (
+                ("Y", "X", "Z"),
+                (5, 1, 3),
+                ("X", "Z", "Y"),
+                (1, 3, 5),
+            ),
+            (("X", "Y"), (10, 2), ("Y", "X"), (2, 10)),
+            (("Y",), (4,), ("Y",), (4,)),
+        ],
+    )
+    def test_sorted_on_construction(
+        self,
+        paulis: tuple[str, ...],
+        qubits: tuple[int, ...],
+        expected_paulis: tuple[str, ...],
+        expected_qubits: tuple[int, ...],
+    ):
+        word = PauliWord(paulis=paulis, qubits=qubits)
+        assert word.paulis == expected_paulis
+        assert word.qubits == expected_qubits
 
     def test_to_matrix(self):
         word = PauliWord(paulis=("X", "Y", "Z"), qubits=(0, 1, 2))
@@ -100,8 +140,8 @@ class TestPauliSum:
             PauliSum(coefficients=(), words=(), identity_coefficient=10.0)
 
     def test_length_mismatch(self):
-        word1 = PauliWord(paulis=(Pauli.X, Pauli.Y, Pauli.Z), qubits=(0, 2, 3))
-        word2 = PauliWord(paulis=(Pauli.Y, Pauli.Z, Pauli.X), qubits=(1, 2, 3))
+        word1 = PauliWord(paulis=("X", "Y", "Z"), qubits=(0, 2, 3))
+        word2 = PauliWord(paulis=("Y", "Z", "X"), qubits=(1, 2, 3))
         coeffs = (5.0,)
 
         error_msg = "The coefficients and words of the PauliSum must be the same length"

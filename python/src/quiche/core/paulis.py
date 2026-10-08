@@ -22,7 +22,13 @@ from math import isclose
 from typing import TYPE_CHECKING, Self
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, computed_field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    NonNegativeInt,
+    computed_field,
+    model_validator,
+)
 
 if TYPE_CHECKING:
     from cirq import DensePauliString
@@ -32,7 +38,7 @@ from quiche.bindings.quest_bindings import PauliStr, PauliStrSum
 
 
 class Pauli(StrEnum):
-    """Single-qubit Pauli operators."""
+    """Non-identity single-qubit Pauli operators."""
 
     X = "X"
     Y = "Y"
@@ -55,7 +61,7 @@ class PauliWord(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     paulis: tuple[Pauli, ...]
-    qubits: tuple[int, ...]
+    qubits: tuple[NonNegativeInt, ...]
 
     @model_validator(mode="after")
     def check_nonzero_lengths(self) -> Self:
@@ -83,6 +89,15 @@ class PauliWord(BaseModel):
         if len(set(self.qubits)) != len(self.qubits):
             error_msg = "The target qubits of the PauliWord must be unique."
             raise ValueError(error_msg)
+        return self
+
+    @model_validator(mode="after")
+    def _sort(self) -> Self:
+        """Sort paulis and qubits by increasing qubit index."""
+        pairs = sorted(zip(self.qubits, self.paulis, strict=True))
+        qubits, paulis = zip(*pairs, strict=True)
+        object.__setattr__(self, "qubits", qubits)
+        object.__setattr__(self, "paulis", paulis)
         return self
 
     @computed_field
@@ -156,7 +171,7 @@ class PauliWord(BaseModel):
 
 
 class PauliSum(BaseModel):
-    """Linear combinations of multi-qubit Pauli operators."""
+    """Linear combinations of Pauli words."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -213,7 +228,7 @@ class PauliSum(BaseModel):
     @computed_field
     @cached_property
     def num_words_with_identity(self) -> int:
-        """Get the number of terms including the identity if non-zero."""
+        """Get the number of words including the identity if non-zero."""
         return self.num_words + (1 if self.has_identity else 0)
 
     @computed_field
@@ -249,7 +264,7 @@ class PauliSum(BaseModel):
         )
 
     def split_identity(self) -> tuple[float, PauliSum]:
-        """Get the identity coefficient and the remaining terms separately."""
+        """Get the identity coefficient and the remaining words separately."""
         return (self.identity_coefficient, self.without_identity())
 
     def to_quest(self) -> PauliStrSum:
