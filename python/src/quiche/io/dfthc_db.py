@@ -79,6 +79,6 @@ def parse(path: str | Path, job_id: int) -> FactorisedHamiltonian:
         bliss_matrix=np.asarray(t["B_bliss"], dtype=np.float64),
         h1=np.asarray(t["h1_exact"], dtype=np.float64),
         const=float(t["const"]),
-        electrons=results["num_elec"],
+        num_electrons=results["num_elec"],
         job_id=job_id,
     )
