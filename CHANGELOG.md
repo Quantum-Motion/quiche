@@ -17,6 +17,16 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
+- Renamed `PauliWord`'s `terms` to `paulis`.
+- Renamed `PauliSum`'s `terms`, `n_terms`, `n_terms_with_identity` and `n_qubits` to `words`, `num_words`, `num_words_with_identity` and `num_qubits`.
+- Renamed `PauliWordRotation`'s `n_qubits` and `n_controls` to `num_qubits` and `num_controls`.
+- Renamed `QDRIFT`'s `n_qubits`, `n_controls` and `n_terms` to `num_qubits`, `num_controls` and `num_samples`.
+- Renamed `Trotterisation`'s `n_qubits`, `n_controls` and `n_steps` to `num_qubits`, `num_controls` and `num_steps`.
+- Renamed `IdentityStatePrep`'s `n_qubits` to `num_qubits`.
+- Renamed `PrepareFromStatePrep`'s `select_nqubits` to `num_select_qubits`.
+- Renamed `NaiveQPE`, `KitaevQPE` and `IterativeQPE`'s `n_simulation_qubits` and `n_estimation_bits` to `num_simulation_qubits` and `num_estimation_bits`.
+- Renamed `ElectronicHamiltonian` and `SecondQuantisedHamiltonian`'s `electrons` to `num_electrons`.
+- Renamed `HartreeFockState.closed_shell`'s `electrons` and `spin_orbitals` to `num_electrons` and `num_spin_orbitals`.
 
 ### Deprecated
 

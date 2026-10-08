@@ -35,10 +35,8 @@ from quiche.resources.bloqs.dfthc import (
     SelectDFTHC,
 )
 
-# FeMoco-54 parameters, from G. H. Low et al.,
-# "Fast Quantum Simulation of Electronic
-# Structure by Spectral Amplification",
-# Phys. Rev. X, vol. 15, no. 4, p. 041016
+# FeMoco-54 parameters, from G. H. Low et al., "Fast Quantum Simulation of Electronic
+# Structure by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016
 N = 54
 R, B, C = 10, 27, 27
 B_ROT = B_K1 = B_K2 = 15

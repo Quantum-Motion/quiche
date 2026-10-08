@@ -81,8 +81,8 @@ class QROMAdjoint(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 
@@ -156,20 +156,20 @@ class InnerQROM(UnaryIterationGate):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_ranks : int
-        DFTHC rank, :math:`R` in ref. [1].
+        DFTHC rank, :math:`R` in [Low2025]_.
     num_bases : int
-        Number of bases per rank component, :math:`B` in ref. [1].
+        Number of bases per rank component, :math:`B` in [Low2025]_.
     num_copies : int
-        Number of copies per rank component, :math:`C` in ref. [1].
+        Number of copies per rank component, :math:`C` in [Low2025]_.
 
     num_bits_keep : int
         Number of bits for coherent alias sampling keep probability, :math:`b_{k2}` in
-        ref. [1].
+        [Low2025]_.
 
     log_block_size : int
-        Log of the block size for QROAM, :math:`k_2` in ref. [1].
+        Log of the block size for QROAM, :math:`k_2` in [Low2025]_.
 
     num_controls : int, optional
         Number of control qubits (default = 0).
@@ -196,8 +196,8 @@ class InnerQROM(UnaryIterationGate):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 
@@ -342,15 +342,15 @@ class InnerQROMTail(UnaryIterationGate):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_ranks : int
-        DFTHC rank, :math:`R` in ref. [1].
+        DFTHC rank, :math:`R` in [Low2025]_.
     num_copies : int
-        Number of copies per rank component, :math:`C` in ref. [1].
+        Number of copies per rank component, :math:`C` in [Low2025]_.
 
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
 
     num_controls : int, optional
         Number of control qubits (default = 0).
@@ -375,8 +375,8 @@ class InnerQROMTail(UnaryIterationGate):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 
@@ -486,22 +486,22 @@ class InnerQROAM(Bloq):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_ranks : int
-        DFTHC rank, :math:`R` in ref. [1].
+        DFTHC rank, :math:`R` in [Low2025]_.
     num_bases : int
-        Number of bases per rank component, :math:`B` in ref. [1].
+        Number of bases per rank component, :math:`B` in [Low2025]_.
     num_copies : int
-        Number of copies per rank component, :math:`C` in ref. [1].
+        Number of copies per rank component, :math:`C` in [Low2025]_.
 
     num_bits_keep : int
         Number of bits for coherent alias sampling keep probability, :math:`b_{k2}` in
-        ref. [1].
+        [Low2025]_.
 
     log_block_size : int
-        Log of the block size for QROAM, :math:`k_2` in ref. [1].
+        Log of the block size for QROAM, :math:`k_2` in [Low2025]_.
     log_block_size_adjoint : int
-        Log of the block size for QROAM adjoint, :math:`k_4` in ref. [1].
+        Log of the block size for QROAM adjoint, :math:`k_4` in [Low2025]_.
 
     num_controls : int, optional
         Number of control qubits (default = 0).
@@ -532,8 +532,8 @@ class InnerQROAM(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 
@@ -742,15 +742,15 @@ class RotationQROM(UnaryIterationGate):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_ranks : int
-        DFTHC rank, :math:`R` in ref. [1].
+        DFTHC rank, :math:`R` in [Low2025]_.
     num_bases : int
-        Number of bases per rank component, :math:`B` in ref. [1].
+        Number of bases per rank component, :math:`B` in [Low2025]_.
 
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
 
     num_controls : int, optional
         Number of control qubits (default = 0).
@@ -774,8 +774,8 @@ class RotationQROM(UnaryIterationGate):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
     """
 

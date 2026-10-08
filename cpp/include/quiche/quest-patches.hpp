@@ -17,7 +17,6 @@
 /**
  * @file quest-patches.hpp
  * @brief Patches and utilities for QuEST.
- * @author Vasco Ferreira
  */
 
 #pragma once

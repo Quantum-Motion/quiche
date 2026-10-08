@@ -184,9 +184,9 @@ def test_hamlib_parsing(
     expected_paulis: tuple[tuple[str, ...], ...],
 ):
     """Test Hamlib parsing matches expected output data."""
-    expected_terms = tuple(
+    expected_words = tuple(
         PauliWord(
-            terms=tuple(Pauli(p) for p in paulis),
+            paulis=tuple(Pauli(p) for p in paulis),
             qubits=targets,
         )
         for paulis, targets in zip(expected_paulis, expected_targets, strict=True)
@@ -195,4 +195,4 @@ def test_hamlib_parsing(
     pauli_sum = parse(data_string)
     assert pauli_sum.identity_coefficient == pytest.approx(expected_identity_coeff)
     assert pauli_sum.coefficients == pytest.approx(expected_coeffs)
-    assert pauli_sum.terms == expected_terms
+    assert pauli_sum.words == expected_words

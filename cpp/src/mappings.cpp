@@ -59,7 +59,7 @@ std::vector<qindex> getUpdateSet(int index, int size) {
 
 std::vector<qindex> getFlipSet(int index) {
 
-    // F(i) = qubits that determine whether orbitzal i and qubit i have the same or flipped parity
+    // F(i) = qubits that determine whether orbital i and qubit i have the same or flipped parity
     //      = set of children of node i in the Fenwick tree
 
     std::vector<qindex> set;

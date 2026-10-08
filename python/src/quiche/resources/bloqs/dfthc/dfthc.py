@@ -15,7 +15,6 @@
 """Main routines for the block encoding of the DFTHC Hamiltonian."""
 
 from functools import cached_property
-from typing import TYPE_CHECKING, Self
 
 import attrs
 from qualtran import (
@@ -59,28 +58,28 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_ranks : int
-        DFTHC rank, :math:`R` in ref. [1].
+        DFTHC rank, :math:`R` in [Low2025]_.
     num_bases : int
-        Number of bases per rank component, :math:`B` in ref. [1].
+        Number of bases per rank component, :math:`B` in [Low2025]_.
     num_copies : int
-        Number of copies per rank component, :math:`C` in ref. [1].
+        Number of copies per rank component, :math:`C` in [Low2025]_.
 
     num_bits_keep_inner : int
         Number of bits for inner coherent alias sampling keep probability,
-        :math:`b_{k2}` in ref. [1].
+        :math:`b_{k2}` in [Low2025]_.
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
     num_bits_amp_rotations : int
         Number of bits used for amplitude amplification rotations during equal state
-        preparation, :math:`s` in ref. [1].
+        preparation, :math:`s` in [Low2025]_.
 
     log_block_size_inner : int
-        Log of the block size for inner QROAM, :math:`k_2` in ref. [1].
+        Log of the block size for inner QROAM, :math:`k_2` in [Low2025]_.
     log_block_size_inner_adjoint : int
-        Log of the block size for inner QROAM adjoint, :math:`k_4` in ref. [1].
+        Log of the block size for inner QROAM adjoint, :math:`k_4` in [Low2025]_.
 
     Registers
     ---------
@@ -97,7 +96,7 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
         Spin control for SF terms.
     s : QBit
         Superposition qubit selecting :math:`X` or :math:`iY` for :math:`D_1/Q_1`,
-        :math:`\varsigma` in ref. [2].
+        :math:`\varsigma` in [Low2026]_.
 
     phase_grad : QAny
         Phase gradient register used throughout the circuit.
@@ -111,16 +110,16 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
         Register representing the outer index, :math:`x_o`.
     succ_outer : QBit
         Success flag for the uniform state preparation over the outer index,
-        :math:`succ_{x_o}` in ref. [1].
+        :math:`succ_{x_o}` in [Low2025]_.
     spin_1 : QBit
         Spin control for :math:`D_1/Q_1` terms.
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-        [2] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026, arXiv:
-            2605.30455.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
+       arXiv: 2605.30455.
 
     """
 
@@ -314,35 +313,35 @@ class DFTHCBlockEncoding(BlockEncoding):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_ranks : int
-        DFTHC rank, :math:`R` in ref. [1].
+        DFTHC rank, :math:`R` in [Low2025]_.
     num_bases : int
-        Number of bases per rank component, :math:`B` in ref. [1].
+        Number of bases per rank component, :math:`B` in [Low2025]_.
     num_copies : int
-        Number of copies per rank component, :math:`C` in ref. [1].
+        Number of copies per rank component, :math:`C` in [Low2025]_.
 
     num_bits_keep_inner : int
         Number of bits for inner coherent alias sampling keep probability,
-        :math:`b_{k2}` in ref. [1].
+        :math:`b_{k2}` in [Low2025]_.
     num_bits_keep_outer : int
         Number of bits for outer coherent alias sampling keep probability,
-        :math:`b_{k1}` in ref. [1].
+        :math:`b_{k1}` in [Low2025]_.
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
     num_bits_amp_rotations : int
         Number of bits used for amplitude amplification rotations during equal state
-        preparation, :math:`s` in ref. [1].
+        preparation, :math:`s` in [Low2025]_.
 
     log_block_size_inner : int
-        Log of the block size for inner QROAM, :math:`k_2` in ref. [1].
+        Log of the block size for inner QROAM, :math:`k_2` in [Low2025]_.
     log_block_size_inner_adjoint : int
-        Log of the block size for inner QROAM adjoint, :math:`k_4` in ref. [1].
+        Log of the block size for inner QROAM adjoint, :math:`k_4` in [Low2025]_.
     log_block_size_outer : int
-        Log of the block size for outer QROAM, :math:`k_1` in ref. [1].
+        Log of the block size for outer QROAM, :math:`k_1` in [Low2025]_.
     log_block_size_outer_adjoint : int
-        Log of the block size for outer QROAM adjoint, :math:`k_5` in ref. [1].
+        Log of the block size for outer QROAM adjoint, :math:`k_5` in [Low2025]_.
 
     num_controls : int, optional
         Number of control qubits (default = 0).
@@ -377,7 +376,7 @@ class DFTHCBlockEncoding(BlockEncoding):
         Spin control for :math:`D_1/Q_1` terms.
     s : QBit
         Superposition qubit selecting :math:`X` or :math:`iY` for :math:`D_1/Q_1`,
-        :math:`\varsigma` in ref. [2].
+        :math:`\varsigma` in [Low2026]_.
 
     phase_grad : QAny
         Phase gradient register used throughout the circuit.
@@ -389,10 +388,10 @@ class DFTHCBlockEncoding(BlockEncoding):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-        [2] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026, arXiv:
-            2605.30455.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
+       arXiv: 2605.30455.
 
     """
 
@@ -684,35 +683,35 @@ class DFTHCWalkOperator(Bloq):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N` in ref. [1].
+        Number of spatial orbitals, :math:`N` in [Low2025]_.
     num_ranks : int
-        DFTHC rank, :math:`R` in ref. [1].
+        DFTHC rank, :math:`R` in [Low2025]_.
     num_bases : int
-        Number of bases per rank component, :math:`B` in ref. [1].
+        Number of bases per rank component, :math:`B` in [Low2025]_.
     num_copies : int
-        Number of copies per rank component, :math:`C` in ref. [1].
+        Number of copies per rank component, :math:`C` in [Low2025]_.
 
     num_bits_keep_inner : int
         Number of bits for inner coherent alias sampling keep probability,
-        :math:`b_{k2}` in ref. [1].
+        :math:`b_{k2}` in [Low2025]_.
     num_bits_keep_outer : int
         Number of bits for outer coherent alias sampling keep probability,
-        :math:`b_{k1}` in ref. [1].
+        :math:`b_{k1}` in [Low2025]_.
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
-        ref. [1].
+        [Low2025]_.
     num_bits_amp_rotations : int
         Number of bits used for amplitude amplification rotations during equal state
-        preparation, :math:`s` in ref. [1].
+        preparation, :math:`s` in [Low2025]_.
 
     log_block_size_inner : int
-        Log of the block size for inner QROAM, :math:`k_2` in ref. [1].
+        Log of the block size for inner QROAM, :math:`k_2` in [Low2025]_.
     log_block_size_inner_adjoint : int
-        Log of the block size for inner QROAM adjoint, :math:`k_4` in ref. [1].
+        Log of the block size for inner QROAM adjoint, :math:`k_4` in [Low2025]_.
     log_block_size_outer : int
-        Log of the block size for outer QROAM, :math:`k_1` in ref. [1].
+        Log of the block size for outer QROAM, :math:`k_1` in [Low2025]_.
     log_block_size_outer_adjoint : int
-        Log of the block size for outer QROAM adjoint, :math:`k_5` in ref. [1].
+        Log of the block size for outer QROAM adjoint, :math:`k_5` in [Low2025]_.
 
     num_controls : int, optional
         Number of control qubits (default = 0).
@@ -723,8 +722,27 @@ class DFTHCWalkOperator(Bloq):
 
     References
     ----------
-        [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+
+    Examples
+    --------
+    Using the FeMoco-54 parameters from [Low2025]_:
+
+    >>> walk = DFTHCWalkOperator(
+    ...     num_orbitals=54,
+    ...     num_ranks=10,
+    ...     num_bases=27,
+    ...     num_copies=27,
+    ...     num_bits_keep_inner=15,
+    ...     num_bits_keep_outer=15,
+    ...     num_bits_phase_grad=15,
+    ...     num_bits_amp_rotations=7,
+    ...     log_block_size_inner=4,
+    ...     log_block_size_inner_adjoint=2,
+    ...     log_block_size_outer=2,
+    ...     log_block_size_outer_adjoint=4,
+    ... )
 
     """
 

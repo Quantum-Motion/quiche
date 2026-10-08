@@ -34,19 +34,19 @@ from qualtran.resource_counting import (
 class IdentityStatePrep(Bloq):
     """Routine for trivial state preparation."""
 
-    n_qubits: int
+    num_qubits: int
 
     def my_static_costs(self, cost_key: CostKey) -> int:
         """Return hard-coded qubit counts."""
         if isinstance(cost_key, QubitCount):
             # Only data qubits are needed for this state preparation.
-            return self.n_qubits
+            return self.num_qubits
         return NotImplemented
 
     @property
     def signature(self) -> Signature:
         """Define input and/or output registers of the bloq."""
-        return Signature([Register("q", dtype=QAny(self.n_qubits), side=Side.RIGHT)])
+        return Signature([Register("q", dtype=QAny(self.num_qubits), side=Side.RIGHT)])
 
     def build_composite_bloq(
         self,
@@ -54,11 +54,11 @@ class IdentityStatePrep(Bloq):
         **_soqs: SoquetT,
     ) -> dict[str, SoquetT]:
         """Implement bloq decomposition into sub-bloqs."""
-        return {"q": bb.allocate(self.n_qubits)}
+        return {"q": bb.allocate(self.num_qubits)}
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph."""
-        return {Allocate(QAny(self.n_qubits)): 1}
+        return {Allocate(QAny(self.num_qubits)): 1}
 
 
 @attrs.frozen
@@ -70,8 +70,8 @@ class BitstringStatePrep(Bloq):
     def __attrs_post_init__(self) -> None:
         """Input validator."""
         if not all(i in {0, 1} for i in self.bitstring):
-            err_msg = "Invalid bitstring."
-            raise ValueError(err_msg)
+            error_msg = "Invalid bitstring."
+            raise ValueError(error_msg)
 
     @property
     def signature(self) -> Signature:
@@ -102,8 +102,8 @@ class BitstringStatePrep(Bloq):
         """Build call graph."""
         bloq_counts = {Allocate(QAny(self.num_qubits)): 1}
 
-        if n_x := sum(self.bitstring):
-            bloq_counts[XGate()] = n_x
+        if num_x := sum(self.bitstring):
+            bloq_counts[XGate()] = num_x
 
         return bloq_counts
 
@@ -128,19 +128,19 @@ class PrepareFromStatePrep(PrepareOracle):
         State preparation bloq.
     phase_bitsize : int
         Number of qubits used for phase gradient.
-    select_nqubits : int
+    num_select_qubits : int
         Number of qubits on which to prepare the PREP state. Note that L must be equal
-        to ``2**select_nqubits``.
+        to ``2**num_select_qubits``.
     """
 
     stateprep: StatePreparationViaRotations
     phase_bitsize: int
-    select_nqubits: int
+    num_select_qubits: int
 
     @property
     def selection_registers(self) -> tuple[Register, ...]:
         """Get selection (index) register."""
-        return (Register("selection", QAny(self.select_nqubits)),)
+        return (Register("selection", QAny(self.num_select_qubits)),)
 
     @property
     def junk_registers(self) -> tuple[Register, ...]:
