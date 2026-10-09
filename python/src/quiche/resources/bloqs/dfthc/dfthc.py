@@ -446,25 +446,25 @@ class DFTHCBlockEncoding(BlockEncoding):
             second quantised Hamiltonian, after factorisation.
         num_bits_keep_inner : int
             Number of bits for inner coherent alias sampling keep probability,
-            :math:`b_{k2}` in ref. [1].
+            :math:`b_{k2}` in [Low2025]_.
         num_bits_keep_outer : int
             Number of bits for outer coherent alias sampling keep probability,
-            :math:`b_{k1}` in ref. [1].
+            :math:`b_{k1}` in [Low2025]_.
         num_bits_phase_grad : int
             Total number of bits for persistent phase gradient register,
-            :math:`b_{rot}` in ref. [1].
+            :math:`b_{rot}` in [Low2025]_.
         num_bits_amp_rotations : int
             Number of bits used for amplitude amplification rotations during equal state
-            preparation, :math:`s` in ref. [1].
+            preparation, :math:`s` in [Low2025]_.
 
         log_block_size_inner : int
-            Log of the block size for inner QROAM, :math:`k_2` in ref. [1].
+            Log of the block size for inner QROAM, :math:`k_2` in [Low2025]_.
         log_block_size_inner_adjoint : int
-            Log of the block size for inner QROAM adjoint, :math:`k_4` in ref. [1].
+            Log of the block size for inner QROAM adjoint, :math:`k_4` in [Low2025]_.
         log_block_size_outer : int
-            Log of the block size for outer QROAM, :math:`k_1` in ref. [1].
+            Log of the block size for outer QROAM, :math:`k_1` in [Low2025]_.
         log_block_size_outer_adjoint : int
-            Log of the block size for outer QROAM adjoint, :math:`k_5` in ref. [1].
+            Log of the block size for outer QROAM adjoint, :math:`k_5` in [Low2025]_.
 
         num_controls : int, optional
             Number of control qubits (default = 0).
@@ -475,9 +475,10 @@ class DFTHCBlockEncoding(BlockEncoding):
 
         References
         ----------
-            [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-                Spectral Amplification", Phys. Rev. X, vol. 15, no. 4,
-                p. 041016, Oct. 2025.
+        .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic
+            Structure by Spectral Amplification", Phys. Rev. X, vol. 15,
+            no. 4, p. 041016, Oct. 2025.
+
 
         """
         return cls(
@@ -789,25 +790,25 @@ class DFTHCWalkOperator(Bloq):
             second quantised Hamiltonian, after factorisation.
         num_bits_keep_inner : int
             Number of bits for inner coherent alias sampling keep probability,
-            :math:`b_{k2}` in ref. [1].
+            :math:`b_{k2}` in [Low2025]_.
         num_bits_keep_outer : int
             Number of bits for outer coherent alias sampling keep probability,
-            :math:`b_{k1}` in ref. [1].
+            :math:`b_{k1}` in [Low2025]_.
         num_bits_phase_grad : int
             Total number of bits for persistent phase gradient register,
-            :math:`b_{rot}` in ref. [1].
+            :math:`b_{rot}` in [Low2025]_.
         num_bits_amp_rotations : int
             Number of bits used for amplitude amplification rotations during equal state
-            preparation, :math:`s` in ref. [1].
+            preparation, :math:`s` in [Low2025]_.
 
         log_block_size_inner : int
-            Log of the block size for inner QROAM, :math:`k_2` in ref. [1].
+            Log of the block size for inner QROAM, :math:`k_2` in [Low2025]_.
         log_block_size_inner_adjoint : int
-            Log of the block size for inner QROAM adjoint, :math:`k_4` in ref. [1].
+            Log of the block size for inner QROAM adjoint, :math:`k_4` in [Low2025]_.
         log_block_size_outer : int
-            Log of the block size for outer QROAM, :math:`k_1` in ref. [1].
+            Log of the block size for outer QROAM, :math:`k_1` in [Low2025]_.
         log_block_size_outer_adjoint : int
-            Log of the block size for outer QROAM adjoint, :math:`k_5` in ref. [1].
+            Log of the block size for outer QROAM adjoint, :math:`k_5` in [Low2025]_.
 
         num_controls : int, optional
             Number of control qubits (default = 0).

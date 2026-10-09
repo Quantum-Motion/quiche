@@ -17,8 +17,10 @@ Helpers to handle factorisation output database files.
 
 References
 ----------
-    [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+.. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+    Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+.. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
+    arXiv: 2605.30455.
 
 """
 
@@ -65,7 +67,7 @@ def parse(path: str | Path, job_id: int) -> DFTHCHamiltonian:
     # External code that generates the input uses convention VLM,
     # which corresponds to RCB.
     # Just for clarity's sake, we transpose and save in the RBC order,
-    # as used in ref. [1].
+    # as used in [Low2025]_.
     u = np.asarray(t["R_vpm"], dtype=np.float64).transpose(0, 2, 1)
     w = np.asarray(t["F_vlm"], dtype=np.float64).transpose(0, 2, 1)
 
