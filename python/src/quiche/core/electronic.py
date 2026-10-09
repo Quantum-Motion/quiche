@@ -172,8 +172,40 @@ class DFTHCHamiltonian(BaseModel):
     """
     Class encompassing a Factorized Hamiltonian, generated from DFTHC output.
 
-    Contains number of orbitals, ranks, bases and copies,
-    as well as the factors themselves.
+    Parameters
+    ----------
+    num_orbitals : int
+        Number of spatial orbitals, :math:`N`.
+    num_ranks : int
+        Number of ranks in the factorisation, :math:`R`.
+    num_bases : int
+        Number of basis vectors per rank, :math:`B`.
+    num_copies : int
+        Number of copies (weight channels) per rank, :math:`C`.
+    unit_vectors : NDArray[np.float64]
+        Real array of shape ``(R, B, N)``. Each vector along the last axis is
+        normalised on reconstruction, so must be non-zero.
+    weight_vectors : NDArray[np.float64]
+        Real array of shape ``(R, B, C)`` containing the weights that
+        combine the unit vectors into the factors :math:`W_{rc}`.
+    bliss_matrix : NDArray[np.float64]
+        Real array of shape ``(N, N)`` containing the BLISS symmetry shift
+        matrix, which is removed from the factorised two body integrals on
+        reconstruction.
+    h1 : NDArray[np.float64]
+        Real array of shape ``(N, N)`` containing the one body integrals in the
+        factorised ("E-form") convention, which absorb a contribution from
+        the two body integrals. The bare one body integrals are recovered on
+        reconstruction.
+    const : float
+        Constant energy offset, used as the core energy of the reconstructed
+        Hamiltonian.
+    num_electrons : int
+        Number of electrons in the system.
+    job_id : int | None, optional
+        Identifier of the DFTHC job that produced the factors. Defaults to
+        ``None``.
+
     """
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
@@ -182,8 +214,8 @@ class DFTHCHamiltonian(BaseModel):
     num_ranks: int
     num_bases: int
     num_copies: int
-    unit_vectors: NDArray[np.float64]  # (R, B, N)
-    weight_vectors: NDArray[np.float64]  # (R, B, C)
+    unit_vectors: NDArray[np.float64]
+    weight_vectors: NDArray[np.float64]
     bliss_matrix: NDArray[np.float64]
     h1: NDArray[np.float64]
     const: float
