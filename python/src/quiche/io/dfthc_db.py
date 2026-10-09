@@ -29,12 +29,12 @@ from pathlib import Path
 
 import numpy as np
 
-from quiche.core.electronic import FactorisedHamiltonian
+from quiche.core.electronic import DFTHCHamiltonian
 
 
-def parse(path: str | Path, job_id: int) -> FactorisedHamiltonian:
+def parse(path: str | Path, job_id: int) -> DFTHCHamiltonian:
     """
-    Return a FactorisedHamiltonian that functions as input for the resource estimation.
+    Return a DFTHCHamiltonian that functions as input for the resource estimation.
 
     Parameters
     ----------
@@ -69,7 +69,7 @@ def parse(path: str | Path, job_id: int) -> FactorisedHamiltonian:
     u = np.asarray(t["R_vpm"], dtype=np.float64).transpose(0, 2, 1)
     w = np.asarray(t["F_vlm"], dtype=np.float64).transpose(0, 2, 1)
 
-    return FactorisedHamiltonian(
+    return DFTHCHamiltonian(
         num_orbitals=results["num_orb"],
         num_ranks=outer_rank,
         num_bases=inner_rank,

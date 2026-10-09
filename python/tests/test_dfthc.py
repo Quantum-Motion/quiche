@@ -23,7 +23,7 @@ from qualtran.testing import (
     assert_valid_bloq_decomposition,
 )
 
-from quiche.core.electronic import FactorisedHamiltonian
+from quiche.core.electronic import DFTHCHamiltonian
 from quiche.resources.bloqs.dfthc import (
     DFTHCBlockEncoding,
     DFTHCInnerBlockEncoding,
@@ -44,7 +44,7 @@ K_1 = K_4 = 2
 K_2 = K_5 = 4
 S = 7
 
-dummy_factorised_hamiltonian = FactorisedHamiltonian(
+dummy_factorised_hamiltonian = DFTHCHamiltonian(
     num_orbitals=N,
     num_ranks=R,
     num_bases=B,
@@ -195,7 +195,7 @@ class TestDFTHCBlockEncoding:
         log_block_size_outer_adjoint=K_5,
     )
 
-    block_encoding_from_fh = DFTHCBlockEncoding.FromFactorisedHamiltonian(
+    block_encoding_from_fh = DFTHCBlockEncoding.FromDFTHCHamiltonian(
         hamiltonian=dummy_factorised_hamiltonian,
         num_bits_keep_inner=B_K2,
         num_bits_keep_outer=B_K1,
@@ -239,7 +239,7 @@ class TestDFTHCWalkOperator:
         log_block_size_outer_adjoint=K_5,
     )
 
-    walk_from_fh = DFTHCBlockEncoding.FromFactorisedHamiltonian(
+    walk_from_fh = DFTHCBlockEncoding.FromDFTHCHamiltonian(
         hamiltonian=dummy_factorised_hamiltonian,
         num_bits_keep_inner=B_K2,
         num_bits_keep_outer=B_K1,
@@ -278,7 +278,7 @@ class TestEquivalence:
 
     def test_from_hamiltonian_equivalence(self):
 
-        assert DFTHCBlockEncoding.FromFactorisedHamiltonian(
+        assert DFTHCBlockEncoding.FromDFTHCHamiltonian(
             dummy_factorised_hamiltonian, **self.kwargs
         ) == DFTHCBlockEncoding(
             num_orbitals=N, num_ranks=R, num_bases=B, num_copies=C, **self.kwargs

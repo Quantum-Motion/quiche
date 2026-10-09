@@ -48,7 +48,7 @@ from quiche.resources.bloqs.dfthc.select import SelectDFTHC
 from quiche.resources.bloqs.dfthc.utils import extract_soqs
 
 if TYPE_CHECKING:
-    from quiche.core.electronic import FactorisedHamiltonian
+    from quiche.core.electronic import DFTHCHamiltonian
 
 
 @attrs.frozen
@@ -422,9 +422,9 @@ class DFTHCBlockEncoding(BlockEncoding):
             raise ValueError(err_msg)
 
     @classmethod
-    def FromFactorisedHamiltonian(  # noqa: N802, PLR0913
+    def FromDFTHCHamiltonian(  # noqa: N802, PLR0913
         cls,
-        hamiltonian: "FactorisedHamiltonian",
+        hamiltonian: "DFTHCHamiltonian",
         *,
         num_bits_keep_inner: int,
         num_bits_keep_outer: int,
@@ -441,8 +441,8 @@ class DFTHCBlockEncoding(BlockEncoding):
 
         Parameters
         ----------
-        hamiltonian : FactorisedHamiltonian
-            A FactorisedHamiltonian object that contains parameters of a
+        hamiltonian : DFTHCHamiltonian
+            A DFTHCHamiltonian object that contains parameters of a
             second quantised Hamiltonian, after factorisation.
         num_bits_keep_inner : int
             Number of bits for inner coherent alias sampling keep probability,
@@ -765,9 +765,9 @@ class DFTHCWalkOperator(Bloq):
     num_controls: int = 0
 
     @classmethod
-    def FromFactorisedHamiltonian(  # noqa: N802, PLR0913
+    def FromDFTHCHamiltonian(  # noqa: N802, PLR0913
         cls,
-        hamiltonian: "FactorisedHamiltonian",
+        hamiltonian: "DFTHCHamiltonian",
         *,
         num_bits_keep_inner: int,
         num_bits_keep_outer: int,
@@ -784,8 +784,8 @@ class DFTHCWalkOperator(Bloq):
 
         Parameters
         ----------
-        hamiltonian : FactorisedHamiltonian
-            A FactorisedHamiltonian object that contains parameters of a
+        hamiltonian : DFTHCHamiltonian
+            A DFTHCHamiltonian object that contains parameters of a
             second quantised Hamiltonian, after factorisation.
         num_bits_keep_inner : int
             Number of bits for inner coherent alias sampling keep probability,

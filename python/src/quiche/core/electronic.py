@@ -168,7 +168,7 @@ class SecondQuantisedHamiltonian(BaseModel):
         return _second_quantised_to_electronic_hamiltonian(self, mapping)
 
 
-class FactorisedHamiltonian(BaseModel):
+class DFTHCHamiltonian(BaseModel):
     """
     Class encompassing a Factorized Hamiltonian, generated from DFTHC output.
 
