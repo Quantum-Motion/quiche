@@ -195,7 +195,7 @@ class TestDFTHCBlockEncoding:
         log_block_size_outer_adjoint=K_5,
     )
 
-    block_encoding_from_fh = DFTHCBlockEncoding.FromDFTHCHamiltonian(
+    block_encoding_from_fh = DFTHCBlockEncoding.from_dfthc_hamiltonian(
         hamiltonian=dummy_factorised_hamiltonian,
         num_bits_keep_inner=B_K2,
         num_bits_keep_outer=B_K1,
@@ -239,7 +239,7 @@ class TestDFTHCWalkOperator:
         log_block_size_outer_adjoint=K_5,
     )
 
-    walk_from_fh = DFTHCBlockEncoding.FromDFTHCHamiltonian(
+    walk_from_fh = DFTHCBlockEncoding.from_dfthc_hamiltonian(
         hamiltonian=dummy_factorised_hamiltonian,
         num_bits_keep_inner=B_K2,
         num_bits_keep_outer=B_K1,
@@ -278,7 +278,7 @@ class TestEquivalence:
 
     def test_from_hamiltonian_equivalence(self):
 
-        assert DFTHCBlockEncoding.FromDFTHCHamiltonian(
+        assert DFTHCBlockEncoding.from_dfthc_hamiltonian(
             dummy_factorised_hamiltonian, **self.kwargs
         ) == DFTHCBlockEncoding(
             num_orbitals=N, num_ranks=R, num_bases=B, num_copies=C, **self.kwargs

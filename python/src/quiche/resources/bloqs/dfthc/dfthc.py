@@ -422,7 +422,7 @@ class DFTHCBlockEncoding(BlockEncoding):
             raise ValueError(err_msg)
 
     @classmethod
-    def FromDFTHCHamiltonian(  # noqa: N802, PLR0913
+    def from_dfthc_hamiltonian(  # noqa: PLR0913
         cls,
         hamiltonian: "DFTHCHamiltonian",
         *,
@@ -765,7 +765,7 @@ class DFTHCWalkOperator(Bloq):
     num_controls: int = 0
 
     @classmethod
-    def FromDFTHCHamiltonian(  # noqa: N802, PLR0913
+    def from_dfthc_hamiltonian(  # noqa: PLR0913
         cls,
         hamiltonian: "DFTHCHamiltonian",
         *,
