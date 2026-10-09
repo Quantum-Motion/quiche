@@ -126,15 +126,18 @@ def _factors(norb: int = 3, ranks: int = 2, bases: int = 4, copies: int = 2) -> 
         "num_electrons": 2,
     }
 
+
 @pytest.fixture(scope="session")
 def db_input_file() -> str:
     """Path to the DFTHC database test file."""
     return str(Path(__file__).parent / "input" / "sq_results.db")
 
+
 @pytest.fixture(scope="session")
 def one_body_reference() -> str:
     """Path to the DFTHC database test file."""
     return str(Path(__file__).parent / "input" / "reconstructed_one_body.npy")
+
 
 @pytest.fixture(scope="session")
 def two_body_reference() -> str:
@@ -180,5 +183,9 @@ class TestDFTHCHamiltonian:
         assert reconstructed.core_energy == factors.const
         assert reconstructed.one_body.shape == (15, 15)
         assert reconstructed.two_body.shape == (15,) * 4
-        assert np.allclose(reconstructed.one_body, np.load(one_body_reference), atol=1e-6)
-        assert np.allclose(reconstructed.two_body, np.load(two_body_reference), atol=1e-6)
+        assert np.allclose(
+            reconstructed.one_body, np.load(one_body_reference), atol=1e-6
+        )
+        assert np.allclose(
+            reconstructed.two_body, np.load(two_body_reference), atol=1e-6
+        )
