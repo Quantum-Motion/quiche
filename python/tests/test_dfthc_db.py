@@ -37,11 +37,11 @@ def test_dfthc_db_parsing(db_input_file: str):
     # in a double zeta basis set (5 AO's per H).
     # RBC values are taken from the input of their code.
     # Integral value references are taken from their factorisation.
-    assert factorised_hamiltonian.N == 15
-    assert factorised_hamiltonian.R == 1
-    assert factorised_hamiltonian.B == 40
-    assert factorised_hamiltonian.C == 40
+    assert factorised_hamiltonian.num_orbitals == 15
+    assert factorised_hamiltonian.num_ranks == 1
+    assert factorised_hamiltonian.num_bases == 40
+    assert factorised_hamiltonian.num_copies == 40
     assert factorised_hamiltonian.num_electrons == 3
     assert np.isclose(factorised_hamiltonian.const, 1.250005222563424, 1e-8)
-    assert np.allclose(factorised_hamiltonian.U.shape, (1, 40, 15), 1e-16)
-    assert np.allclose(factorised_hamiltonian.W.shape, (1, 40, 40), 1e-16)
+    assert np.allclose(factorised_hamiltonian.unit_vectors.shape, (1, 40, 15), 1e-16)
+    assert np.allclose(factorised_hamiltonian.weight_vectors.shape, (1, 40, 40), 1e-16)

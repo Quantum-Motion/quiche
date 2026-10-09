@@ -178,19 +178,21 @@ class FactorisedHamiltonian(BaseModel):
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
-    N: int  # number of spatial orbitals
-    R: int  # outer rank
-    B: int  # inner rank
-    C: int  # copies
-    U: NDArray[np.float64]  # (R, B, N) unit vectors
-    W: NDArray[np.float64]  # (R, B, C) weights
-    bliss_matrix: NDArray[np.float64]  # (N, N) symmetric BLISS matrix
-    h1: NDArray[np.float64]  # (N, N) one-body matrix, without the const/N shift
-    const: float  # constant energy
-    num_electrons: int  # number of electrons
-    job_id: int | None = None  # job ID in the original db file
+    num_orbitals: int
+    num_ranks: int
+    num_bases: int
+    num_copies: int
+    unit_vectors: NDArray[np.float64]  # (R, B, N)
+    weight_vectors: NDArray[np.float64]  # (R, B, C)
+    bliss_matrix: NDArray[np.float64]
+    h1: NDArray[np.float64]
+    const: float
+    num_electrons: int
+    job_id: int | None = None
 
-    @field_validator("U", "W", "bliss_matrix", "h1", mode="before")
+    @field_validator(
+        "unit_vectors", "weight_vectors", "bliss_matrix", "h1", mode="before"
+    )
     @classmethod
     def as_immutable_array(cls, value: object) -> NDArray[np.float64]:
         """Coerce the factors to an immutable real float array."""
@@ -206,10 +208,10 @@ class FactorisedHamiltonian(BaseModel):
     def check_shapes(self) -> Self:
         """Validate the factor shapes are consistent with N, R, B and C."""
         expected = {
-            "U": (self.R, self.B, self.N),
-            "W": (self.R, self.B, self.C),
-            "bliss_matrix": (self.N, self.N),
-            "h1": (self.N, self.N),
+            "unit_vectors": (self.num_ranks, self.num_bases, self.num_orbitals),
+            "weight_vectors": (self.num_ranks, self.num_bases, self.num_copies),
+            "bliss_matrix": (self.num_orbitals, self.num_orbitals),
+            "h1": (self.num_orbitals, self.num_orbitals),
         }
         for name, shape in expected.items():
             if getattr(self, name).shape != shape:
@@ -219,24 +221,30 @@ class FactorisedHamiltonian(BaseModel):
                 raise ValueError(error_msg)
 
         # Reconstruct divides by U, so a zero column would result in NaNs.
-        if np.any(np.linalg.norm(self.U, axis=2) == 0.0):
-            error_msg = "U contains a zero vector, which cannot be normalised."
+        if np.any(np.linalg.norm(self.unit_vectors, axis=2) == 0.0):
+            error_msg = (
+                "`unit_vectors` contains a zero vector,which cannot be normalised."
+            )
             raise ValueError(error_msg)
 
         return self
 
     def reconstruct(self) -> SecondQuantisedHamiltonian:
         """Rebuild the integrals from the factors."""
-        u_normalized = self.U / np.linalg.norm(self.U, axis=2, keepdims=True)
+        u_normalized = self.unit_vectors / np.linalg.norm(
+            self.unit_vectors, axis=2, keepdims=True
+        )
 
         # W_rc[p,q] = sum_b W[r,b,c] * u[r,b,p] * u[r,b,q]
-        w_rc = np.einsum("rbp,rbq,rbc->rcpq", u_normalized, u_normalized, self.W)
+        w_rc = np.einsum(
+            "rbp,rbq,rbc->rcpq", u_normalized, u_normalized, self.weight_vectors
+        )
 
         # g_approx[p,q,t,s] = sum_{r,c} W_rc[p,q] * W_rc[t,s]
         g_approx = np.einsum("rcpq,rcts->pqts", w_rc, w_rc)
 
         # Remove the BLISS symmetry shift: g = g_approx - 1/2 (B x I + I x B)
-        identity = np.eye(self.N)
+        identity = np.eye(self.num_orbitals)
         shift = np.einsum("pq,rs->pqrs", self.bliss_matrix, identity) + np.einsum(
             "pq,rs->pqrs", identity, self.bliss_matrix
         )

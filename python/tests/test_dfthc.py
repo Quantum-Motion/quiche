@@ -45,12 +45,12 @@ K_2 = K_5 = 4
 S = 7
 
 dummy_factorised_hamiltonian = FactorisedHamiltonian(
-    N=N,
-    R=R,
-    B=B,
-    C=C,
-    U=np.ones((R, B, N)),  # non-zero, so unit-vector validation (if added) passes
-    W=np.ones((R, B, C)),
+    num_orbitals=N,
+    num_ranks=R,
+    num_bases=B,
+    num_copies=C,
+    unit_vectors=np.ones((R, B, N)),  # Non-zero, so unit-vector validation passes.
+    weight_vectors=np.ones((R, B, C)),
     bliss_matrix=np.zeros((N, N)),
     h1=np.eye(N),
     const=0.0,

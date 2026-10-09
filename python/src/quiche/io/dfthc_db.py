@@ -70,12 +70,12 @@ def parse(path: str | Path, job_id: int) -> FactorisedHamiltonian:
     w = np.asarray(t["F_vlm"], dtype=np.float64).transpose(0, 2, 1)
 
     return FactorisedHamiltonian(
-        N=results["num_orb"],
-        R=outer_rank,
-        B=inner_rank,
-        C=copies,
-        U=u,
-        W=w,
+        num_orbitals=results["num_orb"],
+        num_ranks=outer_rank,
+        num_bases=inner_rank,
+        num_copies=copies,
+        unit_vectors=u,
+        weight_vectors=w,
         bliss_matrix=np.asarray(t["B_bliss"], dtype=np.float64),
         h1=np.asarray(t["h1_exact"], dtype=np.float64),
         const=float(t["const"]),

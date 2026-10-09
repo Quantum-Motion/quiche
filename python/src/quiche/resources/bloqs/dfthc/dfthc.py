@@ -481,10 +481,10 @@ class DFTHCBlockEncoding(BlockEncoding):
 
         """
         return cls(
-            num_orbitals=hamiltonian.N,
-            num_ranks=hamiltonian.R,
-            num_bases=hamiltonian.B,
-            num_copies=hamiltonian.C,
+            num_orbitals=hamiltonian.num_orbitals,
+            num_ranks=hamiltonian.num_ranks,
+            num_bases=hamiltonian.num_bases,
+            num_copies=hamiltonian.num_copies,
             num_bits_keep_inner=num_bits_keep_inner,
             num_bits_keep_outer=num_bits_keep_outer,
             num_bits_phase_grad=num_bits_phase_grad,
@@ -824,10 +824,10 @@ class DFTHCWalkOperator(Bloq):
 
         """
         return cls(
-            num_orbitals=hamiltonian.N,
-            num_ranks=hamiltonian.R,
-            num_bases=hamiltonian.B,
-            num_copies=hamiltonian.C,
+            num_orbitals=hamiltonian.num_orbitals,
+            num_ranks=hamiltonian.num_ranks,
+            num_bases=hamiltonian.num_bases,
+            num_copies=hamiltonian.num_copies,
             num_bits_keep_inner=num_bits_keep_inner,
             num_bits_keep_outer=num_bits_keep_outer,
             num_bits_phase_grad=num_bits_phase_grad,
