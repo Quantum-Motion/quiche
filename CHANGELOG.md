@@ -11,9 +11,11 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ## Unreleased
 
 ### Added
-- Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
+- Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `QualtranBackend`, `QuESTBackend`, `SecondQuantisedHamiltonian` and `Simulation`.
 - Added QUICHE documentation site.
 - Added DFTHC block encoding and walk operator bloqs.
+- Added `quiche.chemistry.get_qubit_state` to map an occupation state to the qubit basis for a given `Mapping`.
+- Added `quiche.dispatch.backends` with `QualtranBackend` and `QuESTBackend`, used via the new `QPESpec.generate()` method.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
@@ -31,6 +33,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ### Deprecated
 
 ### Removed
+- Removed `QPESpec.get_composite_bloq()` and `QPESpec.to_quest()`. Use `QPESpec.generate(QualtranBackend())` and `QPESpec.generate(QuESTBackend())` instead.
+- Removed the `python/examples/qpespec.ipynb` example notebook.
 
 ### Fixed
 
