@@ -92,9 +92,6 @@ FLOAT_PRECISION = "2"
 ENABLE_MULTITHREADING = "ON"
 ENABLE_DISTRIBUTION = "OFF"
 
-[tool.uv]
-compile-bytecode = true
-
 [tool.ruff]
 src = ["python", "python/src"]
 extend-exclude = ["*.pyi"]    # Ignore auto-generated stubs
