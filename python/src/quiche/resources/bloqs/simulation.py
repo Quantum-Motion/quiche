@@ -430,8 +430,9 @@ class QDRIFT(Bloq):
 
     .. math::
 
-        e^{-iHt} \approx e^{-i c_0 t}
-        \prod_{n=1}^{N} e^{-i \tau \, \mathrm{sgn}(h_{j_n}) P_{j_n}},
+        e^{-iHt} \approx e^{-i c_0 t} \,
+        e^{-i \tau \, \mathrm{sgn}(h_{j_N}) P_{j_N}} \cdots
+        e^{-i \tau \, \mathrm{sgn}(h_{j_1}) P_{j_1}},
         \qquad \tau = \frac{\lambda t}{N},
 
     where :math:`N` is ``num_samples``, :math:`\lambda = \sum_j |h_j|`, and each
@@ -696,14 +697,14 @@ class Trotterisation(Bloq):
 
     .. math::
 
-        S_1(\Delta t) = \prod_{j=1}^{L} e^{-i h_j P_j \Delta t}.
+        S_1(\Delta t) = e^{-i h_L P_L \Delta t} \cdots e^{-i h_1 P_1 \Delta t}.
 
     For ``order=2``, the symmetric (Strang) formula is used,
 
     .. math::
 
-        S_2(\Delta t) = \prod_{j=L}^{1} e^{-i h_j P_j \Delta t / 2}
-                        \prod_{j=1}^{L} e^{-i h_j P_j \Delta t / 2},
+        S_2(\Delta t) = e^{-i h_1 P_1 \Delta t / 2} \cdots e^{-i h_L P_L \Delta t / 2}
+                    \, e^{-i h_L P_L \Delta t / 2} \cdots e^{-i h_1 P_1 \Delta t / 2},
 
     and higher even orders follow Suzuki's recursion,
 
