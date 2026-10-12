@@ -27,6 +27,8 @@ __all__ = [
     "PauliWord",
     "PhaseEstimation",
     "QPESpec",
+    "QuESTBackend",
+    "QualtranBackend",
     "SecondQuantisedHamiltonian",
     "Simulation",
     "bindings",
@@ -48,6 +50,8 @@ _REEXPORTS = {
     "PauliWord": ".core.paulis",
     "PhaseEstimation": ".core.algorithms",
     "QPESpec": ".dispatch.qpespec",
+    "QuESTBackend": ".dispatch.backends.quest",
+    "QualtranBackend": ".dispatch.backends.qualtran",
     "SecondQuantisedHamiltonian": ".core.electronic",
     "Simulation": ".core.algorithms",
 }
@@ -68,6 +72,7 @@ if TYPE_CHECKING:
     from .core.errors import Errors
     from .core.paulis import Pauli, PauliSum, PauliWord
     from .dispatch import QPESpec
+    from .dispatch.backends import QualtranBackend, QuESTBackend
 
 
 def __getattr__(name: str) -> object:
