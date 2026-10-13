@@ -303,7 +303,7 @@ class TestPauliSum:
         id_coeff = 10.0
 
         pauli_sum = PauliSum(
-            coefficients=(5.0, 2.0),
+            coefficients=coeffs,
             words=(word1, word2),
             identity_coefficient=id_coeff,
         )
