@@ -412,7 +412,8 @@ class TestPauliSum:
             ("", "must be nonzero"),
             ("1.0 III", "must be nonzero"),
             ("10 I\n5 XIZ\n-2 ZY", "must have the same length"),
-            ("10.0\n5.0 XIZ", "must have the same length"),
+            ("10 IIIII\n5 XIZ", "must have the same length"),
+            ("10.0\n5.0 XIZ", "must contain a Pauli string"),
         ],
     )
     def test_from_dense_string_invalid(self, string: str, error_msg: str):

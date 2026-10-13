@@ -369,10 +369,16 @@ class PauliSum(BaseModel):
         return id_coeff, coeffs, strings
 
     @staticmethod
-    def _validate_length_dense_strings(strings: list[str]) -> None:
+    def _validate_dense_strings(strings: list[str]) -> None:
+        if not all(strings):
+            error_msg = (
+                "Each dense line must contain a Pauli string after the coefficient."
+            )
+            raise ValueError(error_msg)
+
         lengths_set = {len(s) for s in strings}
         if len(lengths_set) > 1:
-            error_msg = "All non-identity dense strings must have the same length."
+            error_msg = "All dense strings must have the same length."
             raise ValueError(error_msg)
 
     @classmethod
@@ -388,8 +394,8 @@ class PauliSum(BaseModel):
             -2.0 ZYI
 
         A line of only ``I`` represents an identity term. Multiple identity lines are
-        summed into the identity coefficient. Blank lines are ignored. All non-identity
-        lines must have the same length.
+        summed into the identity coefficient. Blank lines are ignored. All lines must
+        have the same length.
 
         Parameters
         ----------
@@ -405,10 +411,10 @@ class PauliSum(BaseModel):
 
         """
         lines = cls._split_lines(dense_string)
+        cls._validate_dense_strings([s for _, s in lines])
         id_coeff, coeffs, strings = cls._split_identity(
             lines, lambda s: set(s) == {"I"}
         )
-        cls._validate_length_dense_strings(strings)
         words = [PauliWord.from_dense_string(s, big_endian=big_endian) for s in strings]
         return cls(coefficients=coeffs, words=words, identity_coefficient=id_coeff)
 
