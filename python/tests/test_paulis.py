@@ -190,8 +190,8 @@ class TestPauliWord:
             ("X(a)", "Invalid sparse Pauli"),
             ("X(0", "Invalid sparse Pauli"),
             ("X(0)Y(1)", "Invalid sparse Pauli"),
-            ("X(0) Y(0)", "Qubit 0 appears more than once"),
-            ("X(0) Y(00)", "Qubit 0 appears more than once"),
+            ("X(0) Y(0)", "must be unique"),
+            ("X(0) Y(00)", "must be unique"),
         ],
     )
     def test_from_sparse_string_invalid(self, string: str, error_msg: str):
@@ -377,7 +377,7 @@ class TestPauliSum:
             ("abc X(0)", "Invalid PauliSum line"),
             ("1.0 A(0)", "Invalid sparse Pauli"),
             ("1.0 X0", "Invalid sparse Pauli"),
-            ("1.0 X(0) Y(0)", "appears more than once"),
+            ("1.0 X(0) Y(0)", "must be unique"),
             ("0 X(0)", "zero-valued coefficients"),
             ("", "must be nonzero"),
             ("1.0 ", "must be nonzero"),

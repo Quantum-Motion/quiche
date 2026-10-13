@@ -130,19 +130,13 @@ class PauliWord(BaseModel):
 
     @staticmethod
     def _validate_pairs(pairs: list[tuple[str, int]]) -> list[tuple[Pauli, int]]:
+        # Duplicate qubits are rejected by the check_qubits_unique validator.
         validated = []
-        qubits_seen = set()
 
         for char, qubit in pairs:
             if char not in {"I", "X", "Y", "Z"}:
                 error_msg = f"Invalid Pauli {char!r}."
                 raise ValueError(error_msg)
-
-            if qubit in qubits_seen:
-                error_msg = f"Qubit {qubit} appears more than once."
-                raise ValueError(error_msg)
-
-            qubits_seen.add(qubit)
 
             if char != "I":
                 validated.append((Pauli(char), qubit))
