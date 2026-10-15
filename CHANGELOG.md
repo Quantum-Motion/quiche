@@ -14,6 +14,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
 - Added QUICHE documentation site.
 - Added DFTHC block encoding and walk operator bloqs.
+- Added `from_sparse_string`, `from_dense_string` and `to_sparse_string` to `PauliWord` and `PauliSum`, and `to_dense_string` to `PauliSum`.
+- Added `to_matrix` to `Pauli`, `PauliWord` and `PauliSum`.
 - Added `Trotterisation.trotter_coeffs`, `Trotterisation.trotter_indices` and `Trotterisation.rotation_sequence`.
 
 ### Changed
@@ -28,6 +30,10 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Renamed `NaiveQPE`, `KitaevQPE` and `IterativeQPE`'s `n_simulation_qubits` and `n_estimation_bits` to `num_simulation_qubits` and `num_estimation_bits`.
 - Renamed `ElectronicHamiltonian` and `SecondQuantisedHamiltonian`'s `electrons` to `num_electrons`.
 - Renamed `HartreeFockState.closed_shell`'s `electrons` and `spin_orbitals` to `num_electrons` and `num_spin_orbitals`.
+- Changed the default string representation of `PauliWord` and `PauliSum` to the sparse string format.
+- Renamed `PauliWord.to_str` to `to_dense_string`.
+- Updated `PauliWord` to sort its `paulis` and `qubits` by increasing qubit index.
+- Updated `PauliWord` validation to reject negative qubit indices.
 - Renamed the `h` and `t` fields of `QDRIFT` and `Trotterisation` to `sum` and `time`.
 - Renamed the `simulation` register of `QDRIFT`, `Trotterisation`, `NaiveQPE`, `KitaevQPE` and `IterativeQPE` to `system`.
 - Changed `Trotterisation`'s Suzuki-Trotter expansion to no longer merge adjacent rotations on the same term.

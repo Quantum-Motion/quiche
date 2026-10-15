@@ -211,7 +211,7 @@ class TestPauliWordRotation:
             PauliWordRotation(word, 0.4, 7)
 
     def test_decomposition(self, rotation: PauliWordRotation):
-        h = rotation.word._to_matrix(
+        h = rotation.word.to_matrix(
             length=rotation.num_qubits, ignore_idle_qubits=False
         )
         u_target = expm(-1j * h * rotation.angle / 2)
@@ -294,7 +294,7 @@ class TestQDRIFT:
         bloq = qdrift.controlled() if controlled else qdrift
         actual = bloq.tensor_contract()
 
-        exponential = expm(-1j * time * h_small._to_matrix())
+        exponential = expm(-1j * time * h_small.to_matrix())
         expected = (
             block_diag(np.eye(len(exponential)), exponential)
             if controlled
@@ -371,7 +371,7 @@ class TestTrotterisation:
         bloq = trotter.controlled() if controlled else trotter
         actual = bloq.tensor_contract()
 
-        exponential = expm(-1j * time * h_small._to_matrix())
+        exponential = expm(-1j * time * h_small.to_matrix())
         expected = (
             block_diag(np.eye(len(exponential)), exponential)
             if controlled
