@@ -48,7 +48,7 @@ def test_unknown_job_id(path_to_dfthc_input_data: str):
 
 
 def test_job_not_completed(path_to_dfthc_input_data: str, tmp_path: Path):
-    """Test behaviour when tryiong to read from an incomplete job."""
+    """Test behaviour when trying to read from an incomplete job."""
     path = tmp_path / "failed.db"
     shutil.copy(path_to_dfthc_input_data, path)
     with closing(sqlite3.connect(path)) as con, con:

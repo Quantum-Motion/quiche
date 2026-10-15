@@ -40,7 +40,7 @@ __all__ = [
 ]
 
 _REEXPORTS = {
-    "DFTHCHamiltonian": "core.electronic",
+    "DFTHCHamiltonian": ".core.electronic",
     "ElectronicHamiltonian": ".core.electronic",
     "Errors": ".core.errors",
     "HartreeFockState": ".chemistry",

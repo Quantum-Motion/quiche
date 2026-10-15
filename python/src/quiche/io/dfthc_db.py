@@ -51,7 +51,7 @@ def read(path: str | Path, job_id: int) -> DFTHCHamiltonian:
         form, containing the number of orbitals, number of electrons, number of ranks,
         number of bases, number of copies, together with the unit vectors,
         weight vectors, BLISS matrix, one-body term and constant
-        shift. The unit and weight vectors are returned in RBC order (see [Low2025]).
+        shift. The unit and weight vectors are returned in RBC order (see [Low2025]_).
 
     Raises
     ------
