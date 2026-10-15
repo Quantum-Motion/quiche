@@ -186,9 +186,9 @@ class TestDFTHCHamiltonian:
         assert reconstructed.core_energy == hamiltonian.const
         assert reconstructed.one_body.shape == (15, 15)
         assert reconstructed.two_body.shape == (15,) * 4
-        assert np.testing.assert_allclose(
+        np.testing.assert_allclose(
             reconstructed.one_body, np.load(path_to_dfthc_one_body_reference), atol=1e-6
         )
-        assert np.testing.assert_allclose(
+        np.testing.assert_allclose(
             reconstructed.two_body, np.load(path_to_dfthc_two_body_reference), atol=1e-6
         )
