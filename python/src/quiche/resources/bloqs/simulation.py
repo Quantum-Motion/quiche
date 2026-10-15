@@ -663,15 +663,15 @@ class Trotterisation(Bloq):
         """Implement the decomposition into sub-bloqs."""
         simulation = soqs["simulation"]
 
-        # Build the PauliWordRotation for each term in the Hamiltonian.
+        # Build the PauliWordRotation for each word in the Hamiltonian.
         if self.is_controlled:
             bloqs = tuple(
-                PauliWordRotation(t, self.dt, self.num_qubits).controlled()
-                for t in self.h.words
+                PauliWordRotation(w, self.dt, self.num_qubits).controlled()
+                for w in self.h.words
             )
         else:
             bloqs = tuple(
-                PauliWordRotation(t, self.dt, self.num_qubits) for t in self.h.words
+                PauliWordRotation(w, self.dt, self.num_qubits) for w in self.h.words
             )
         # Extract coefficients and indices for the given Trotter formula.
         coeffs, indices = self.get_coeffs_indices(self.order)
