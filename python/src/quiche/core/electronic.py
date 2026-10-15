@@ -170,7 +170,7 @@ class SecondQuantisedHamiltonian(BaseModel):
 
 class DFTHCHamiltonian(BaseModel):
     """
-    Class encompassing a Factorized Hamiltonian, generated from DFTHC output.
+    Class encompassing an electronic Hamiltonian in DFTHC factorised form.
 
     Parameters
     ----------
@@ -252,10 +252,10 @@ class DFTHCHamiltonian(BaseModel):
                 )
                 raise ValueError(error_msg)
 
-        # Reconstruct divides by U, so a zero column would result in NaNs.
+        # Reconstruct divides by U, so a zero vector would result in NaNs.
         if np.any(np.linalg.norm(self.unit_vectors, axis=2) == 0.0):
             error_msg = (
-                "`unit_vectors` contains a zero vector,which cannot be normalised."
+                "`unit_vectors` contains a zero vector, which cannot be normalised."
             )
             raise ValueError(error_msg)
 
