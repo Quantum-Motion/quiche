@@ -15,7 +15,7 @@
 """Main routines for the block encoding of the DFTHC Hamiltonian."""
 
 from functools import cached_property
-from typing import TYPE_CHECKING, Self
+from typing import Self
 
 import attrs
 from qualtran import (
@@ -39,6 +39,7 @@ from qualtran.resource_counting import (
 )
 from qualtran.symbolics import bit_length
 
+from quiche.core.electronic import DFTHCHamiltonian
 from quiche.resources.bloqs.dfthc.prep import (
     InnerPrepareDFTHC,
     OuterPrepareDFTHC,
@@ -46,9 +47,6 @@ from quiche.resources.bloqs.dfthc.prep import (
 )
 from quiche.resources.bloqs.dfthc.select import SelectDFTHC
 from quiche.resources.bloqs.dfthc.utils import extract_soqs
-
-if TYPE_CHECKING:
-    from quiche.core.electronic import DFTHCHamiltonian
 
 
 @attrs.frozen
@@ -424,7 +422,7 @@ class DFTHCBlockEncoding(BlockEncoding):
     @classmethod
     def from_dfthc_hamiltonian(  # noqa: PLR0913
         cls,
-        hamiltonian: "DFTHCHamiltonian",
+        hamiltonian: DFTHCHamiltonian,
         *,
         num_bits_keep_inner: int,
         num_bits_keep_outer: int,
@@ -437,7 +435,7 @@ class DFTHCBlockEncoding(BlockEncoding):
         num_controls: int = 0,
     ) -> Self:
         """
-        Complete DFTHC Hamiltonian block encoding.
+        DFTHC Hamiltonian block encoding, starting from DFTHCHamiltonian parameters.
 
         Parameters
         ----------
@@ -469,16 +467,11 @@ class DFTHCBlockEncoding(BlockEncoding):
         num_controls : int, optional
             Number of control qubits (default = 0).
 
-        Registers
-        ---------
-        `block_encoding`'s registers, preceded by `ctrl` if `num_controls` > 0.
-
         References
         ----------
         .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic
             Structure by Spectral Amplification", Phys. Rev. X, vol. 15,
             no. 4, p. 041016, Oct. 2025.
-
 
         """
         return cls(
@@ -768,7 +761,7 @@ class DFTHCWalkOperator(Bloq):
     @classmethod
     def from_dfthc_hamiltonian(  # noqa: PLR0913
         cls,
-        hamiltonian: "DFTHCHamiltonian",
+        hamiltonian: DFTHCHamiltonian,
         *,
         num_bits_keep_inner: int,
         num_bits_keep_outer: int,
@@ -781,7 +774,7 @@ class DFTHCWalkOperator(Bloq):
         num_controls: int = 0,
     ) -> Self:
         """
-        Qubitisation walk operator for the DFTHC block encoding.
+        DFTHC Hamiltonian walk operator, starting from DFTHCHamiltonian parameters.
 
         Parameters
         ----------
@@ -813,15 +806,11 @@ class DFTHCWalkOperator(Bloq):
         num_controls : int, optional
             Number of control qubits (default = 0).
 
-        Registers
-        ---------
-        `block_encoding`'s registers, preceded by `ctrl` if `num_controls` > 0.
-
         References
         ----------
-            [1] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-                Spectral Amplification", Phys. Rev. X, vol. 15, no. 4,
-                p. 041016, Oct. 2025.
+        .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+           by Spectral Amplification", Phys. Rev. X, vol. 15,
+           no. 4, p. 041016, Oct. 2025.
 
         """
         return cls(
