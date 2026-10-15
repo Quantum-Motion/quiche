@@ -14,6 +14,9 @@
 
 """Tests for the DFTHC database parsing."""
 
+import shutil
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import numpy as np
@@ -26,6 +29,33 @@ from quiche.io import dfthc_db
 def path_to_dfthc_input_data() -> str:
     """Path to the DFTHC database test file."""
     return str(Path(__file__).parent / "dfthc_data" / "sq_results.db")
+
+
+def test_missing_file(tmp_path: Path):
+    """Test behaviour when input file is missing."""
+    path = tmp_path / "missing.db"
+
+    with pytest.raises(FileNotFoundError, match="Database file not found"):
+        dfthc_db.read(path, 1)
+
+    assert not path.exists()  # Opening must not create the file.
+
+
+def test_unknown_job_id(path_to_dfthc_input_data: str):
+    """Test behaviour when wrong job ID is given."""
+    with pytest.raises(ValueError, match="No job with id 999"):
+        dfthc_db.read(path_to_dfthc_input_data, 999)
+
+
+def test_job_not_completed(path_to_dfthc_input_data: str, tmp_path: Path):
+    """Test behaviour when tryiong to read from an incomplete job."""
+    path = tmp_path / "failed.db"
+    shutil.copy(path_to_dfthc_input_data, path)
+    with closing(sqlite3.connect(path)) as con, con:
+        con.execute("UPDATE experiments SET status='failed' WHERE id=1")
+
+    with pytest.raises(ValueError, match="not 'completed'"):
+        dfthc_db.read(path, 1)
 
 
 def test_dfthc_db_parsing(path_to_dfthc_input_data: str):
@@ -42,12 +72,6 @@ def test_dfthc_db_parsing(path_to_dfthc_input_data: str):
     assert dfthc_hamiltonian.num_bases == 40
     assert dfthc_hamiltonian.num_copies == 40
     assert dfthc_hamiltonian.num_electrons == 3
-    np.testing.assert_allclose(
-        dfthc_hamiltonian.const, 1.250005222563424, rtol=1e-8
-    )
-    np.testing.assert_array_equal(
-        dfthc_hamiltonian.unit_vectors.shape, (1, 40, 15)
-    )
-    np.testing.assert_array_equal(
-        dfthc_hamiltonian.weight_vectors.shape, (1, 40, 40)
-    )
+    np.testing.assert_allclose(dfthc_hamiltonian.const, 1.250005222563424, rtol=1e-8)
+    np.testing.assert_array_equal(dfthc_hamiltonian.unit_vectors.shape, (1, 40, 15))
+    np.testing.assert_array_equal(dfthc_hamiltonian.weight_vectors.shape, (1, 40, 40))

@@ -11,7 +11,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ## Unreleased
 
 ### Added
-- Added top-level re-exports of `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
+- Added top-level re-exports of `DFTHCHamiltonian`, `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
 - Added QUICHE documentation site.
 - Added DFTHC block encoding and walk operator bloqs.
 - Added `DFTHCHamiltonian` class for DFTHC factorisation results, with `reconstruct` to rebuild the second quantised integrals.

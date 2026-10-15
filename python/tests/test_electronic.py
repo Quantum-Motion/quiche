@@ -151,6 +151,37 @@ class TestDFTHCHamiltonian:
     """Test DFTHCHamiltonian class."""
 
     @pytest.mark.parametrize(
+        "name", ["num_orbitals", "num_ranks", "num_bases", "num_copies"]
+    )
+    @pytest.mark.parametrize("value", [0, -1])
+    def test_non_positive_dimensions(self, factors: dict, name: str, value: int):
+        factors[name] = value
+
+        with pytest.raises(ValueError, match="All dimensions must be positive"):
+            DFTHCHamiltonian(**factors)
+
+    @pytest.mark.parametrize(
+        ("num_electrons", "error_msg"),
+        [
+            (-1, "number of electrons must be non-negative"),
+            (7, "number of electrons must not exceed the number of spin orbitals"),
+        ],
+    )
+    def test_invalid_num_electrons(
+        self, factors: dict, num_electrons: int, error_msg: str
+    ):
+        factors["num_electrons"] = num_electrons  # 3 orbitals, so at most 6.
+
+        with pytest.raises(ValueError, match=error_msg):
+            DFTHCHamiltonian(**factors)
+
+    def test_complex_factors(self, factors: dict):
+        factors["bliss_matrix"] = factors["bliss_matrix"] * 1j
+
+        with pytest.raises(ValueError, match="must be real"):
+            DFTHCHamiltonian(**factors)
+
+    @pytest.mark.parametrize(
         ("name", "shape"),
         [
             ("unit_vectors", (2, 4, 5)),

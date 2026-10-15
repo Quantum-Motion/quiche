@@ -250,7 +250,7 @@ class DFTHCHamiltonian(BaseModel):
             error_msg = f"All dimensions must be positive, got {dimensions}."
             raise ValueError(error_msg)
         return self
-    
+
     @model_validator(mode="after")
     def check_shapes(self) -> Self:
         """Validate the factor shapes are consistent with N, R, B and C."""

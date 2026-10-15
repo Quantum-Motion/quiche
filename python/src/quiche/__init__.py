@@ -40,7 +40,7 @@ __all__ = [
 ]
 
 _REEXPORTS = {
-    "DFTHCHamiltonian" : "core.electronic",
+    "DFTHCHamiltonian": "core.electronic",
     "ElectronicHamiltonian": ".core.electronic",
     "Errors": ".core.errors",
     "HartreeFockState": ".chemistry",
@@ -66,7 +66,11 @@ if TYPE_CHECKING:
     )
     from .chemistry import HartreeFockState
     from .core.algorithms import Mapping, PhaseEstimation, Simulation
-    from .core.electronic import ElectronicHamiltonian, SecondQuantisedHamiltonian
+    from .core.electronic import (
+        DFTHCHamiltonian,
+        ElectronicHamiltonian,
+        SecondQuantisedHamiltonian,
+    )
     from .core.errors import Errors
     from .core.paulis import Pauli, PauliSum, PauliWord
     from .dispatch import QPESpec
