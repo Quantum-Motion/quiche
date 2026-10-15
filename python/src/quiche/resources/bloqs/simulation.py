@@ -151,6 +151,7 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
     Extends Qualtran's ``LCUBlockEncoding`` with a ``from_hamiltonian``
     constructor and an analytic ``build_call_graph``, so resource counts don't
     require a full decomposition.
+
     """
 
     @classmethod
