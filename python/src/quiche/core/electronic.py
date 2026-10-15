@@ -175,13 +175,13 @@ class DFTHCHamiltonian(BaseModel):
     Parameters
     ----------
     num_orbitals : int
-        Number of spatial orbitals, :math:`N`.
+        Number of spatial orbitals, :math:`N`. Must be positive.
     num_ranks : int
-        Number of ranks in the factorisation, :math:`R`.
+        Number of ranks in the factorisation, :math:`R`. Must be positive.
     num_bases : int
-        Number of basis vectors per rank, :math:`B`.
+        Number of basis vectors per rank, :math:`B`. Must be positive.
     num_copies : int
-        Number of copies (weight channels) per rank, :math:`C`.
+        Number of copies (weight channels) per rank, :math:`C`. Must be positive.
     unit_vectors : NDArray[np.float64]
         Real array of shape ``(R, B, N)``. Each vector along the last axis is
         normalised on reconstruction, so must be non-zero.
@@ -192,7 +192,7 @@ class DFTHCHamiltonian(BaseModel):
         Real array of shape ``(N, N)`` containing the BLISS symmetry shift
         matrix, which is removed from the factorised two body integrals on
         reconstruction.
-    h1 : NDArray[np.float64]
+    factorised_one_body : NDArray[np.float64]
         Real array of shape ``(N, N)`` containing the one body integrals in the
         factorised ("E-form") convention, which absorb a contribution from
         the two body integrals. The bare one body integrals are recovered on
@@ -201,10 +201,8 @@ class DFTHCHamiltonian(BaseModel):
         Constant energy offset, used as the core energy of the reconstructed
         Hamiltonian.
     num_electrons : int
-        Number of electrons in the system.
-    job_id : int | None, optional
-        Identifier of the DFTHC job that produced the factors. Defaults to
-        ``None``.
+        Number of electrons in the system. Must be non-negative and at most
+        :math:`2N`.
 
     """
 
@@ -217,13 +215,16 @@ class DFTHCHamiltonian(BaseModel):
     unit_vectors: NDArray[np.float64]
     weight_vectors: NDArray[np.float64]
     bliss_matrix: NDArray[np.float64]
-    h1: NDArray[np.float64]
+    factorised_one_body: NDArray[np.float64]
     const: float
     num_electrons: int
-    job_id: int | None = None
 
     @field_validator(
-        "unit_vectors", "weight_vectors", "bliss_matrix", "h1", mode="before"
+        "unit_vectors",
+        "weight_vectors",
+        "bliss_matrix",
+        "factorised_one_body",
+        mode="before",
     )
     @classmethod
     def as_immutable_array(cls, value: object) -> NDArray[np.float64]:
@@ -243,7 +244,7 @@ class DFTHCHamiltonian(BaseModel):
             "unit_vectors": (self.num_ranks, self.num_bases, self.num_orbitals),
             "weight_vectors": (self.num_ranks, self.num_bases, self.num_copies),
             "bliss_matrix": (self.num_orbitals, self.num_orbitals),
-            "h1": (self.num_orbitals, self.num_orbitals),
+            "factorised_one_body": (self.num_orbitals, self.num_orbitals),
         }
         for name, shape in expected.items():
             if getattr(self, name).shape != shape:
@@ -261,15 +262,44 @@ class DFTHCHamiltonian(BaseModel):
 
         return self
 
+    @model_validator(mode="after")
+    def check_dimension_positive(self) -> Self:
+        """Validate that the dimensions N, R, B and C are strictly positive."""
+        dimensions = {
+            "num_orbitals": self.num_orbitals,
+            "num_ranks": self.num_ranks,
+            "num_bases": self.num_bases,
+            "num_copies": self.num_copies,
+        }
+        if any(value <= 0 for value in dimensions.values()):
+            error_msg = f"All dimensions must be positive, got {dimensions}."
+            raise ValueError(error_msg)
+        return self
+
+    @model_validator(mode="after")
+    def check_electrons(self) -> Self:
+        """Validate the electron count fits in the given orbital space."""
+        if self.num_electrons < 0:
+            error_msg = "The number of electrons must be non-negative."
+            raise ValueError(error_msg)
+
+        if self.num_electrons > 2 * self.num_orbitals:
+            error_msg = (
+                "The number of electrons must not exceed the number of spin orbitals."
+            )
+            raise ValueError(error_msg)
+
+        return self
+
     def reconstruct(self) -> SecondQuantisedHamiltonian:
         """Rebuild the integrals from the factors."""
-        u_normalized = self.unit_vectors / np.linalg.norm(
+        u_normalised = self.unit_vectors / np.linalg.norm(
             self.unit_vectors, axis=2, keepdims=True
         )
 
         # W_rc[p,q] = sum_b W[r,b,c] * u[r,b,p] * u[r,b,q]
         w_rc = np.einsum(
-            "rbp,rbq,rbc->rcpq", u_normalized, u_normalized, self.weight_vectors
+            "rbp,rbq,rbc->rcpq", u_normalised, u_normalised, self.weight_vectors
         )
 
         # g_approx[p,q,t,s] = sum_{r,c} W_rc[p,q] * W_rc[t,s]
@@ -283,7 +313,7 @@ class DFTHCHamiltonian(BaseModel):
         two_body = g_approx - 0.5 * shift
 
         # E-form -> bare one-body integrals: t1 = h1 + 1/2 sum_r (pr|rq)
-        one_body = self.h1 + 0.5 * np.einsum("prrq->pq", two_body)
+        one_body = self.factorised_one_body + 0.5 * np.einsum("prrq->pq", two_body)
 
         return SecondQuantisedHamiltonian(
             one_body=one_body,

@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Helpers to handle factorisation output database files.
+"""
+Helpers to handle factorisation output database files.
 
 References
 ----------
@@ -103,8 +104,7 @@ def load(path: str | Path, job_id: int) -> DFTHCHamiltonian:
         unit_vectors=unit_vectors,
         weight_vectors=weight_vectors,
         bliss_matrix=np.asarray(arrays["B_bliss"], dtype=np.float64),
-        one_body=np.asarray(arrays["h1_exact"], dtype=np.float64),
+        factorised_one_body=np.asarray(arrays["h1_exact"], dtype=np.float64),
         const=float(arrays["const"]),
         num_electrons=results["num_elec"],
-        job_id=job_id,
     )
