@@ -33,7 +33,7 @@ import numpy as np
 from quiche.core.electronic import DFTHCHamiltonian
 
 
-def load(path: str | Path, job_id: int) -> DFTHCHamiltonian:
+def read(path: str | Path, job_id: int) -> DFTHCHamiltonian:
     """
     Return a DFTHCHamiltonian that functions as input for the resource estimation.
 
@@ -49,10 +49,9 @@ def load(path: str | Path, job_id: int) -> DFTHCHamiltonian:
     DFTHCHamiltonian
         The electronic Hamiltonian in double-factorized tensor hypercontraction (DFTHC)
         form, containing the number of orbitals, number of electrons, number of ranks,
-        number of bases, number of copies copies, together with the unit vectors,
+        number of bases, number of copies, together with the unit vectors,
         weight vectors, BLISS matrix, one-body term and constant
-        shift. The unit and weight vectors are returned in RBC order.
-        The originating ``job_id`` is stored on the object.
+        shift. The unit and weight vectors are returned in RBC order (see [Low2025]).
 
     Raises
     ------

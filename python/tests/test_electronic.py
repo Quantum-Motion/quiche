@@ -177,7 +177,7 @@ class TestDFTHCHamiltonian:
         path_to_dfthc_one_body_reference: str,
         path_to_dfthc_two_body_reference: str,
     ):
-        hamiltonian = dfthc_db.load(path_to_dfthc_input_data, 1)
+        hamiltonian = dfthc_db.read(path_to_dfthc_input_data, 1)
         reconstructed = hamiltonian.reconstruct()
 
         assert isinstance(reconstructed, SecondQuantisedHamiltonian)

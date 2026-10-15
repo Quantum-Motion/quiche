@@ -30,7 +30,7 @@ def path_to_dfthc_input_data() -> str:
 
 def test_dfthc_db_parsing(path_to_dfthc_input_data: str):
     """Test the parsing of the database file."""
-    factorised_hamiltonian = dfthc_db.load(path_to_dfthc_input_data, 1)
+    factorised_hamiltonian = dfthc_db.read(path_to_dfthc_input_data, 1)
 
     # The data is calculated using external partner's code.
     # The system is a H_3 chain (3 electrons),
