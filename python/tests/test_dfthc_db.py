@@ -30,24 +30,24 @@ def path_to_dfthc_input_data() -> str:
 
 def test_dfthc_db_parsing(path_to_dfthc_input_data: str):
     """Test the parsing of the database file."""
-    factorised_hamiltonian = dfthc_db.read(path_to_dfthc_input_data, 1)
+    dfthc_hamiltonian = dfthc_db.read(path_to_dfthc_input_data, 1)
 
     # The data is calculated using external partner's code.
     # The system is a H_3 chain (3 electrons),
     # in a double zeta basis set (5 AO's per H).
     # RBC values are taken from the input of their code.
     # Integral value references are taken from their factorisation.
-    assert factorised_hamiltonian.num_orbitals == 15
-    assert factorised_hamiltonian.num_ranks == 1
-    assert factorised_hamiltonian.num_bases == 40
-    assert factorised_hamiltonian.num_copies == 40
-    assert factorised_hamiltonian.num_electrons == 3
+    assert dfthc_hamiltonian.num_orbitals == 15
+    assert dfthc_hamiltonian.num_ranks == 1
+    assert dfthc_hamiltonian.num_bases == 40
+    assert dfthc_hamiltonian.num_copies == 40
+    assert dfthc_hamiltonian.num_electrons == 3
     np.testing.assert_allclose(
-        factorised_hamiltonian.const, 1.250005222563424, rtol=1e-8
+        dfthc_hamiltonian.const, 1.250005222563424, rtol=1e-8
     )
     np.testing.assert_array_equal(
-        factorised_hamiltonian.unit_vectors.shape, (1, 40, 15)
+        dfthc_hamiltonian.unit_vectors.shape, (1, 40, 15)
     )
     np.testing.assert_array_equal(
-        factorised_hamiltonian.weight_vectors.shape, (1, 40, 40)
+        dfthc_hamiltonian.weight_vectors.shape, (1, 40, 40)
     )

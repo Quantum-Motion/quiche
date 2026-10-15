@@ -238,6 +238,20 @@ class DFTHCHamiltonian(BaseModel):
         return array
 
     @model_validator(mode="after")
+    def check_dimension_positive(self) -> Self:
+        """Validate that the dimensions N, R, B and C are strictly positive."""
+        dimensions = {
+            "num_orbitals": self.num_orbitals,
+            "num_ranks": self.num_ranks,
+            "num_bases": self.num_bases,
+            "num_copies": self.num_copies,
+        }
+        if any(value <= 0 for value in dimensions.values()):
+            error_msg = f"All dimensions must be positive, got {dimensions}."
+            raise ValueError(error_msg)
+        return self
+    
+    @model_validator(mode="after")
     def check_shapes(self) -> Self:
         """Validate the factor shapes are consistent with N, R, B and C."""
         expected = {
@@ -260,20 +274,6 @@ class DFTHCHamiltonian(BaseModel):
             )
             raise ValueError(error_msg)
 
-        return self
-
-    @model_validator(mode="after")
-    def check_dimension_positive(self) -> Self:
-        """Validate that the dimensions N, R, B and C are strictly positive."""
-        dimensions = {
-            "num_orbitals": self.num_orbitals,
-            "num_ranks": self.num_ranks,
-            "num_bases": self.num_bases,
-            "num_copies": self.num_copies,
-        }
-        if any(value <= 0 for value in dimensions.values()):
-            error_msg = f"All dimensions must be positive, got {dimensions}."
-            raise ValueError(error_msg)
         return self
 
     @model_validator(mode="after")

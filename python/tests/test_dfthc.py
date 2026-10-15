@@ -46,7 +46,7 @@ S = 7
 
 @pytest.fixture
 def dummy_dfthc_hamiltonian() -> DFTHCHamiltonian:
-    """Return a small, valid DFTHCHamiltonian for use in tests."""
+    """Return a dummy DFTHCHamiltonian for use in tests."""
     return DFTHCHamiltonian(
         num_orbitals=N,
         num_ranks=R,
@@ -240,7 +240,7 @@ class TestDFTHCWalkOperator:
         log_block_size_outer_adjoint=K_5,
     )
 
-    def test_from_hamiltonian_equivalence(
+    def test_from_dfthc_hamiltonian_equivalence(
         self, dummy_dfthc_hamiltonian: DFTHCHamiltonian
     ):
         walk_from_fh = DFTHCWalkOperator.from_dfthc_hamiltonian(

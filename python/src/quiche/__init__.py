@@ -18,6 +18,7 @@ import importlib
 from typing import TYPE_CHECKING
 
 __all__ = [
+    "DFTHCHamiltonian",
     "ElectronicHamiltonian",
     "Errors",
     "HartreeFockState",
@@ -39,6 +40,7 @@ __all__ = [
 ]
 
 _REEXPORTS = {
+    "DFTHCHamiltonian" : "core.electronic",
     "ElectronicHamiltonian": ".core.electronic",
     "Errors": ".core.errors",
     "HartreeFockState": ".chemistry",
