@@ -121,7 +121,7 @@ def _factors(norb: int = 3, ranks: int = 2, bases: int = 4, copies: int = 2) -> 
         "unit_vectors": np.ones((ranks, bases, norb)),
         "weight_vectors": np.ones((ranks, bases, copies)),
         "bliss_matrix": np.ones((norb, norb)),
-        "h1": np.ones((norb, norb)),
+        "factorised_one_body": np.ones((norb, norb)),
         "const": 0.5,
         "num_electrons": 2,
     }
@@ -130,19 +130,19 @@ def _factors(norb: int = 3, ranks: int = 2, bases: int = 4, copies: int = 2) -> 
 @pytest.fixture(scope="session")
 def db_input_file() -> str:
     """Path to the DFTHC database test file."""
-    return str(Path(__file__).parent / "input" / "sq_results.db")
+    return str(Path(__file__).parent / "dfthc_data" / "sq_results.db")
 
 
 @pytest.fixture(scope="session")
 def one_body_reference() -> str:
     """Path to the DFTHC database test file."""
-    return str(Path(__file__).parent / "input" / "reconstructed_one_body.npy")
+    return str(Path(__file__).parent / "dfthc_data" / "reconstructed_one_body.npy")
 
 
 @pytest.fixture(scope="session")
 def two_body_reference() -> str:
     """Path to the DFTHC database test file."""
-    return str(Path(__file__).parent / "input" / "reconstructed_two_body.npy")
+    return str(Path(__file__).parent / "dfthc_data" / "reconstructed_two_body.npy")
 
 
 class TestDFTHCHamiltonian:
@@ -154,7 +154,7 @@ class TestDFTHCHamiltonian:
             ("unit_vectors", (2, 4, 5)),
             ("weight_vectors", (2, 5, 2)),
             ("bliss_matrix", (3, 4)),
-            ("h1", (2, 2)),
+            ("factorised_one_body", (2, 2)),
         ],
     )
     def test_invalid_shapes(self, name: str, shape: tuple[int, ...]):
@@ -174,7 +174,7 @@ class TestDFTHCHamiltonian:
     def test_reconstruct(
         self, db_input_file: str, one_body_reference: str, two_body_reference: str
     ):
-        factors = dfthc_db.parse(db_input_file, 1)
+        factors = dfthc_db.load(db_input_file, 1)
         reconstructed = factors.reconstruct()
 
         assert isinstance(reconstructed, SecondQuantisedHamiltonian)

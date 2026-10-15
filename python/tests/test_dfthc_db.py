@@ -25,12 +25,12 @@ from quiche.io import dfthc_db
 @pytest.fixture(scope="session")
 def db_input_file() -> str:
     """Path to the DFTHC database test file."""
-    return str(Path(__file__).parent / "input" / "sq_results.db")
+    return str(Path(__file__).parent / "dfthc_data" / "sq_results.db")
 
 
 def test_dfthc_db_parsing(db_input_file: str):
     """Test the parsing of the database file."""
-    factorised_hamiltonian = dfthc_db.parse(db_input_file, 1)
+    factorised_hamiltonian = dfthc_db.load(db_input_file, 1)
 
     # The data is calculated using external partner's code.
     # The system is a H_3 chain (3 electrons),
