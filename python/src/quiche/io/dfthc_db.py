@@ -40,7 +40,7 @@ def parse(path: str | Path, job_id: int) -> DFTHCHamiltonian:
 
     Parameters
     ----------
-    path : str
+    path : str | Path
         The database file generated with external DFTHC code.
     job_id : int
         The ID of the job you want to extract.
