@@ -22,15 +22,15 @@ import pytest
 from quiche.io import dfthc_db
 
 
-@pytest.fixture()
-def dfthc_data_input_path() -> str:
+@pytest.fixture
+def path_to_dfthc_input_data() -> str:
     """Path to the DFTHC database test file."""
     return str(Path(__file__).parent / "dfthc_data" / "sq_results.db")
 
 
-def test_dfthc_db_parsing(dfthc_data_input_path: str):
+def test_dfthc_db_parsing(path_to_dfthc_input_data: str):
     """Test the parsing of the database file."""
-    factorised_hamiltonian = dfthc_db.load(dfthc_data_input_path, 1)
+    factorised_hamiltonian = dfthc_db.load(path_to_dfthc_input_data, 1)
 
     # The data is calculated using external partner's code.
     # The system is a H_3 chain (3 electrons),
@@ -42,6 +42,12 @@ def test_dfthc_db_parsing(dfthc_data_input_path: str):
     assert factorised_hamiltonian.num_bases == 40
     assert factorised_hamiltonian.num_copies == 40
     assert factorised_hamiltonian.num_electrons == 3
-    assert np.testing.assert_allclose(factorised_hamiltonian.const, 1.250005222563424, rtol=1e-8)
-    assert np.testing.assert_array_equal(factorised_hamiltonian.unit_vectors.shape, (1, 40, 15))
-    assert np.testing.assert_array_equal(factorised_hamiltonian.weight_vectors.shape, (1, 40, 40))
+    assert np.testing.assert_allclose(
+        factorised_hamiltonian.const, 1.250005222563424, rtol=1e-8
+    )
+    assert np.testing.assert_array_equal(
+        factorised_hamiltonian.unit_vectors.shape, (1, 40, 15)
+    )
+    assert np.testing.assert_array_equal(
+        factorised_hamiltonian.weight_vectors.shape, (1, 40, 40)
+    )
