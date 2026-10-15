@@ -258,7 +258,13 @@ class TestPauliWordRotationSequence:
 class TestQDRIFT:
     @pytest.fixture
     def qdrift(self, h2: PauliSum) -> QDRIFT:
-        return QDRIFT(h2, time=5, num_samples=20, seed=1024)
+        # Sum with repeated word for call graph regression testing
+        pauli_sum = PauliSum(
+            coefficients=(*h2.coefficients, h2.coefficients[-1]),
+            words=(*h2.words, h2.words[-1]),
+            identity_coefficient=h2.identity_coefficient,
+        )
+        return QDRIFT(pauli_sum, time=5, num_samples=20, seed=1024)
 
     def test_invalid_negative_num_samples(self, h2: PauliSum):
         with pytest.raises(ValueError, match="Choose positive num_samples"):

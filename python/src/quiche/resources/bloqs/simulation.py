@@ -572,7 +572,7 @@ class QDRIFT(Bloq):
             p=probabilities,
         )
 
-    def get_rotation(self, index: int) -> PauliWordRotation:
+    def _get_rotation(self, index: int) -> PauliWordRotation:
         """Get the individual PauliWordRotation for a given term."""
         return PauliWordRotation(
             word=self.sum.words[index],
@@ -580,6 +580,13 @@ class QDRIFT(Bloq):
             num_qubits=self.num_qubits,
             is_controlled=self.is_controlled,
         )
+
+    @cached_property
+    def sampled_rotations(self) -> tuple[PauliWordRotation, ...]:
+        """Sequence of rotations for the QDRIFT simulation."""
+        unique_indices = np.unique(self.sampled_indices)
+        rotations = {i: self._get_rotation(i) for i in unique_indices}
+        return tuple(rotations[i] for i in self.sampled_indices)
 
     @property
     def phase(self) -> Bloq:
@@ -593,8 +600,8 @@ class QDRIFT(Bloq):
         **soqs: SoquetT,
     ) -> dict[str, SoquetT]:
         """Implement bloq decomposition into sub-bloqs."""
-        for idx in self.sampled_indices:
-            soqs = bb.add_d(self.get_rotation(idx), **soqs)
+        for rotation in self.sampled_rotations:
+            soqs = bb.add_d(rotation, **soqs)
 
         if self.is_controlled:
             soqs["ctrl"] = bb.add(self.phase, q=soqs["ctrl"])
@@ -604,11 +611,7 @@ class QDRIFT(Bloq):
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Compute call graph for QDRIFT."""
-        counts = Counter(self.sampled_indices)
-        return {
-            **{self.get_rotation(i): n for i, n in counts.items()},
-            self.phase: 1,
-        }
+        return {**Counter(self.sampled_rotations), self.phase: 1}
 
 
 @attrs.frozen
