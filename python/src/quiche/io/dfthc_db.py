@@ -12,21 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Helpers to handle factorisation output database files.
+"""Helpers to handle factorisation output database files.
 
 References
 ----------
 .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
     Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-.. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
-    arXiv: 2605.30455.
 
 """
 
 import io
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import numpy as np
@@ -34,7 +32,7 @@ import numpy as np
 from quiche.core.electronic import DFTHCHamiltonian
 
 
-def parse(path: str | Path, job_id: int) -> DFTHCHamiltonian:
+def load(path: str | Path, job_id: int) -> DFTHCHamiltonian:
     """
     Return a DFTHCHamiltonian that functions as input for the resource estimation.
 
@@ -44,14 +42,40 @@ def parse(path: str | Path, job_id: int) -> DFTHCHamiltonian:
         The database file generated with external DFTHC code.
     job_id : int
         The ID of the job to extract.
-        This selects the row (e.g. one of the 4 jobs run in this example).
+
+    Returns
+    -------
+    DFTHCHamiltonian
+        The electronic Hamiltonian in double-factorized tensor hypercontraction (DFTHC)
+        form, containing the number of orbitals, number of electrons, number of ranks,
+        number of bases, number of copies copies, together with the unit vectors,
+        weight vectors, BLISS matrix, one-body term and constant
+        shift. The unit and weight vectors are returned in RBC order.
+        The originating ``job_id`` is stored on the object.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``path`` does not point towards an existing file.
+    ValueError
+        If no row with the given ``job_id`` exists in the database.
+    ValueError
+        If the job exists but its status is not ``"completed"``.
 
     """
-    with sqlite3.connect(path) as con:
+    path = Path(path)
+    if not path.is_file():
+        error_msg = f"Database file not found: {path}"
+        raise FileNotFoundError(error_msg)
+
+    # Open read-only so that sqlite3 never creates a file as a side effect.
+    uri = f"{path.resolve().as_uri()}?mode=ro"
+    with closing(sqlite3.connect(uri, uri=True)) as con:
         row = con.execute(
             "SELECT status, inputs, results, data_blob FROM experiments WHERE id=?",
             (job_id,),
         ).fetchone()
+
     if row is None:
         error_msg = f"No job with id {job_id} in {path}"
         raise ValueError(error_msg)
@@ -62,25 +86,25 @@ def parse(path: str | Path, job_id: int) -> DFTHCHamiltonian:
 
     outer_rank, copies, inner_rank = json.loads(inputs)["VLM"]
     results = json.loads(results)
-    t = np.load(io.BytesIO(blob))
+    arrays = np.load(io.BytesIO(blob))
 
     # External code that generates the input uses convention VLM,
     # which corresponds to RCB.
     # Just for clarity's sake, we transpose and save in the RBC order,
     # as used in [Low2025]_.
-    u = np.asarray(t["R_vpm"], dtype=np.float64).transpose(0, 2, 1)
-    w = np.asarray(t["F_vlm"], dtype=np.float64).transpose(0, 2, 1)
+    unit_vectors = np.asarray(arrays["R_vpm"], dtype=np.float64).transpose(0, 2, 1)
+    weight_vectors = np.asarray(arrays["F_vlm"], dtype=np.float64).transpose(0, 2, 1)
 
     return DFTHCHamiltonian(
         num_orbitals=results["num_orb"],
         num_ranks=outer_rank,
         num_bases=inner_rank,
         num_copies=copies,
-        unit_vectors=u,
-        weight_vectors=w,
-        bliss_matrix=np.asarray(t["B_bliss"], dtype=np.float64),
-        h1=np.asarray(t["h1_exact"], dtype=np.float64),
-        const=float(t["const"]),
+        unit_vectors=unit_vectors,
+        weight_vectors=weight_vectors,
+        bliss_matrix=np.asarray(arrays["B_bliss"], dtype=np.float64),
+        one_body=np.asarray(arrays["h1_exact"], dtype=np.float64),
+        const=float(arrays["const"]),
         num_electrons=results["num_elec"],
         job_id=job_id,
     )
