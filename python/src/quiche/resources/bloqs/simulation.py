@@ -465,8 +465,10 @@ class QDRIFT(Bloq):
 
     Raises
     ------
+    TypeError
+        If ``seed`` isn't an integer.
     ValueError
-        If ``num_samples`` or ``time`` aren't positive.
+        If ``num_samples`` or ``time`` aren't positive, or if ``seed`` is negative.
 
     References
     ----------
