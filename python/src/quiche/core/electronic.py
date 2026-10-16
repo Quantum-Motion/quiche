@@ -329,7 +329,7 @@ class DFTHCHamiltonian(BaseModel):
         # The r_k values can then be extracted by taking the square root.
         # Put back in correct order by flipping.
         # ... to apply to all leading indices. 
-        r = np.sqrt(np.cumsum((vector**2)[...,::-1], axis=1)[...,::-1])
+        r = np.sqrt(np.cumsum((vector**2)[...,::-1], axis=-1)[...,::-1])
 
         # We need u_k and r_{k+1} for our angles.
         r_next = r[..., 1:].copy()
