@@ -78,9 +78,8 @@ class SelectPauliLCUWrapper(SelectPauliLCU):
     """
     Wrapper for ``SelectPauliLCU`` with analytic resource counting costs.
 
-    Defines analytic ``call_graph`` and QubitCount ``static_costs`` enabling resource
-    costs and counts to be generated without performing a full explicit decomposition of
-    the bloq.
+    Defines an analytic call graph and qubit count enabling resource costs and counts to
+    be generated without performing a full explicit decomposition of the bloq.
 
     Costs and implementation follow that of [Babbush2018]_.
 
@@ -839,8 +838,8 @@ class Trotterisation(Bloq):
             coeffs = np.ones(self.sum.num_words)
         else:
             coeffs = np.full(2 * self.sum.num_words, 0.5)
-            for k in range(4, self.order + 1, 2):
-                uk = 1.0 / (4.0 - 4.0 ** (1.0 / (k - 1.0)))
+            for order in range(4, self.order + 1, 2):
+                uk = 1.0 / (4.0 - 4.0 ** (1.0 / (order - 1.0)))
                 coeffs = np.kron([uk, uk, 1 - 4 * uk, uk, uk], coeffs)
 
         return coeffs
