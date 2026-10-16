@@ -40,6 +40,7 @@ from qualtran.resource_counting import (
 from qualtran.symbolics import bit_length
 
 from quiche.core.electronic import DFTHCHamiltonian
+from quiche.core.encodings import angles_to_integer_representation, pack_into_word
 from quiche.resources.bloqs.dfthc.prep import (
     InnerPrepareDFTHC,
     OuterPrepareDFTHC,
@@ -47,6 +48,20 @@ from quiche.resources.bloqs.dfthc.prep import (
 )
 from quiche.resources.bloqs.dfthc.select import SelectDFTHC
 from quiche.resources.bloqs.dfthc.utils import extract_soqs
+
+
+def _rotation_data(
+    hamiltonian: DFTHCHamiltonian, num_bits_phase_grad: int
+) -> tuple[tuple[int, ...], ...]:
+    """Get the packed Givens rotation words, indexed `[rank][inner_index]`."""
+    # (R, B, N - 1) angles -> (R, B) words of (N - 1) * b_rot bits.
+    words = pack_into_word(
+        angles_to_integer_representation(
+            hamiltonian.rotation_angles(), num_bits_phase_grad
+        ),
+        num_bits_phase_grad,
+    )
+    return tuple(tuple(int(word) for word in row) for row in words)
 
 
 @attrs.frozen
@@ -133,6 +148,10 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
 
     log_block_size_inner: int
     log_block_size_inner_adjoint: int
+
+    rotation_data: tuple[tuple[int, ...], ...] | None = attrs.field(
+        default=None, repr=False
+    )
 
     def __attrs_post_init__(self) -> None:
         """Validate inputs."""
@@ -253,6 +272,7 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
             num_ranks=self.num_ranks,
             num_bases=self.num_bases,
             num_bits_phase_grad=self.num_bits_phase_grad,
+            rotation_data=self.rotation_data,
         )
 
     @property
@@ -411,6 +431,10 @@ class DFTHCBlockEncoding(BlockEncoding):
 
     num_controls: int = 0
 
+    rotation_data: tuple[tuple[int, ...], ...] | None = attrs.field(
+        default=None, repr=False
+    )
+
     def __attrs_post_init__(self) -> None:
         """Validate inputs."""
         if self.num_bits_amp_rotations > self.num_bits_phase_grad:
@@ -467,6 +491,12 @@ class DFTHCBlockEncoding(BlockEncoding):
         num_controls : int, optional
             Number of control qubits (default = 0).
 
+        Notes
+        -----
+        The Givens rotation words computed from `hamiltonian` are always loaded
+        into the rotation QROM. To use placeholder data instead, call the
+        constructor directly.
+
         References
         ----------
         .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
@@ -488,6 +518,7 @@ class DFTHCBlockEncoding(BlockEncoding):
             log_block_size_outer=log_block_size_outer,
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
+            rotation_data=_rotation_data(hamiltonian, num_bits_phase_grad),
         )
 
     @property
@@ -612,6 +643,7 @@ class DFTHCBlockEncoding(BlockEncoding):
             num_bits_amp_rotations=self.num_bits_amp_rotations,
             log_block_size_inner=self.log_block_size_inner,
             log_block_size_inner_adjoint=self.log_block_size_inner_adjoint,
+            rotation_data=self.rotation_data,
         )
 
     @property
@@ -710,6 +742,11 @@ class DFTHCWalkOperator(Bloq):
 
     num_controls : int, optional
         Number of control qubits (default = 0).
+    rotation_data : tuple[tuple[int, ...], ...] | None, optional
+        Packed Givens rotation words loaded by the rotation QROM, indexed
+        ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
+        If None (default), placeholder data is used, which is sufficient for
+        resource estimation. :meth:`from_dfthc_hamiltonian` always sets it.
 
     Registers
     ---------
@@ -757,6 +794,10 @@ class DFTHCWalkOperator(Bloq):
     log_block_size_outer_adjoint: int
 
     num_controls: int = 0
+
+    rotation_data: tuple[tuple[int, ...], ...] | None = attrs.field(
+        default=None, repr=False
+    )
 
     @classmethod
     def from_dfthc_hamiltonian(  # noqa: PLR0913
@@ -806,6 +847,12 @@ class DFTHCWalkOperator(Bloq):
         num_controls : int, optional
             Number of control qubits (default = 0).
 
+        Notes
+        -----
+        The Givens rotation words computed from `hamiltonian` are always loaded
+        into the rotation QROM. To use placeholder data instead, call the
+        constructor directly.
+
         References
         ----------
         .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
@@ -827,6 +874,7 @@ class DFTHCWalkOperator(Bloq):
             log_block_size_outer=log_block_size_outer,
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
+            rotation_data=_rotation_data(hamiltonian, num_bits_phase_grad),
         )
 
     @property
@@ -861,6 +909,7 @@ class DFTHCWalkOperator(Bloq):
             log_block_size_outer=self.log_block_size_outer,
             log_block_size_outer_adjoint=self.log_block_size_outer_adjoint,
             num_controls=0,
+            rotation_data=self.rotation_data,
         )
 
     @property

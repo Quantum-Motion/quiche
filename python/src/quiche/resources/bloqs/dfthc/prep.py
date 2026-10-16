@@ -672,6 +672,11 @@ class RotationPrepareDFTHC(Bloq):
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
         [Low2025]_.
 
+    rotation_data : tuple[tuple[int, ...], ...] | None, optional
+        Packed Givens rotation words, indexed ``rotation_data[rank][inner_index]``
+        for ``inner_index < num_bases``. Each word holds :math:`N - 1` angles of
+        :math:`b_{rot}` bits, with the first angle in the most significant bits.
+
     Registers
     ---------
     inner_index : QAny
@@ -699,6 +704,10 @@ class RotationPrepareDFTHC(Bloq):
     num_bases: int
 
     num_bits_phase_grad: int
+
+    rotation_data: tuple[tuple[int, ...], ...] | None = attrs.field(
+        default=None, repr=False
+    )
 
     @property
     def num_inner(self) -> int:
@@ -742,6 +751,7 @@ class RotationPrepareDFTHC(Bloq):
             num_bases=self.num_bases,
             num_bits_phase_grad=self.num_bits_phase_grad,
             num_controls=1,
+            rotation_data=self.rotation_data,
         )
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
