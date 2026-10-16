@@ -19,6 +19,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `from_dfthc_hamiltonian` constructors to `DFTHCBlockEncoding` and `DFTHCWalkOperator`.
 - Added `from_sparse_string`, `from_dense_string` and `to_sparse_string` to `PauliWord` and `PauliSum`, and `to_dense_string` to `PauliSum`.
 - Added `to_matrix` to `Pauli`, `PauliWord` and `PauliSum`.
+
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
 - Renamed `PauliWord`'s `terms` to `paulis`.
