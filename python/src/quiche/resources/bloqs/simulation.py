@@ -874,9 +874,9 @@ class Trotterisation(Bloq):
         return _PauliWordRotationSequence(
             tuple(
                 get_rotation(i, c)
-                for c, i in zip(
-                    self.trotter_coeffs.tolist(),
+                for i, c in zip(
                     self.trotter_indices.tolist(),
+                    self.trotter_coeffs.tolist(),
                     strict=True,
                 )
             )
