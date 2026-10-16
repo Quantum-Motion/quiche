@@ -15,6 +15,7 @@
 """Main routines for the block encoding of the DFTHC Hamiltonian."""
 
 from functools import cached_property
+from typing import Self
 
 import attrs
 from qualtran import (
@@ -38,6 +39,7 @@ from qualtran.resource_counting import (
 )
 from qualtran.symbolics import bit_length
 
+from quiche.core.electronic import DFTHCHamiltonian
 from quiche.resources.bloqs.dfthc.prep import (
     InnerPrepareDFTHC,
     OuterPrepareDFTHC,
@@ -417,6 +419,77 @@ class DFTHCBlockEncoding(BlockEncoding):
             )
             raise ValueError(err_msg)
 
+    @classmethod
+    def from_dfthc_hamiltonian(  # noqa: PLR0913
+        cls,
+        hamiltonian: DFTHCHamiltonian,
+        *,
+        num_bits_keep_inner: int,
+        num_bits_keep_outer: int,
+        num_bits_phase_grad: int,
+        num_bits_amp_rotations: int,
+        log_block_size_inner: int,
+        log_block_size_inner_adjoint: int,
+        log_block_size_outer: int,
+        log_block_size_outer_adjoint: int,
+        num_controls: int = 0,
+    ) -> Self:
+        """
+        DFTHC Hamiltonian block encoding, starting from DFTHCHamiltonian parameters.
+
+        Parameters
+        ----------
+        hamiltonian : DFTHCHamiltonian
+            A DFTHCHamiltonian object that contains parameters of a
+            second quantised Hamiltonian, after factorisation.
+        num_bits_keep_inner : int
+            Number of bits for inner coherent alias sampling keep probability,
+            :math:`b_{k2}` in [Low2025]_.
+        num_bits_keep_outer : int
+            Number of bits for outer coherent alias sampling keep probability,
+            :math:`b_{k1}` in [Low2025]_.
+        num_bits_phase_grad : int
+            Total number of bits for persistent phase gradient register,
+            :math:`b_{rot}` in [Low2025]_.
+        num_bits_amp_rotations : int
+            Number of bits used for amplitude amplification rotations during equal state
+            preparation, :math:`s` in [Low2025]_.
+
+        log_block_size_inner : int
+            Log of the block size for inner QROAM, :math:`k_2` in [Low2025]_.
+        log_block_size_inner_adjoint : int
+            Log of the block size for inner QROAM adjoint, :math:`k_4` in [Low2025]_.
+        log_block_size_outer : int
+            Log of the block size for outer QROAM, :math:`k_1` in [Low2025]_.
+        log_block_size_outer_adjoint : int
+            Log of the block size for outer QROAM adjoint, :math:`k_5` in [Low2025]_.
+
+        num_controls : int, optional
+            Number of control qubits (default = 0).
+
+        References
+        ----------
+        .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+           by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4,
+           p. 041016, Oct. 2025.
+
+        """
+        return cls(
+            num_orbitals=hamiltonian.num_orbitals,
+            num_ranks=hamiltonian.num_ranks,
+            num_bases=hamiltonian.num_bases,
+            num_copies=hamiltonian.num_copies,
+            num_bits_keep_inner=num_bits_keep_inner,
+            num_bits_keep_outer=num_bits_keep_outer,
+            num_bits_phase_grad=num_bits_phase_grad,
+            num_bits_amp_rotations=num_bits_amp_rotations,
+            log_block_size_inner=log_block_size_inner,
+            log_block_size_inner_adjoint=log_block_size_inner_adjoint,
+            log_block_size_outer=log_block_size_outer,
+            log_block_size_outer_adjoint=log_block_size_outer_adjoint,
+            num_controls=num_controls,
+        )
+
     @property
     def num_outer(self) -> int:
         """Number of terms for the outer index, :math:`N + RC`."""
@@ -684,6 +757,77 @@ class DFTHCWalkOperator(Bloq):
     log_block_size_outer_adjoint: int
 
     num_controls: int = 0
+
+    @classmethod
+    def from_dfthc_hamiltonian(  # noqa: PLR0913
+        cls,
+        hamiltonian: DFTHCHamiltonian,
+        *,
+        num_bits_keep_inner: int,
+        num_bits_keep_outer: int,
+        num_bits_phase_grad: int,
+        num_bits_amp_rotations: int,
+        log_block_size_inner: int,
+        log_block_size_inner_adjoint: int,
+        log_block_size_outer: int,
+        log_block_size_outer_adjoint: int,
+        num_controls: int = 0,
+    ) -> Self:
+        """
+        DFTHC Hamiltonian walk operator, starting from DFTHCHamiltonian parameters.
+
+        Parameters
+        ----------
+        hamiltonian : DFTHCHamiltonian
+            A DFTHCHamiltonian object that contains parameters of a
+            second quantised Hamiltonian, after factorisation.
+        num_bits_keep_inner : int
+            Number of bits for inner coherent alias sampling keep probability,
+            :math:`b_{k2}` in [Low2025]_.
+        num_bits_keep_outer : int
+            Number of bits for outer coherent alias sampling keep probability,
+            :math:`b_{k1}` in [Low2025]_.
+        num_bits_phase_grad : int
+            Total number of bits for persistent phase gradient register,
+            :math:`b_{rot}` in [Low2025]_.
+        num_bits_amp_rotations : int
+            Number of bits used for amplitude amplification rotations during equal state
+            preparation, :math:`s` in [Low2025]_.
+
+        log_block_size_inner : int
+            Log of the block size for inner QROAM, :math:`k_2` in [Low2025]_.
+        log_block_size_inner_adjoint : int
+            Log of the block size for inner QROAM adjoint, :math:`k_4` in [Low2025]_.
+        log_block_size_outer : int
+            Log of the block size for outer QROAM, :math:`k_1` in [Low2025]_.
+        log_block_size_outer_adjoint : int
+            Log of the block size for outer QROAM adjoint, :math:`k_5` in [Low2025]_.
+
+        num_controls : int, optional
+            Number of control qubits (default = 0).
+
+        References
+        ----------
+        .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+           by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4,
+           p. 041016, Oct. 2025.
+
+        """
+        return cls(
+            num_orbitals=hamiltonian.num_orbitals,
+            num_ranks=hamiltonian.num_ranks,
+            num_bases=hamiltonian.num_bases,
+            num_copies=hamiltonian.num_copies,
+            num_bits_keep_inner=num_bits_keep_inner,
+            num_bits_keep_outer=num_bits_keep_outer,
+            num_bits_phase_grad=num_bits_phase_grad,
+            num_bits_amp_rotations=num_bits_amp_rotations,
+            log_block_size_inner=log_block_size_inner,
+            log_block_size_inner_adjoint=log_block_size_inner_adjoint,
+            log_block_size_outer=log_block_size_outer,
+            log_block_size_outer_adjoint=log_block_size_outer_adjoint,
+            num_controls=num_controls,
+        )
 
     @property
     def control_registers(self) -> tuple[Register, ...]:
