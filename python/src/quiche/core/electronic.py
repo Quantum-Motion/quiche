@@ -312,7 +312,7 @@ class DFTHCHamiltonian(BaseModel):
         )
         two_body = g_approx - 0.5 * shift
 
-        # E-form -> bare one-body integrals: t1 = h1 + 1/2 sum_r (pr|rq)
+        # E-form -> bare one-body integrals = factorised_one_body + 1/2 sum_r (pr|rq)
         one_body = self.factorised_one_body + 0.5 * np.einsum("prrq->pq", two_body)
 
         return SecondQuantisedHamiltonian(

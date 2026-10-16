@@ -47,7 +47,7 @@ def read(path: str | Path, job_id: int) -> DFTHCHamiltonian:
     Returns
     -------
     DFTHCHamiltonian
-        The electronic Hamiltonian in double-factorized tensor hypercontraction (DFTHC)
+        The electronic Hamiltonian in double-factorised tensor hypercontraction (DFTHC)
         form, containing the number of orbitals, number of electrons, number of ranks,
         number of bases, number of copies, together with the unit vectors,
         weight vectors, BLISS matrix, one-body term and constant
