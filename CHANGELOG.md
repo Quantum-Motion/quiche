@@ -38,6 +38,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Renamed the `simulation` register of `QDRIFT`, `Trotterisation`, `NaiveQPE`, `KitaevQPE` and `IterativeQPE` to `system`.
 - Changed `Trotterisation`'s Suzuki-Trotter expansion to no longer merge adjacent rotations on the same term.
 - Changed `QDRIFT.sampled_indices` to return a NumPy array rather than a tuple.
+- Changed `QDRIFT` to sample term counts directly, speeding up the call graph for large `num_samples` (sampled terms will differ for a given seed from previous sampling).
 
 ### Deprecated
 
