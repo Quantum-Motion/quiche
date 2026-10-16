@@ -562,16 +562,24 @@ class QDRIFT(Bloq):
         """Get timestep for each operator."""
         return self.time * self.lam / self.num_samples
 
+    @property
+    def _seed_sequences(self) -> list[np.random.SeedSequence]:
+        """Independent seed sequences for count and order sampling."""
+        return np.random.SeedSequence(self.seed).spawn(2)
+
+    @cached_property
+    def sampled_counts(self) -> NDArray[np.int_]:
+        """Get the number of times each word in the sum is sampled."""
+        rng = np.random.default_rng(self._seed_sequences[0])
+        probabilities = np.asarray(self.positive_coefficients) / self.lam
+        return rng.multinomial(self.num_samples, probabilities)
+
     @cached_property
     def sampled_indices(self) -> NDArray[np.int_]:
-        """Random sequence of indices for Hamiltonian sampling."""
-        rng = np.random.default_rng(self.seed)
-        probabilities = np.asarray(self.positive_coefficients) / self.lam
-        return rng.choice(
-            self.sum.num_words,
-            size=self.num_samples,
-            p=probabilities,
-        )
+        """Get a random sequence of indices consistent with the sampled counts."""
+        rng = np.random.default_rng(self._seed_sequences[1])
+        indices = np.repeat(np.arange(self.sum.num_words), self.sampled_counts)
+        return rng.permutation(indices)
 
     def _get_rotation(self, index: int) -> PauliWordRotation:
         """Get the individual PauliWordRotation for a given term."""
@@ -583,11 +591,15 @@ class QDRIFT(Bloq):
         )
 
     @cached_property
+    def unique_rotations(self) -> dict[int, PauliWordRotation]:
+        """Unique rotations in the QDRIFT sequence, keyed by word index in the sum."""
+        unique_indices = np.flatnonzero(self.sampled_counts).tolist()
+        return {i: self._get_rotation(i) for i in unique_indices}
+
+    @property
     def sampled_rotations(self) -> tuple[PauliWordRotation, ...]:
         """Sequence of rotations for the QDRIFT simulation."""
-        unique_indices = np.unique(self.sampled_indices)
-        rotations = {i: self._get_rotation(i) for i in unique_indices}
-        return tuple(rotations[i] for i in self.sampled_indices)
+        return tuple(self.unique_rotations[i] for i in self.sampled_indices)
 
     @property
     def phase(self) -> Bloq:
@@ -612,7 +624,13 @@ class QDRIFT(Bloq):
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Compute call graph for QDRIFT."""
-        return {**Counter(self.sampled_rotations), self.phase: 1}
+        # Equivalent to Counter(self.sampled_rotations), but uses the sampled counts
+        # directly rather than iterating over every sample
+        counts = self.sampled_counts.tolist()
+        rotation_counts = Counter()
+        for i, rotation in self.unique_rotations.items():
+            rotation_counts[rotation] += counts[i]
+        return {**rotation_counts, self.phase: 1}
 
 
 @attrs.frozen
