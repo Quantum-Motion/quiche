@@ -323,13 +323,14 @@ class DFTHCHamiltonian(BaseModel):
         )
 
     @staticmethod
-    def _givens_angles(vector):
-        # The "recursion" (r) is constructed from the recursion relation r_k^2 = u_k^2 + r_{k+1}^2.
+    def _givens_angles(vector: NDArray[np.float64]) -> NDArray[np.float64]:
+        # The "recursion" (r) is constructed from the recursion relation
+        # r_k^2 = u_k^2 + r_{k+1}^2.
         # r_k^2 = \Sum^{N-1}_{j=k} u_j^2. This counts in descending order.
         # The r_k values can then be extracted by taking the square root.
         # Put back in correct order by flipping.
-        # ... to apply to all leading indices. 
-        r = np.sqrt(np.cumsum((vector**2)[...,::-1], axis=-1)[...,::-1])
+        # ... to apply to all leading indices.
+        r = np.sqrt(np.cumsum((vector**2)[..., ::-1], axis=-1)[..., ::-1])
 
         # We need u_k and r_{k+1} for our angles.
         r_next = r[..., 1:].copy()
@@ -343,15 +344,15 @@ class DFTHCHamiltonian(BaseModel):
         # Regular np.arctan does not fix the quadrant.
         return np.arctan2(r_next, vector[..., :-1])
 
-
     def rotation_angles(self) -> NDArray[np.float64]:
         """
         Givens ladder angles of every direction U[r, b] ([Low2025], appendix 5B).
-        
+
         References
         ----------
-        .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
-            Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-            
+        .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+            by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
+            Oct. 2025.
+
         """
         return self._givens_angles(self.unit_vectors)
