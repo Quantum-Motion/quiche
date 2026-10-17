@@ -32,14 +32,26 @@ from qualtran.resource_counting import (
 
 @attrs.frozen
 class IdentityStatePrep(Bloq):
-    """Routine for trivial state preparation."""
+    r"""
+    Trivial preparation of the all-zero state :math:`|0\rangle^{\otimes n}`.
+
+    Parameters
+    ----------
+    num_qubits : int
+        Number of qubits, :math:`n`, in register to initialise.
+
+    Registers
+    ---------
+    q : QAny, RIGHT
+        Newly-allocated qubit register initialised to zero state.
+
+    """
 
     num_qubits: int
 
     def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
+        """Return qubit counts (not including any rotation-synthesis ancillas)."""
         if isinstance(cost_key, QubitCount):
-            # Only data qubits are needed for this state preparation.
             return self.num_qubits
         return NotImplemented
 
@@ -63,7 +75,26 @@ class IdentityStatePrep(Bloq):
 
 @attrs.frozen
 class BitstringStatePrep(Bloq):
-    """Routine to prepare an arbitrary computational basis state."""
+    """
+    Computational basis state preparation from a given bitstring.
+
+    Parameters
+    ----------
+    bitstring : tuple[int, ...]
+        Binary string representing the target computational basis state.
+        Bit ``i`` is applied to qubit ``i`` of the output register.
+
+    Registers
+    ---------
+    q : QAny, RIGHT
+        Newly-allocated qubit register initialised to given computational basis state.
+
+    Raises
+    ------
+    ValueError
+        If ``bitstring`` contains values other than 0 or 1.
+
+    """
 
     bitstring: tuple[int, ...]
 
@@ -108,9 +139,8 @@ class BitstringStatePrep(Bloq):
         return bloq_counts
 
     def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
+        """Return qubit counts (not including any rotation-synthesis ancillas)."""
         if isinstance(cost_key, QubitCount):
-            # Only data qubits are needed for this state preparation.
             return self.num_qubits
         return NotImplemented
 
@@ -118,19 +148,34 @@ class BitstringStatePrep(Bloq):
 @attrs.frozen
 class PrepareFromStatePrep(PrepareOracle):
     r"""
-    PREP routine for a given phase-gradient state preparation bloq.
+    ``PrepareOracle`` interface wrapper for ``StatePreparationViaRotations`` bloq.
 
-    Implements the action ``PREP |0> = \sum_{j=1}^L c_j |j>``.
+    Implements the action
 
-    Properties
+    .. math::
+
+        \mathrm{PREP}|0\rangle^{\otimes n} = \sum_{j=0}^{2^n - 1} c_j |j\rangle,
+
+    where :math:`n` is ``num_select_qubits`` and :math:`c_j` are the state
+    coefficients of ``stateprep``. The phase gradient register is returned unchanged.
+
+    Parameters
     ----------
     stateprep : StatePreparationViaRotations
-        State preparation bloq.
+        State preparation bloq. Its target register must have ``num_select_qubits``
+        qubits and its phase gradient register must have ``phase_bitsize`` qubits.
     phase_bitsize : int
-        Number of qubits used for phase gradient.
+        Number of qubits used for phase gradient state.
     num_select_qubits : int
-        Number of qubits on which to prepare the PREP state. Note that L must be equal
-        to ``2**num_select_qubits``.
+        Number of qubits, :math:`n`, on which to prepare the PREP state.
+
+    Registers
+    ---------
+    selection : QAny
+        Qubits used to represent the selection index for the LCU.
+    phase_gradient : QAny
+        Qubits used for phase gradient states for rotation synthesis.
+
     """
 
     stateprep: StatePreparationViaRotations
@@ -163,7 +208,6 @@ class PrepareFromStatePrep(PrepareOracle):
             target_state=soqs["selection"],
             phase_gradient=soqs["phase_gradient"],
         )
-
         return {"selection": selection, "phase_gradient": phase_gradient}
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
