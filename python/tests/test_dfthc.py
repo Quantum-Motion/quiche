@@ -24,7 +24,6 @@ from qualtran.testing import (
     assert_valid_bloq_decomposition,
 )
 
-from quiche.core._encodings import angles_to_integer_representation, pack_into_word
 from quiche.core.electronic import DFTHCHamiltonian
 from quiche.resources.bloqs.dfthc import (
     DFTHCBlockEncoding,
@@ -37,6 +36,7 @@ from quiche.resources.bloqs.dfthc import (
     SelectDFTHC,
 )
 from quiche.resources.bloqs.dfthc.qrom import RotationQROM
+from quiche.resources.bloqs.dfthc.select import GivensLadder
 
 # FeMoco-54 parameters, from G. H. Low et al., "Fast Quantum Simulation of Electronic
 # Structure by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016
@@ -66,17 +66,14 @@ def dummy_dfthc_hamiltonian() -> DFTHCHamiltonian:
     )
 
 
-@pytest.fixture
-def dummy_rotation_data(
-    dummy_dfthc_hamiltonian: DFTHCHamiltonian,
-) -> tuple[tuple[int, ...], ...]:
-    """Return the rotation words of the dummy DFTHCHamiltonian, with B_ROT bits."""
-    integers = angles_to_integer_representation(
-        dummy_dfthc_hamiltonian.rotation_angles(), B_ROT
-    )
-    return tuple(
-        tuple(int(word) for word in row) for row in pack_into_word(integers, B_ROT)
-    )
+def decode_rotation_data(rotation_data: tuple[tuple[int, ...], ...]) -> np.ndarray:
+    """Get the angles in the rotation words, as the Givens ladder splits them up."""
+    partition = GivensLadder(N, B_ROT).partition
+    values = [
+        [partition.call_classically(x=word)[0] for word in row] for row in rotation_data
+    ]
+    # The register of an angle holds a fraction of 4 pi.
+    return np.array(values, dtype=float) * 4 * np.pi / 2**B_ROT
 
 
 class TestOuterPrepareDFTHC:
@@ -277,11 +274,7 @@ class TestDFTHCBlockEncoding:
         log_block_size_outer_adjoint=K_5,
     )
 
-    def test_from_dfthc_hamiltonian(
-        self,
-        dummy_dfthc_hamiltonian: DFTHCHamiltonian,
-        dummy_rotation_data: tuple[tuple[int, ...], ...],
-    ):
+    def test_from_dfthc_hamiltonian(self, dummy_dfthc_hamiltonian: DFTHCHamiltonian):
         block_encoding_from_fh = DFTHCBlockEncoding.from_dfthc_hamiltonian(
             hamiltonian=dummy_dfthc_hamiltonian,
             num_bits_keep_inner=B_K2,
@@ -298,10 +291,14 @@ class TestDFTHCBlockEncoding:
         assert self.block_encoding == attrs.evolve(
             block_encoding_from_fh, rotation_data=None
         )
-        np.testing.assert_array_equal(
-            block_encoding_from_fh.rotation_data, dummy_rotation_data
+        assert block_encoding_from_fh.rotation_data is not None
+        # The angles the ladder reads from the words are those of the Hamiltonian.
+        np.testing.assert_allclose(
+            np.exp(1j * decode_rotation_data(block_encoding_from_fh.rotation_data)),
+            np.exp(1j * dummy_dfthc_hamiltonian.rotation_angles()),
+            rtol=0,
+            atol=2 * np.pi / 2**B_ROT,
         )
-        # The rotation data reaches the QROM that loads it.
         qrom = block_encoding_from_fh.inner.rotation_prep.qrom
         assert qrom.rotation_data == block_encoding_from_fh.rotation_data
 
@@ -324,11 +321,7 @@ class TestDFTHCWalkOperator:
         log_block_size_outer_adjoint=K_5,
     )
 
-    def test_from_dfthc_hamiltonian(
-        self,
-        dummy_dfthc_hamiltonian: DFTHCHamiltonian,
-        dummy_rotation_data: tuple[tuple[int, ...], ...],
-    ):
+    def test_from_dfthc_hamiltonian(self, dummy_dfthc_hamiltonian: DFTHCHamiltonian):
         walk_from_fh = DFTHCWalkOperator.from_dfthc_hamiltonian(
             hamiltonian=dummy_dfthc_hamiltonian,
             num_bits_keep_inner=B_K2,
@@ -343,6 +336,13 @@ class TestDFTHCWalkOperator:
 
         # Apart from the rotation data, it is the bloq built from the parameters.
         assert self.walk == attrs.evolve(walk_from_fh, rotation_data=None)
-        np.testing.assert_array_equal(walk_from_fh.rotation_data, dummy_rotation_data)
+        assert walk_from_fh.rotation_data is not None
+        # The angles the ladder reads from the words are those of the Hamiltonian.
+        np.testing.assert_allclose(
+            np.exp(1j * decode_rotation_data(walk_from_fh.rotation_data)),
+            np.exp(1j * dummy_dfthc_hamiltonian.rotation_angles()),
+            rtol=0,
+            atol=2 * np.pi / 2**B_ROT,
+        )
         qrom = walk_from_fh.block_encoding.inner.rotation_prep.qrom
         assert qrom.rotation_data == walk_from_fh.rotation_data
