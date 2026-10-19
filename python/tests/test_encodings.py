@@ -16,11 +16,12 @@
 
 import numpy as np
 import pytest
+from numpy.typing import ArrayLike
 
-from quiche.core.encodings import angles_to_integer_representation, pack_into_word
+from quiche.core._encodings import angles_to_integer_representation, pack_into_word
 
-NUM_BITS = 4  # The least significant bit is 4 * pi / 2**4 = pi / 4.
-LSB = np.pi / 4
+NUM_BITS = 4
+RESOLUTION = 4 * np.pi / 2**NUM_BITS  # The angle of the least significant bit.
 
 
 class TestAnglesToIntegerRepresentation:
@@ -29,10 +30,16 @@ class TestAnglesToIntegerRepresentation:
     @pytest.mark.parametrize(
         ("angles", "expected"),
         [
-            ([0.0, LSB, 2 * LSB, 4 * LSB], [0, 1, 2, 4]),  # Exact multiples.
-            ([-2 * LSB, 8 * LSB, 9 * LSB], [6, 0, 1]),  # Negative and beyond 2 * pi.
-            ([0.4 * LSB, 0.6 * LSB], [0, 1]),  # Rounds to nearest.
-            ([8 * LSB - 0.1 * LSB], [0]),  # Rounds up to 2**(n - 1), which wraps to 0.
+            ([0.0, RESOLUTION, 2 * RESOLUTION, 4 * RESOLUTION], [0, 1, 2, 4]),
+            ([-2 * RESOLUTION, 8 * RESOLUTION, 9 * RESOLUTION], [6, 0, 1]),
+            ([0.4 * RESOLUTION, 0.6 * RESOLUTION], [0, 1]),
+            ([7.9 * RESOLUTION], [0]),
+        ],
+        ids=[
+            "exact_multiples",
+            "negative_and_beyond_2pi",
+            "rounds_to_nearest",
+            "rounds_up_and_wraps_to_zero",
         ],
     )
     def test_values(self, angles: list[float], expected: list[int]):
@@ -45,16 +52,30 @@ class TestAnglesToIntegerRepresentation:
         rng = np.random.default_rng(0)
         angles = rng.uniform(-4 * np.pi, 4 * np.pi, size=(5, 4, 7))
 
-        q = angles_to_integer_representation(angles, num_bits)
+        integers = angles_to_integer_representation(angles, num_bits)
 
-        assert q.shape == angles.shape
-        assert q.min() >= 0
-        assert q.max() < 2 ** (num_bits - 1)
+        assert integers.shape == angles.shape
+        assert integers.min() >= 0
+        assert integers.max() < 2 ** (num_bits - 1)
+        # Decoding gives back the angle up to half the angle of the least significant
+        # bit, compared as points on the circle since rotations are periodic in 2 pi.
+        decoded = integers * 4 * np.pi / 2**num_bits
+        np.testing.assert_allclose(
+            np.exp(1j * decoded),
+            np.exp(1j * angles),
+            rtol=0,
+            atol=2 * np.pi / 2**num_bits,
+        )
 
-        # Decoding gives back the angle up to half a least significant bit (mod 2 pi).
-        decoded = q * 4 * np.pi / 2**num_bits
-        error = np.abs(np.angle(np.exp(1j * (decoded - angles))))
-        assert error.max() <= 2 * np.pi / 2**num_bits + 1e-12
+    @pytest.mark.parametrize("num_bits", [1, 0, -3])
+    def test_too_few_bits(self, num_bits: int):
+        with pytest.raises(ValueError, match="must be at least 2"):
+            angles_to_integer_representation([0.5], num_bits)
+
+    @pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
+    def test_non_finite_angles(self, value: float):
+        with pytest.raises(ValueError, match="must be finite"):
+            angles_to_integer_representation([0.5, value], NUM_BITS)
 
 
 class TestPackIntoWord:
@@ -64,23 +85,32 @@ class TestPackIntoWord:
         words = pack_into_word([[1, 2, 3], [4, 5, 6]], num_bits=4)
 
         assert words.shape == (2,)
-        assert list(words) == [0x123, 0x456]  # The first entry is the most significant.
+        # The first integer takes the most significant bits.
+        np.testing.assert_array_equal(words, [0x123, 0x456])
 
     def test_large_words(self):
         # FeMoco-54 sizes, where each word exceeds 64 bits.
         num_bits, num_angles = 15, 53
         rng = np.random.default_rng(1)
-        q = rng.integers(0, 2 ** (num_bits - 1), size=(3, 2, num_angles))
+        integers = rng.integers(0, 2 ** (num_bits - 1), size=(3, 2, num_angles))
 
-        words = pack_into_word(q, num_bits)
+        words = pack_into_word(integers, num_bits)
 
         assert words.shape == (3, 2)
         mask = 2**num_bits - 1
         for idx in np.ndindex(words.shape):
             word = int(words[idx])
-            assert word < 2 ** (num_bits * num_angles)
             unpacked = [
                 (word >> (num_bits * (num_angles - 1 - k))) & mask
                 for k in range(num_angles)
             ]
-            assert unpacked == q[idx].tolist()
+            np.testing.assert_array_equal(unpacked, integers[idx])
+
+    @pytest.mark.parametrize(
+        "integers",
+        [[[16]], [[-1]], np.array([[16]]), np.array([[-1]])],
+        ids=["list_too_large", "list_negative", "array_too_large", "array_negative"],
+    )
+    def test_entries_must_fit(self, integers: ArrayLike):
+        with pytest.raises(ValueError, match="to fit in the word"):
+            pack_into_word(integers, num_bits=4)

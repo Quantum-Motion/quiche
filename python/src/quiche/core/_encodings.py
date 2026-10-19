@@ -85,10 +85,10 @@ def pack_into_word(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.objec
         If entries in the array of angles don't match `num_bits`.
 
     """
+    integer_angles = np.asarray(integer_angles)
     if np.any((integer_angles < 0) | (integer_angles >= 2**num_bits)):
         error_msg = f"Entries must be in [0, 2**{num_bits}) to fit in the word."
         raise ValueError(error_msg)
-    integer_angles = np.asarray(integer_angles)
     num_angles = integer_angles.shape[-1]
     words = np.empty(
         integer_angles.shape[:-1], dtype=object
