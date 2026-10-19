@@ -58,23 +58,37 @@ class _SingleAncillaQPE(Bloq):
     Provides the common Hadamard-test structure used for Naive QPE, Kitaev QPE and
     Iterative QPE.
 
-    |0>   ---H---[S†]------•------[Rz]---H---- meas
-                           |
-    |psi> -------------U^exponent-------------
+    ::
 
-    `S†` applied if measuring imaginary component.
-    `Rz` used for feedback rotation in Iterative QPE (enabled according to
-        the `apply_feedback` property).
+        |0>   ---H---[S†]------•------[Rz]---H---- meas
+                               |
+        |psi> -------------U^exponent-------------
 
-    The exponent of the propagator is also determined by the `exponent` property.
+    ``S†`` applied if measuring imaginary component.
+    ``Rz`` used for feedback rotation in Iterative QPE (enabled according to the
+    ``apply_feedback`` property).
 
-    Properties
+    The exponent of the propagator is also determined by the ``exponent`` property.
+
+    Parameters
     ----------
     simulation : Bloq
         Bloq implementing the Hamiltonian simulation.
     mode : {'re', 'im'}
         Specifies whether to measure the real or imaginary part of the expectation
         value.
+
+    Registers
+    ---------
+    system : QAny
+        Qubits used for Hamiltonian simulation.
+
+    Raises
+    ------
+    ValueError
+        If ``exponent`` is not a positive integer, or if ``mode`` is not ``'re'`` or
+        ``'im'``.
+
     """
 
     simulation: Bloq
@@ -103,7 +117,7 @@ class _SingleAncillaQPE(Bloq):
 
     @property
     def controlled_propagator(self) -> Bloq:
-        """Return the controlled propagator `C[U^exponent]`."""
+        """Return the controlled propagator ``C[U^exponent]``."""
         return (
             self.simulation.controlled()
             if self.exponent == 1
@@ -113,7 +127,7 @@ class _SingleAncillaQPE(Bloq):
     @property
     def num_simulation_qubits(self) -> int:
         """Return number of qubits used for Hamiltonian simulation."""
-        return self.simulation.signature.get_left("simulation").total_bits()
+        return self.simulation.signature.get_left("system").total_bits()
 
     @property
     def num_estimation_bits(self) -> int:
@@ -123,17 +137,13 @@ class _SingleAncillaQPE(Bloq):
     @property
     def signature(self) -> Signature:
         """Define input and/or output registers of the bloq."""
-        return Signature(
-            [Register("simulation", dtype=QAny(self.num_simulation_qubits))]
-        )
+        return Signature([Register("system", dtype=QAny(self.num_simulation_qubits))])
 
     def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
+        """Return qubit counts (not including any rotation-synthesis ancillas)."""
         if isinstance(cost_key, QubitCount) and (
             isinstance(self.simulation, (QDRIFT, Trotterisation))
         ):
-            # This bloq only needs the data qubits and one ancilla. So far assumes that
-            # will not be initialised with a Qubitisation simulation bloq.
             return self.num_simulation_qubits + 1
         return NotImplemented
 
@@ -143,17 +153,17 @@ class _SingleAncillaQPE(Bloq):
         **soqs: SoquetT,
     ) -> dict[str, SoquetT]:
         """Implement bloq decomposition into sub-bloqs."""
-        simulation = soqs["simulation"]
+        system = soqs["system"]
 
         estimation = bb.add(RectangularWindowState(self.num_estimation_bits))
 
         if self.mode == "im":
             estimation = bb.add(SGate(is_adjoint=True), q=estimation)
 
-        estimation, simulation = bb.add(
+        estimation, system = bb.add(
             self.controlled_propagator,
             ctrl=estimation,
-            simulation=simulation,
+            system=system,
         )
 
         if self.apply_feedback:
@@ -163,7 +173,7 @@ class _SingleAncillaQPE(Bloq):
         estimation = bb.add(Hadamard(), q=estimation)
 
         bb.free(estimation)
-        return {"simulation": simulation}
+        return {"system": system}
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for single-ancilla QPE."""
@@ -192,19 +202,23 @@ class NaiveQPE(_SingleAncillaQPE):
     Uses a controlled application of the propagator U to estimate its expectation value
     in a provided initial state. Only one ancilla is used during the Hadamard test.
 
-    If the measurement mode is "re", the bloq represents the following circuit::
+    If the measurement mode is "re", the bloq represents the following circuit
+
+    ::
 
         |0>   ------H------•--------H----- meas
                            |
         |psi> -------------U--------------
 
-    and if it is "im", the bloq represents the following circuit::
+    and if it is "im", the bloq represents the following circuit
+
+    ::
 
         |0>   ---H---S†----•------- H ---- meas
                            |
         |psi> -------------U--------------
 
-    Properties
+    Parameters
     ----------
     simulation : Bloq
         Bloq implementing the Hamiltonian simulation.
@@ -212,9 +226,15 @@ class NaiveQPE(_SingleAncillaQPE):
         Specifies whether to measure the real or imaginary part of the expectation
         value.
 
-    Resources
-    ----------
-    The bloq uses simulation qubits and a single ancilla qubit.
+    Registers
+    ---------
+    system : QAny
+        Qubits used for Hamiltonian simulation.
+
+    Raises
+    ------
+    ValueError
+        If ``mode`` is not ``'re'`` or ``'im'``.
 
     """
 
@@ -228,35 +248,41 @@ class NaiveQPE(_SingleAncillaQPE):
 
     @property
     def apply_feedback(self) -> bool:
-        """Whether a feedback rotation is applied (`False` for Naive QPE)."""
+        """Whether a feedback rotation is applied (``False`` for Naive QPE)."""
         return False
 
 
 @attrs.frozen
 class KitaevQPE(_SingleAncillaQPE):
-    """
+    r"""
     Kitaev single-ancilla phase estimation.
 
-    For a unitary operator U and an initial state that approximates some eigenstate
-    ``|psi>``, estimate the phase theta in ``U|psi> = e^{2 pi i theta} |psi>``. The
-    Kitaev QPE estimates the k-th digit of the phase by applying the propagator U^(2^k)
-    for increasing k values.
-    This bloq implements the QPE for a single selection of k. It needs to be called
-    multiple times with different k values to reflect a full phase estimation.
+    For a unitary operator :math:`U` and an initial state that approximates some
+    eigenstate :math:`|\psi\rangle`, estimate the phase theta in :math:`U|\psi\rangle =
+    e^{2 \pi i \theta} |\psi\rangle`. The Kitaev QPE estimates the :math:`k`-th digit of
+    the phase by applying the propagator :math:`U^{2^k}` for increasing :math:`k`
+    values.
+    This bloq implements the QPE for a single selection of :math:`k`. It needs to be
+    called multiple times with different :math:`k` values to reflect a full phase
+    estimation.
 
-    If the measurement mode is "re", the bloq represents the following circuit::
+    If the measurement mode is "re", the bloq represents the following circuit
+
+    ::
 
         |0>   ------H------•--------H----- meas
                            |
         |psi> -------------U^(2^k)--------
 
-    and if it is "im", the bloq represents the following circuit::
+    and if it is "im", the bloq represents the following circuit
+
+    ::
 
         |0>   ---H---S†----•------- H ---- meas
                            |
         |psi> -------------U^(2^k)--------
 
-    Properties
+    Parameters
     ----------
     simulation : Bloq
         Bloq implementing the Hamiltonian simulation.
@@ -265,9 +291,16 @@ class KitaevQPE(_SingleAncillaQPE):
     mode : {'re', 'im'}
         Specifies whether to measure the real or imaginary part of the expectation
         value.
-    Resources
-    ----------
-    The bloq uses simulation qubits and a single ancilla qubit.
+
+    Registers
+    ---------
+    system : QAny
+        Qubits used for Hamiltonian simulation.
+
+    Raises
+    ------
+    ValueError
+        If ``k`` is negative, or if ``mode`` is not ``'re'`` or ``'im'``.
 
     """
 
@@ -277,41 +310,49 @@ class KitaevQPE(_SingleAncillaQPE):
 
     @property
     def exponent(self) -> int:
-        """Power to which the propagator is raised (2^k for Kitaev QPE)."""
+        """Power to which the propagator is raised (:math:`2^k` for Kitaev QPE)."""
         return 2**self.k
 
     @property
     def apply_feedback(self) -> bool:
-        """Whether a feedback rotation is applied (`False` for Kitaev QPE)."""
+        """Whether a feedback rotation is applied (``False`` for Kitaev QPE)."""
         return False
 
 
 @attrs.frozen
 class IterativeQPE(_SingleAncillaQPE):
-    """
+    r"""
     Iterative phase estimation.
 
-    For a unitary operator U and an initial state that approximates some eigenstate
-    ``|psi>``, estimate the phase theta in ``U|psi> = e^{2 pi i theta} |psi>``. In
-    iterative QPE, a rotation around z is inserted between the controlled propagator and
-    the second Hadamard gate. The rotation angle depends on previous measurements, which
-    we cannot evaluate in Qualtran. Instead we use symbolic angles.
-    This bloq implements the QPE for a single selection of k. It needs to be called
-    multiple times with different k values to reflect a full phase estimation.
+    For a unitary operator :math:`U` and an initial state that approximates some
+    eigenstate :math:`|\psi\rangle`, estimate the phase theta in :math:`U|\psi\rangle =
+    e^{2 \pi i \theta} |\psi\rangle`.
 
-    If the measurement mode is "re", the bloq represents the following circuit::
+    In iterative QPE, a rotation around :math:`Z` is inserted between the controlled
+    propagator and the second Hadamard gate. The rotation angle depends on previous
+    measurements, which we cannot evaluate in Qualtran. Instead we use symbolic angles.
+
+    This bloq implements the QPE for a single selection of :math:`k`. It needs to be
+    called multiple times with different :math:`k` values to reflect a full phase
+    estimation.
+
+    If the measurement mode is "re", the bloq represents the following circuit
+
+    ::
 
         |0>   ------H------•----Rz----H----- meas
                            |
         |psi> -------------U^(2^k)----------
 
-    and if it is "im", the bloq represents the following circuit::
+    and if it is "im", the bloq represents the following circuit
+
+    ::
 
         |0>   ---H---S†----•----Rz---H---- meas
                            |
         |psi> -------------U^(2^k)----------
 
-    Properties
+    Parameters
     ----------
     simulation : Bloq
         Bloq implementing the Hamiltonian simulation.
@@ -320,9 +361,16 @@ class IterativeQPE(_SingleAncillaQPE):
     mode : {'re', 'im'}
         Specifies whether to measure the real or imaginary part of the expectation
         value.
-    Resources
-    ----------
-    The bloq uses simulation qubits and a single ancilla qubit.
+
+    Registers
+    ---------
+    system : QAny
+        Qubits used for Hamiltonian simulation.
+
+    Raises
+    ------
+    ValueError
+        If ``k`` is negative, or if ``mode`` is not ``'re'`` or ``'im'``.
 
     """
 
@@ -332,27 +380,51 @@ class IterativeQPE(_SingleAncillaQPE):
 
     @property
     def exponent(self) -> int:
-        """Power to which the propagator is raised (2^k for Iterative QPE)."""
+        """Power to which the propagator is raised (:math:`2^k` for Iterative QPE)."""
         return 2**self.k
 
     @property
     def apply_feedback(self) -> bool:
-        """Whether a feedback rotation is applied (`True` for Iterative QPE)."""
+        """Whether a feedback rotation is applied (``True`` for Iterative QPE)."""
         return True
+
+
+# TODO(Vasco): refactor bloqs below.
 
 
 @attrs.frozen
 class TextbookQPE(Bloq):
-    """End-to-end QPE routine including state preparation, simulation and QFT."""
+    """
+    End-to-end QPE routine including state preparation, simulation and QFT.
+
+    Parameters
+    ----------
+    simulation_factory : Callable[[int], Bloq]
+        Factory returning the ladder bloq (``TrotterLadder`` or ``QubitisationLadder``)
+        for a given QPE ancilla.
+    num_data : int
+        Number of qubits used to represent the target system.
+    num_qpe_ancillas : int
+        Number of qubits used to represent the phase for phase estimation.
+    num_other_ancillas : int
+        Number of additional ancillas (e.g. for block encoding), to be allocated and
+        freed within this bloq.
+
+    Registers
+    ---------
+    data : QAny
+        Qubits representing the target system.
+
+    """
 
     simulation_factory: Callable[[int], Bloq]
 
-    num_data: int  # system qubits
-    num_qpe_ancillas: int  # ancilla used for phase estimation
-    num_other_ancillas: int  # other ancilla used e.g. for block encoding
+    num_data: int
+    num_qpe_ancillas: int
+    num_other_ancillas: int
 
     def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
+        """Return qubit counts (not including any rotation-synthesis ancillas)."""
         # There are three stages to the QPE:
         # 1. State preparation on simulation and estimation registers
         #    The static cost currently assumes that there are no ancilla
@@ -487,7 +559,31 @@ class TextbookQPE(Bloq):
 
 @attrs.frozen
 class TrotterLadder(Bloq):
-    """Routine to construct controlled Trotter evolution operator as needed for QPE."""
+    """
+    Routine to construct controlled Trotter evolution operator as needed for QPE.
+
+    Applies :math:`U^{2^k}`, controlled on QPE ancilla :math:`k`, where :math:`U` is the
+    simulation bloq.
+
+    Parameters
+    ----------
+    index : int
+        Index, :math:`k`, of the controlling QPE ancilla.
+    simulation : Trotterisation | QDRIFT
+        Bloq implementing the Hamiltonian simulation.
+    num_data : int
+        Number of qubits used to represent the target system.
+    num_qpe_ancillas : int
+        Number of qubits used to represent the phase for phase estimation.
+
+    Registers
+    ---------
+    data : QAny
+        Qubits representing the target system.
+    qpe_ancillas : QAny
+        Qubits representing the phase accumulated during phase estimation.
+
+    """
 
     # Index must be first parameter
     index: int
@@ -497,14 +593,10 @@ class TrotterLadder(Bloq):
     num_qpe_ancillas: int
 
     def my_static_costs(self, cost_key: CostKey) -> int:
-        """Return hard-coded qubit counts."""
+        """Return qubit counts (not including any rotation-synthesis ancillas)."""
         if isinstance(cost_key, QubitCount) and (
             isinstance(self.simulation, (Trotterisation, QDRIFT))
         ):
-            # The Trotter bloq needs a number of rotation gates. Although it may require
-            # ancilla qubits, the required number is calculated in post-processing.
-            # So the total number of qubits is simply the number of data qubits plus the
-            # number of ancillas.
             return self.num_data + self.num_qpe_ancillas
         return NotImplemented
 
@@ -527,7 +619,7 @@ class TrotterLadder(Bloq):
         ancilla_qubits[self.index], data = bb.add(
             Power(c_simulation, 2**self.index),
             ctrl=ancilla_qubits[self.index],
-            simulation=data,
+            system=data,
         )
 
         qpe_ancillas = bb.join(ancilla_qubits)
@@ -543,7 +635,33 @@ class TrotterLadder(Bloq):
 
 @attrs.frozen
 class QubitisationLadder(Bloq):
-    """Routine to construct controlled Qubitisation operator as needed for QPE."""
+    """
+    Routine to construct controlled Qubitisation operator as needed for QPE.
+
+    Parameters
+    ----------
+    index : int
+        Index, :math:`k`, of the controlling QPE ancilla.
+    walk : QubitizationWalkOperator
+        Qubitisation walk operator built from the Hamiltonian block encoding.
+    num_data : int
+        Number of qubits used to represent the target system.
+    num_qpe_ancillas : int
+        Number of qubits used to represent the phase for phase estimation.
+    num_selection_ancillas : int
+        Total number of block-encoding ancillas (selection plus phase gradient
+        qubits).
+
+    Registers
+    ---------
+    data : QAny
+        Qubits representing the target system.
+    qpe_ancillas : QAny
+        Qubits representing the phase accumulated during phase estimation.
+    other_ancillas : QAny
+        Block-encoding ancillas.
+
+    """
 
     # Index must be first parameter
     index: int

@@ -169,8 +169,8 @@ class QPESpec:
         match self.simulation:
             case Simulation.QDRIFT:
                 bloq = QDRIFT(
-                    h=self.hamiltonian.paulis,
-                    t=self.time,
+                    sum=self.hamiltonian.paulis,
+                    time=self.time,
                     num_samples=self.reps,
                     seed=self.seed,
                 )
@@ -198,8 +198,8 @@ class QPESpec:
 
             case Simulation.Trotter:
                 bloq = Trotterisation(
-                    h=self.hamiltonian.paulis,
-                    t=self.time,
+                    sum=self.hamiltonian.paulis,
+                    time=self.time,
                     num_steps=self.reps,
                     order=self.order,
                 )

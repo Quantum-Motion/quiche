@@ -19,7 +19,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `from_dfthc_hamiltonian` constructors to `DFTHCBlockEncoding` and `DFTHCWalkOperator`.
 - Added `from_sparse_string`, `from_dense_string` and `to_sparse_string` to `PauliWord` and `PauliSum`, and `to_dense_string` to `PauliSum`.
 - Added `to_matrix` to `Pauli`, `PauliWord` and `PauliSum`.
-- Added `quiche.core.encodings` to encode rotation angles as integers and pack them into binary words.
+- Added `Trotterisation.trotter_coeffs`, `Trotterisation.trotter_indices` and `Trotterisation.rotation_sequence`.
+- Added `quiche.core._encodings` to encode rotation angles as integers and pack them into binary words.
 - Added `DFTHCHamiltonian.rotation_angles` for the Givens angles that rotate each unit vector onto the first basis vector.
 - Added a `rotation_data` field to the DFTHC bloqs to load these angles into `RotationQROM`, set by `from_dfthc_hamiltonian`.
 
@@ -39,12 +40,19 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Renamed `PauliWord.to_str` to `to_dense_string`.
 - Updated `PauliWord` to sort its `paulis` and `qubits` by increasing qubit index.
 - Updated `PauliWord` validation to reject negative qubit indices.
+- Renamed the `h` and `t` fields of `QDRIFT` and `Trotterisation` to `sum` and `time`.
+- Renamed the `simulation` register of `QDRIFT`, `Trotterisation`, `NaiveQPE`, `KitaevQPE` and `IterativeQPE` to `system`.
+- Changed `Trotterisation`'s Suzuki-Trotter expansion to no longer merge adjacent rotations on the same term.
+- Changed `QDRIFT.sampled_indices` to return a NumPy array rather than a tuple.
+- Changed `QDRIFT` to sample term counts directly, speeding up the call graph for large `num_samples` (sampled terms will differ for a given seed from previous sampling).
 
 ### Deprecated
 
 ### Removed
+- Removed `Trotterisation.get_coeffs_indices()` (use `trotter_coeffs` and `trotter_indices` instead).
 
 ### Fixed
+- Fixed `QDRIFT` and `Trotterisation` call graphs undercounting rotations for repeated `PauliWord`s.
 
 ### Security
 
