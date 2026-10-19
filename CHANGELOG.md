@@ -19,6 +19,9 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `from_dfthc_hamiltonian` constructors to `DFTHCBlockEncoding` and `DFTHCWalkOperator`.
 - Added `from_sparse_string`, `from_dense_string` and `to_sparse_string` to `PauliWord` and `PauliSum`, and `to_dense_string` to `PauliSum`.
 - Added `to_matrix` to `Pauli`, `PauliWord` and `PauliSum`.
+- Added `quiche.core.encodings` to encode rotation angles as integers and pack them into binary words.
+- Added `DFTHCHamiltonian.rotation_angles` for the Givens angles that rotate each unit vector onto the first basis vector.
+- Added a `rotation_data` field to the DFTHC bloqs to load these angles into `RotationQROM`, set by `from_dfthc_hamiltonian`.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
