@@ -54,7 +54,7 @@ def angles_to_integer_representation(
     if not np.all(np.isfinite(angles)):
         error_msg = "`angles` must be finite, got NaN or infinite values."
         raise ValueError(error_msg)
-    radian_angle_values = np.mod(np.asarray(angles, dtype=float), 2 * np.pi) / (
+    radian_angle_values = np.mod(angles, 2 * np.pi) / (
         4 * np.pi
     )
     integer_angles = radian_angle_values * 2**num_bits
@@ -71,7 +71,7 @@ def pack_into_word(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.objec
     Parameters
     ----------
     integer_angles : ArrayLike
-        An array-like object containing angles, encoded as integers.
+        An array-like object containing angles, encoded as .
     num_bits : int
         Number of bits used to encode each angle.
 
