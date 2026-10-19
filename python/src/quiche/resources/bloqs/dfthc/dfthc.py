@@ -50,20 +50,6 @@ from quiche.resources.bloqs.dfthc.select import SelectDFTHC
 from quiche.resources.bloqs.dfthc.utils import extract_soqs
 
 
-def _rotation_data(
-    hamiltonian: DFTHCHamiltonian, num_bits_phase_grad: int
-) -> tuple[tuple[int, ...], ...]:
-    """Get the packed Givens rotation words, indexed `[rank][inner_index]`."""
-    # (R, B, N - 1) angles -> (R, B) words of (N - 1) * b_rot bits.
-    words = pack_into_word(
-        angles_to_integer_representation(
-            hamiltonian.rotation_angles(), num_bits_phase_grad
-        ),
-        num_bits_phase_grad,
-    )
-    return tuple(tuple(int(word) for word in row) for row in words)
-
-
 @attrs.frozen
 class DFTHCInnerBlockEncoding(BlockEncoding):
     r"""
@@ -504,6 +490,15 @@ class DFTHCBlockEncoding(BlockEncoding):
            p. 041016, Oct. 2025.
 
         """
+        # (R, B, N - 1) angles -> (R, B) words of (N - 1) * b_rot bits.
+        words = pack_into_word(
+            angles_to_integer_representation(
+                hamiltonian.rotation_angles(), num_bits_phase_grad
+            ),
+            num_bits_phase_grad,
+        )
+        rotation_data = tuple(tuple(int(word) for word in row) for row in words)
+
         return cls(
             num_orbitals=hamiltonian.num_orbitals,
             num_ranks=hamiltonian.num_ranks,
@@ -518,7 +513,7 @@ class DFTHCBlockEncoding(BlockEncoding):
             log_block_size_outer=log_block_size_outer,
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
-            rotation_data=_rotation_data(hamiltonian, num_bits_phase_grad),
+            rotation_data=rotation_data,
         )
 
     @property
@@ -860,6 +855,15 @@ class DFTHCWalkOperator(Bloq):
            p. 041016, Oct. 2025.
 
         """
+        # (R, B, N - 1) angles -> (R, B) words of (N - 1) * b_rot bits.
+        words = pack_into_word(
+            angles_to_integer_representation(
+                hamiltonian.rotation_angles(), num_bits_phase_grad
+            ),
+            num_bits_phase_grad,
+        )
+        rotation_data = tuple(tuple(int(word) for word in row) for row in words)
+
         return cls(
             num_orbitals=hamiltonian.num_orbitals,
             num_ranks=hamiltonian.num_ranks,
@@ -874,7 +878,7 @@ class DFTHCWalkOperator(Bloq):
             log_block_size_outer=log_block_size_outer,
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
-            rotation_data=_rotation_data(hamiltonian, num_bits_phase_grad),
+            rotation_data=rotation_data,
         )
 
     @property
