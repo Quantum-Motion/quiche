@@ -19,7 +19,7 @@ from numpy.typing import ArrayLike, NDArray
 
 
 def angles_to_integer_representation(
-    angles: ArrayLike, num_bits: int
+    radian_angles: ArrayLike, num_bits: int, *, rng: np.random.Generator | None = None
 ) -> NDArray[np.int64]:
     """
     Angles (radians) -> integers q in [0, 2**(num_bits - 1)).
@@ -30,10 +30,13 @@ def angles_to_integer_representation(
 
     Parameters
     ----------
-    angles : ArrayLike
+    radian_angles : ArrayLike
         An array-like object containing radian angles, as floats.
     num_bits : int
         Number of bits used to encode each angle.
+    rng : np.random.Generator, optional
+        Random number generator for unbiased rounding ([Low2025]_, appendix D).
+        If None (default), angles are rounded to the nearest integer.
 
     Returns
     -------
@@ -46,20 +49,29 @@ def angles_to_integer_representation(
     ValueError
         If angles are NaN or infinite.
 
+    References
+    ----------
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+        by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
+        Oct. 2025.
+
     """
     if num_bits < 2:
         error_msg = f"`num_bits` must be at least 2, got {num_bits}."
         raise ValueError(error_msg)
-    angles = np.asarray(angles, dtype=float)
-    if not np.all(np.isfinite(angles)):
+    radian_angles = np.asarray(radian_angles, dtype=float)
+    if not np.all(np.isfinite(radian_angles)):
         error_msg = "`angles` must be finite, got NaN or infinite values."
         raise ValueError(error_msg)
-    radian_angle_values = np.mod(angles, 2 * np.pi) / (
-        4 * np.pi
-    )
-    integer_angles = radian_angle_values * 2**num_bits
-    integer_angles = np.rint(integer_angles)
-    return np.mod(integer_angles.astype(np.int64), 2 ** (num_bits - 1))
+    fractional_angle_values = np.mod(radian_angles, 2 * np.pi) / (4 * np.pi)
+    scaled_angles = fractional_angle_values * 2**num_bits
+    if rng is None:
+        rounded_angles = np.rint(scaled_angles)
+    else:
+        # Round up with probability equal to the fractional part, so that the
+        # expected value of the rounded integer is the unrounded value.
+        rounded_angles = np.floor(scaled_angles + rng.random(scaled_angles.shape))
+    return np.mod(rounded_angles.astype(np.int64), 2 ** (num_bits - 1))
 
 
 def pack_into_word(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.object_]:
