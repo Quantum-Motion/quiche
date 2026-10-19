@@ -14,29 +14,18 @@
 
 """Structures to define and dispatch phase estimation calculations."""
 
-# TODO(Vasco): refactor
-# ruff: noqa: C901
+from __future__ import annotations
 
-from collections.abc import Callable
-from functools import partial
+from typing import TYPE_CHECKING
 
 from pydantic.dataclasses import Field, dataclass
-from qualtran import Bloq, BloqBuilder, CompositeBloq
-from qualtran.bloqs.qubitization.qubitization_walk_operator import (
-    QubitizationWalkOperator,
-)
 
-from quiche.bindings.quiche_bindings import initClassicalState
 from quiche.chemistry import (
     HartreeFockState,
-    get_bk_state,
-    get_jw_state,
-    get_parity_state,
 )
 from quiche.core import (
     ElectronicHamiltonian,
     Errors,
-    Mapping,
     PhaseEstimation,
     Simulation,
 )
@@ -49,28 +38,12 @@ from quiche.dispatch.budget.simulation import (
     get_qubitisation_ancillas,
     get_trotter_params,
 )
-from quiche.resources.bloqs import (
-    QDRIFT,
-    BitstringStatePrep,
-    IdentityStatePrep,
-    LCUBlockEncodingWrapper,
-    Trotterisation,
-)
-from quiche.resources.bloqs.estimation import (
-    QubitisationLadder,
-    TextbookQPE,
-    TrotterLadder,
-)
-from quiche.simulation import SimulationRoutine
-from quiche.simulation.estimation import (
-    getPhaseKitaevQDRIFT,
-    getPhaseKitaevTrotter,
-    getPhaseTextbookQDRIFT,
-    getPhaseTextbookQubitised,
-    getPhaseTextbookTrotter,
-)
+
+if TYPE_CHECKING:
+    from quiche.dispatch.backends import QPESpecBackend
 
 
+# TODO(Vasco): refactor the algorithm -> parameter calculation out of here
 @dataclass()
 class QPESpec:
     """QPE calculation specification for simulation and resource estimates."""
@@ -85,12 +58,6 @@ class QPESpec:
 
     def __post_init__(self) -> None:
         """Calculate the circuit properties for the given QPE routine."""
-        if self.state_prep is not None and not isinstance(
-            self.state_prep, HartreeFockState
-        ):
-            error_msg = f"Invalid state preparation {self.state_prep}"
-            raise ValueError(error_msg)
-
         if isinstance(self.state_prep, HartreeFockState) and (
             (self.state_prep.num_spin_orbitals != self.hamiltonian.paulis.num_qubits)
             or (self.state_prep.num_electrons != self.hamiltonian.num_electrons)
@@ -99,6 +66,15 @@ class QPESpec:
                 "Provided HartreeFockState is inconsistent with ElectronicHamiltonian."
             )
             raise ValueError(error_msg)
+
+        self.num_data = self.hamiltonian.paulis.num_qubits
+        self.num_phase_ancillas: int = 0
+        self.num_qpe_ancillas: int = 0
+        self.num_index_ancillas: int = 0
+        self.num_rounds: int | None = None
+        self.time: float | None = None
+        self.order: int | None = None
+        self.reps: int | None = None
 
         match self.algorithm:
             case PhaseEstimation.Textbook:
@@ -111,9 +87,6 @@ class QPESpec:
             ):
                 self.num_qpe_ancillas = 1
                 self.num_rounds = get_kitaev_qpe_rounds(self.error_budget)
-
-        self.num_index_ancillas = 0
-        self.num_phase_ancillas = 0
 
         match self.simulation:
             case Simulation.QDRIFT:
@@ -139,223 +112,11 @@ class QPESpec:
                     self.error_budget,
                 )
 
-        self.num_data = self.hamiltonian.paulis.num_qubits
         self.num_simulation_ancillas = self.num_index_ancillas + self.num_phase_ancillas
         self.num_qubits = (
             self.num_data + self.num_qpe_ancillas + self.num_simulation_ancillas
         )
 
-    def _get_stateprep_bloq(self) -> Bloq:
-        """Pattern matching and construction for state preparation Bloq."""
-        match self.state_prep:
-            case None:
-                state_prep_bloq = IdentityStatePrep(self.num_data)
-            case HartreeFockState():
-                mapping = self.hamiltonian.mapping
-                occupation = self.state_prep.occupation
-                match mapping:
-                    case Mapping.JordanWigner:
-                        bitstring = get_jw_state(occupation)
-                    case Mapping.BravyiKitaev:
-                        bitstring = get_bk_state(occupation)
-                    case Mapping.Parity:
-                        bitstring = get_parity_state(occupation)
-                state_prep_bloq = BitstringStatePrep(tuple(bitstring))
-
-        return state_prep_bloq
-
-    def _get_simulation_bloq_factory(self) -> Callable[[int], Bloq]:
-        """Pattern matching and construction for simulation factories."""
-        match self.simulation:
-            case Simulation.QDRIFT:
-                bloq = QDRIFT(
-                    sum=self.hamiltonian.paulis,
-                    time=self.time,
-                    num_samples=self.reps,
-                    seed=self.seed,
-                )
-
-                simulation_bloq_factory = partial(
-                    TrotterLadder,
-                    simulation=bloq,
-                    num_data=self.num_data,
-                    num_qpe_ancillas=self.num_qpe_ancillas,
-                )
-
-            case Simulation.Qubitised:
-                blockencoding = LCUBlockEncodingWrapper.from_hamiltonian(
-                    self.hamiltonian.paulis, self.num_phase_ancillas
-                )
-                walk_op = QubitizationWalkOperator(blockencoding)
-
-                simulation_bloq_factory = partial(
-                    QubitisationLadder,
-                    walk=walk_op,
-                    num_data=self.num_data,
-                    num_qpe_ancillas=self.num_qpe_ancillas,
-                    num_selection_ancillas=self.num_simulation_ancillas,
-                )
-
-            case Simulation.Trotter:
-                bloq = Trotterisation(
-                    sum=self.hamiltonian.paulis,
-                    time=self.time,
-                    num_steps=self.reps,
-                    order=self.order,
-                )
-
-                simulation_bloq_factory = partial(
-                    TrotterLadder,
-                    simulation=bloq,
-                    num_data=self.num_data,
-                    num_qpe_ancillas=self.num_qpe_ancillas,
-                )
-
-        return simulation_bloq_factory
-
-    def _get_estimation_bloq(self) -> Bloq:
-        """Pattern matching and construction for QPE Bloq."""
-        match self.algorithm:
-            case PhaseEstimation.Iterative:
-                msg = "Iterative QPE Bloq not yet implemented."
-                raise NotImplementedError(msg)
-
-            case PhaseEstimation.Kitaev:
-                msg = "Kitaev QPE Bloq not yet implemented."
-                raise NotImplementedError(msg)
-
-            case PhaseEstimation.Naive:
-                msg = "Naive QPE Bloq not yet implemented."
-                raise NotImplementedError(msg)
-
-            case PhaseEstimation.Textbook:
-                estimation_bloq = TextbookQPE(
-                    simulation_factory=self._get_simulation_bloq_factory(),
-                    num_data=self.num_data,
-                    num_qpe_ancillas=self.num_qpe_ancillas,
-                    num_other_ancillas=self.num_simulation_ancillas,
-                )
-
-        return estimation_bloq
-
-    def get_composite_bloq(self) -> CompositeBloq:
-        """Estimate resources for the calculation using the qualtran backend."""
-        bb = BloqBuilder()
-        data = bb.add(self._get_stateprep_bloq())
-        data = bb.add(self._get_estimation_bloq(), data=data)
-        bb.free(data)
-        return bb.finalize()
-
-    def _get_stateprep_quest(self) -> Callable:
-        match self.state_prep:
-            case None:
-
-                def noop(_: object) -> None:
-                    pass
-
-                init = noop
-
-            case HartreeFockState():
-                occupation = self.state_prep.occupation
-                mapping = self.hamiltonian.mapping
-
-                match mapping:
-                    case Mapping.JordanWigner:
-                        bitstring = get_jw_state(occupation)
-                    case Mapping.BravyiKitaev:
-                        bitstring = get_bk_state(occupation)
-                    case Mapping.Parity:
-                        bitstring = get_parity_state(occupation)
-
-                init = partial(initClassicalState, state=bitstring)
-        return init
-
-    def _get_estimation_quest(self) -> Callable:
-        # Data register: [0, num_data]
-        # Ancilla register: [num_data, num_data + num_qpe_ancillas]
-        qpe_ancillas = list(range(self.num_data, self.num_data + self.num_qpe_ancillas))
-
-        # Simulation currently doesn't use ancillas for rotations
-        # so only include index ancillas
-        index_ancillas = list(
-            range(
-                self.num_data + self.num_qpe_ancillas,
-                self.num_data + self.num_qpe_ancillas + self.num_index_ancillas,
-            )
-        )
-
-        match self.algorithm:
-            case PhaseEstimation.Iterative:
-                msg = "Iterative QPE not yet implemented in simulation backend."
-                raise NotImplementedError(msg)
-
-            case PhaseEstimation.Kitaev:
-                match self.simulation:
-                    case Simulation.QDRIFT:
-                        sim = partial(
-                            getPhaseKitaevQDRIFT,
-                            hamiltonian=self.hamiltonian.paulis,
-                            ancilla_index=qpe_ancillas[0],
-                            reps=self.reps,
-                            time=self.time,
-                            num_bits=self.num_rounds,
-                            seed=self.seed,
-                        )
-
-                    case Simulation.Qubitised:
-                        msg = "Qubitisation not yet implemented in simulation backend."
-                        raise NotImplementedError(msg)
-
-                    case Simulation.Trotter:
-                        sim = partial(
-                            getPhaseKitaevTrotter,
-                            hamiltonian=self.hamiltonian.paulis,
-                            ancilla_index=qpe_ancillas[0],
-                            order=self.order,
-                            reps=self.reps,
-                            time=self.time,
-                            num_bits=self.num_rounds,
-                        )
-
-            case PhaseEstimation.Naive:
-                msg = "Naive QPE not yet implemented in simulation backend."
-                raise NotImplementedError(msg)
-
-            case PhaseEstimation.Textbook:
-                match self.simulation:
-                    case Simulation.QDRIFT:
-                        sim = partial(
-                            getPhaseTextbookQDRIFT,
-                            hamiltonian=self.hamiltonian.paulis,
-                            ancillas=qpe_ancillas,
-                            reps=self.reps,
-                            time=self.time,
-                            seed=self.seed,
-                        )
-
-                    case Simulation.Qubitised:
-                        sim = partial(
-                            getPhaseTextbookQubitised,
-                            hamiltonian=self.hamiltonian.paulis,
-                            qpe_ancillas=qpe_ancillas,
-                            qubitisation_ancillas=index_ancillas,
-                        )
-
-                    case Simulation.Trotter:
-                        sim = partial(
-                            getPhaseTextbookTrotter,
-                            hamiltonian=self.hamiltonian.paulis,
-                            ancillas=qpe_ancillas,
-                            order=self.order,
-                            reps=self.reps,
-                            time=self.time,
-                        )
-
-        return sim
-
-    def to_quest(self) -> SimulationRoutine:
-        """Generate a QuEST simulation implementing the specified calculation."""
-        routine = SimulationRoutine()
-        routine.append(self._get_stateprep_quest())
-        routine.append(self._get_estimation_quest())
-        return routine
+    def generate[T](self, backend: QPESpecBackend[T]) -> T:
+        """Generate the implementation of this QPESpec for the given backend."""
+        return backend.generate(self)

@@ -14,12 +14,15 @@
 
 """Quantum chemistry related methods and transformations."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from math import ceil, log2
 from typing import Self
 
 import numpy as np
 from numpy.typing import NDArray
+
+from quiche.core import Mapping
 
 
 def get_hf_state(num_spin_orbitals: int, num_electrons: int) -> NDArray[np.int_]:
@@ -57,13 +60,13 @@ def get_hf_state(num_spin_orbitals: int, num_electrons: int) -> NDArray[np.int_]
     return occupation
 
 
-def get_jw_state(occupation: NDArray[np.int_]) -> NDArray[np.int_]:
+def get_jw_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int_]:
     """
     Transform an occupation state to qubit basis with the Jordan-Wigner mapping.
 
     Parameters
     ----------
-    occupation : ``NDArray[np.int_]``
+    occupation : Sequence[int] | ``NDArray[np.int_]``
         Occupation basis state to convert.
 
     Returns
@@ -75,13 +78,13 @@ def get_jw_state(occupation: NDArray[np.int_]) -> NDArray[np.int_]:
     return np.array(occupation, dtype=int)
 
 
-def get_parity_state(occupation: NDArray[np.int_]) -> NDArray[np.int_]:
+def get_parity_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int_]:
     """
     Transform an occupation state to qubit basis with the Parity mapping.
 
     Parameters
     ----------
-    occupation : ``NDArray[np.int_]``
+    occupation : Sequence[int] | ``NDArray[np.int_]``
         Occupation basis state to convert.
 
     Returns
@@ -90,6 +93,7 @@ def get_parity_state(occupation: NDArray[np.int_]) -> NDArray[np.int_]:
         The qubit basis state resulting from the fermion-to-qubit mapping.
 
     """
+    occupation = np.asarray(occupation, dtype=int)
     return np.cumsum(occupation) % 2
 
 
@@ -104,7 +108,7 @@ def _bk_transformation_matrix(size: int) -> NDArray[np.int_]:
 
     Returns
     -------
-    NDArray
+    ``NDArray[np.int_]``
         Matrix transforming from occupation basis to qubit basis.
 
     """
@@ -118,13 +122,13 @@ def _bk_transformation_matrix(size: int) -> NDArray[np.int_]:
     return mat[:size, :size]
 
 
-def get_bk_state(occupation: NDArray[np.int_]) -> NDArray[np.int_]:
+def get_bk_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int_]:
     """
     Transform an occupation state to qubit basis with the Bravyi-Kitaev mapping.
 
     Parameters
     ----------
-    occupation : ``NDArray[np.int_]``
+    occupation : Sequence[int] | ``NDArray[np.int_]``
         Occupation basis state to convert.
 
     Returns
@@ -133,8 +137,38 @@ def get_bk_state(occupation: NDArray[np.int_]) -> NDArray[np.int_]:
         The qubit basis state resulting from the fermion-to-qubit mapping.
 
     """
+    occupation = np.asarray(occupation, dtype=int)
     mat = _bk_transformation_matrix(len(occupation))
     return (mat @ occupation) % 2
+
+
+def get_qubit_state(
+    occupation: Sequence[int] | NDArray[np.int_],
+    mapping: Mapping,
+) -> NDArray[np.int_]:
+    """
+    Transform an occupation state to qubit basis with the given mapping.
+
+    Parameters
+    ----------
+    occupation : Sequence[int] | ``NDArray[np.int_]``
+        Occupation basis state to convert.
+    mapping : Mapping
+        Fermion-to-qubit mapping to apply.
+
+    Returns
+    -------
+    ``NDArray[np.int_]``
+        The qubit basis state resulting from the fermion-to-qubit mapping.
+
+    """
+    match mapping:
+        case Mapping.JordanWigner:
+            return get_jw_state(occupation)
+        case Mapping.BravyiKitaev:
+            return get_bk_state(occupation)
+        case Mapping.Parity:
+            return get_parity_state(occupation)
 
 
 @dataclass(frozen=True)

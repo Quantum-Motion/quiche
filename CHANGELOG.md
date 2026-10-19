@@ -11,7 +11,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ## Unreleased
 
 ### Added
-- Added top-level re-exports of `DFTHCHamiltonian`, `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
+- Added top-level re-exports of `DFTHCHamiltonian`, `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `QualtranBackend`, `QuESTBackend`, `SecondQuantisedHamiltonian` and `Simulation`.
 - Added QUICHE documentation site.
 - Added DFTHC block encoding and walk operator bloqs.
 - Added `DFTHCHamiltonian` class for DFTHC factorisation results, with `reconstruct` to rebuild the second quantised integrals.
@@ -20,6 +20,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `from_sparse_string`, `from_dense_string` and `to_sparse_string` to `PauliWord` and `PauliSum`, and `to_dense_string` to `PauliSum`.
 - Added `to_matrix` to `Pauli`, `PauliWord` and `PauliSum`.
 - Added `Trotterisation.trotter_coeffs`, `Trotterisation.trotter_indices` and `Trotterisation.rotation_sequence`.
+- Added `quiche.chemistry.get_qubit_state` to map an occupation state to the qubit basis for a given `Mapping`.
+- Added `quiche.dispatch.backends` with `QualtranBackend` and `QuESTBackend`, used via the new `QPESpec.generate()` method.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
@@ -47,6 +49,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Removed
 - Removed `Trotterisation.get_coeffs_indices()` (use `trotter_coeffs` and `trotter_indices` instead).
+- Removed `QPESpec.get_composite_bloq()` and `QPESpec.to_quest()`. Use `QPESpec.generate(QualtranBackend())` and `QPESpec.generate(QuESTBackend())` instead.
+- Removed the `python/examples/qpespec.ipynb` example notebook.
 
 ### Fixed
 - Fixed `QDRIFT` and `Trotterisation` call graphs undercounting rotations for repeated `PauliWord`s.
