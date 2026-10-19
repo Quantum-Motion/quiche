@@ -77,6 +77,36 @@ class TestAnglesToIntegerRepresentation:
         with pytest.raises(ValueError, match="must be finite"):
             angles_to_integer_representation([0.5, value], NUM_BITS)
 
+    @pytest.mark.parametrize(
+        ("angle", "neighbours"),
+        [(0.3, {0, 1}), (1.7, {1, 2}), (7.9, {7, 0})],  # In steps; 8 wraps to 0.
+        ids=["lower_half", "upper_half", "rounds_up_and_wraps_to_zero"],
+    )
+    def test_unbiased_rounding_neighbours(self, angle: float, neighbours: set[int]):
+        rng = np.random.default_rng(0)
+        integers = angles_to_integer_representation(
+            np.full(1000, angle * RESOLUTION), NUM_BITS, rng=rng
+        )
+        assert set(integers.tolist()) == neighbours
+
+    def test_unbiased_rounding_mean(self):
+        angles = np.full(100_000, 0.3 * RESOLUTION)
+        integers = angles_to_integer_representation(
+            angles, NUM_BITS, rng=np.random.default_rng(0)
+        )
+        # Rounded up with probability equal to the fractional part, 0.3.
+        np.testing.assert_allclose(integers.mean(), 0.3, atol=0.01)
+
+    def test_unbiased_rounding_reproducible(self):
+        angles = np.random.default_rng(1).uniform(0, 2 * np.pi, size=100)
+        first = angles_to_integer_representation(
+            angles, NUM_BITS, rng=np.random.default_rng(5)
+        )
+        second = angles_to_integer_representation(
+            angles, NUM_BITS, rng=np.random.default_rng(5)
+        )
+        np.testing.assert_array_equal(first, second)
+
 
 class TestPackIntoWord:
     """Tests for packing integers into a single word."""
