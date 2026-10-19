@@ -50,19 +50,15 @@ autodoc_default_options = {
     "members": True,
     "member-order": "bysource",
 }
-autodoc_typehints = "description"
-autodoc_typehints_description_target = "documented_params"
+autodoc_typehints = "signature"
 autodoc_typehints_format = "short"
 
 # -- Napoleon ----------------------------------------------------------------
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
-# QUICHE docstrings use a couple of sections that are not part of numpydoc.
-napoleon_custom_sections = [
-    ("Properties", "params_style"),
-    ("Resources", "notes_style"),
-]
+napoleon_use_rtype = False
+napoleon_custom_sections = [("Registers", "params_style")]
 
 # -- MyST ----------------------------------------------------------------------
 
