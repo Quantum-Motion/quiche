@@ -48,6 +48,7 @@ K_2 = K_5 = 4
 S = 7
 N_SMALL, R_SMALL, B_SMALL, B_ROT_SMALL = 4, 3, 2, 6
 
+
 @pytest.fixture
 def dummy_dfthc_hamiltonian() -> DFTHCHamiltonian:
     """Return a dummy DFTHCHamiltonian for use in tests."""
@@ -63,6 +64,7 @@ def dummy_dfthc_hamiltonian() -> DFTHCHamiltonian:
         const=0.0,
         num_electrons=N,
     )
+
 
 @pytest.fixture
 def dummy_rotation_data(
