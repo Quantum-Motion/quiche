@@ -14,9 +14,11 @@
 
 """Tests for the DFTHC bloqs."""
 
+import attrs
 import numpy as np
 import pytest
 from qualtran.resource_counting.generalizers import ignore_alloc_free, ignore_split_join
+from qualtran.simulation.classical_sim import ClassicalValT
 from qualtran.testing import (
     assert_equivalent_bloq_counts,
     assert_valid_bloq_decomposition,
@@ -33,6 +35,7 @@ from quiche.resources.bloqs.dfthc import (
     RotationPrepareDFTHC,
     SelectDFTHC,
 )
+from quiche.resources.bloqs.dfthc.qrom import RotationQROM
 
 # FeMoco-54 parameters, from G. H. Low et al., "Fast Quantum Simulation of Electronic
 # Structure by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016
@@ -211,7 +214,10 @@ class TestDFTHCBlockEncoding:
             log_block_size_outer=K_1,
             log_block_size_outer_adjoint=K_5,
         )
-        assert self.block_encoding == block_encoding_from_fh
+        # The rotation data is tested separately in `TestRotationData`.
+        assert self.block_encoding == attrs.evolve(
+            block_encoding_from_fh, rotation_data=None
+        )
 
     def test_decomposition(self):
         assert_valid_bloq_decomposition(self.block_encoding)
@@ -254,7 +260,8 @@ class TestDFTHCWalkOperator:
             log_block_size_outer=K_1,
             log_block_size_outer_adjoint=K_5,
         )
-        assert self.walk == walk_from_fh
+        # The rotation data is tested separately in `TestRotationData`.
+        assert self.walk == attrs.evolve(walk_from_fh, rotation_data=None)
 
     def test_decomposition(self):
         assert_valid_bloq_decomposition(self.walk)
@@ -263,3 +270,131 @@ class TestDFTHCWalkOperator:
         assert_equivalent_bloq_counts(
             self.walk, generalizer=[ignore_split_join, ignore_alloc_free]
         )
+
+
+class TestRotationData:
+    """Tests for loading the Givens rotation words into the rotation QROM."""
+
+    # A small system, so the QROM can be simulated.
+    norb, nranks, nbases, ncopies, brot = 4, 3, 2, 2, 6
+
+    @pytest.fixture
+    def hamiltonian(self) -> DFTHCHamiltonian:
+        rng = np.random.default_rng(7)
+        return DFTHCHamiltonian(
+            num_orbitals=self.norb,
+            num_ranks=self.nranks,
+            num_bases=self.nbases,
+            num_copies=self.ncopies,
+            unit_vectors=rng.normal(size=(self.nranks, self.nbases, self.norb)),
+            weight_vectors=np.ones((self.nranks, self.nbases, self.ncopies)),
+            bliss_matrix=np.zeros((self.norb, self.norb)),
+            factorised_one_body=np.eye(self.norb),
+            const=0.0,
+            num_electrons=self.norb,
+        )
+
+    @pytest.fixture(params=[DFTHCBlockEncoding, DFTHCWalkOperator])
+    def bloq(
+        self, request: pytest.FixtureRequest, hamiltonian: DFTHCHamiltonian
+    ) -> DFTHCBlockEncoding | DFTHCWalkOperator:
+        return request.param.from_dfthc_hamiltonian(
+            hamiltonian=hamiltonian,
+            num_bits_keep_inner=3,
+            num_bits_keep_outer=3,
+            num_bits_phase_grad=self.brot,
+            num_bits_amp_rotations=3,
+            log_block_size_inner=1,
+            log_block_size_inner_adjoint=1,
+            log_block_size_outer=1,
+            log_block_size_outer_adjoint=1,
+        )
+
+    def test_factory_encodes_rotation_angles(
+        self, hamiltonian: DFTHCHamiltonian, bloq: DFTHCBlockEncoding
+    ):
+        angles = hamiltonian.rotation_angles()
+        data = bloq.rotation_data
+
+        assert data is not None
+        assert len(data) == self.nranks
+        assert all(len(row) == self.nbases for row in data)
+        mask = 2**self.brot - 1
+        for r in range(self.nranks):
+            for b in range(self.nbases):
+                # The first angle is in the most significant bits.
+                q = [
+                    (data[r][b] >> (self.brot * (self.norb - 2 - k))) & mask
+                    for k in range(self.norb - 1)
+                ]
+                decoded = np.array(q) * 4 * np.pi / 2**self.brot
+                error = np.abs(np.angle(np.exp(1j * (decoded - angles[r, b]))))
+                assert error.max() <= 2 * np.pi / 2**self.brot + 1e-12
+
+    def test_data_reaches_qrom(self, bloq: DFTHCBlockEncoding | DFTHCWalkOperator):
+        block_encoding = (
+            bloq.block_encoding if isinstance(bloq, DFTHCWalkOperator) else bloq
+        )
+
+        qrom = block_encoding.inner.rotation_prep.qrom
+
+        assert bloq.rotation_data is not None
+        assert qrom.rotation_data == bloq.rotation_data
+
+    def test_qrom_loads_table(self):
+        data = tuple(
+            tuple(1000 * (r + 1) + b for b in range(self.nbases))
+            for r in range(self.nranks)
+        )
+        qrom = RotationQROM(
+            num_orbitals=self.norb,
+            num_ranks=self.nranks,
+            num_bases=self.nbases,
+            num_bits_phase_grad=self.brot,
+            num_controls=1,
+            rotation_data=data,
+        )
+        cbloq = qrom.decompose_bloq()
+        names = [reg.name for reg in qrom.signature.rights()]
+
+        def lookup(**registers: int) -> dict[str, ClassicalValT]:
+            return dict(zip(names, cbloq.call_classically(**registers), strict=True))
+
+        for r in range(self.nranks):
+            for b in range(self.nbases):
+                loaded = lookup(
+                    ctrl=1, inner_index=b, rank=r, rotations=0, non_identity=0
+                )
+                assert loaded["rotations"] == data[r][b]
+                assert loaded["non_identity"] == 0
+
+                idle = lookup(
+                    ctrl=0, inner_index=b, rank=r, rotations=0, non_identity=0
+                )
+                assert idle["rotations"] == 0
+
+        # b = B is the identity term, which flags instead of loading rotations.
+        identity = lookup(
+            ctrl=1, inner_index=self.nbases, rank=0, rotations=0, non_identity=0
+        )
+        assert identity["rotations"] == 0
+        assert identity["non_identity"] == 1
+
+    @pytest.mark.parametrize(
+        ("data", "match"),
+        [
+            (((0, 0),) * (nranks - 1), "shape"),  # Too few ranks.
+            (((0,),) * nranks, "shape"),  # Too few bases.
+            (((2 ** ((norb - 1) * brot), 0),) * nranks, "fit in"),  # Too wide.
+            (((-1, 0),) * nranks, "fit in"),  # Negative.
+        ],
+    )
+    def test_qrom_rotation_data_validation(self, data: tuple, match: str):
+        with pytest.raises(ValueError, match=match):
+            RotationQROM(
+                num_orbitals=self.norb,
+                num_ranks=self.nranks,
+                num_bases=self.nbases,
+                num_bits_phase_grad=self.brot,
+                rotation_data=data,
+            )
