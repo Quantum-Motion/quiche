@@ -327,6 +327,7 @@ class DFTHCHamiltonian(BaseModel):
 
     @staticmethod
     def _givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Transform the given vectors into a set of rotation angles."""
         # Norm of each vector from coordinate k onwards.
         tail_norms = np.sqrt(np.cumsum((vectors**2)[..., ::-1], axis=-1)[..., ::-1])
         remainder_norms = tail_norms[..., 1:].copy()
