@@ -71,7 +71,7 @@ def pack_into_word(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.objec
     Parameters
     ----------
     integer_angles : ArrayLike
-        An array-like object containing radian angles, as floats.
+        An array-like object containing angles, encoded as integers.
     num_bits : int
         Number of bits used to encode each angle.
 

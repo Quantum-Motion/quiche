@@ -338,7 +338,7 @@ class DFTHCHamiltonian(BaseModel):
 
     def rotation_angles(self) -> NDArray[np.float64]:
         """
-        Givens ladder angles of every direction u(R, B) ([Low2025], appendix 5B).
+        Givens ladder angles of every direction u(R, B) ([Low2025]_, appendix 5B).
 
         Returns
         -------
@@ -346,7 +346,7 @@ class DFTHCHamiltonian(BaseModel):
 
         References
         ----------
-        .. [Low2025]_ G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+        .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
             by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
             Oct. 2025.
 
