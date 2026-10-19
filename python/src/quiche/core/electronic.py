@@ -233,6 +233,9 @@ class DFTHCHamiltonian(BaseModel):
         if np.issubdtype(array.dtype, np.complexfloating):
             error_msg = "The factors must be real, got complex values."
             raise ValueError(error_msg)
+        if not np.all(np.isfinite(array)):
+            error_msg = "The factors must be finite, got NaN or infinite values."
+            raise ValueError(error_msg)
         array = np.array(array, dtype=float)
         array.flags.writeable = False
         return array
@@ -323,34 +326,27 @@ class DFTHCHamiltonian(BaseModel):
         )
 
     @staticmethod
-    def _givens_angles(vector: NDArray[np.float64]) -> NDArray[np.float64]:
-        # The "recursion" (r) is constructed from the recursion relation
-        # r_k^2 = u_k^2 + r_{k+1}^2.
-        # r_k^2 = \Sum^{N-1}_{j=k} u_j^2. This counts in descending order.
-        # The r_k values can then be extracted by taking the square root.
-        # Put back in correct order by flipping.
-        # ... to apply to all leading indices.
-        r = np.sqrt(np.cumsum((vector**2)[..., ::-1], axis=-1)[..., ::-1])
+    def _givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
+        # Norm of each vector from coordinate k onwards.
+        tail_norms = np.sqrt(np.cumsum((vectors**2)[..., ::-1], axis=-1)[..., ::-1])
+        remainder_norms = tail_norms[..., 1:].copy()
 
-        # We need u_k and r_{k+1} for our angles.
-        r_next = r[..., 1:].copy()
-
-        # r_{N-1} = u_{N-1} is signed, unlike the other r_k (which are lengths >= 0).
-        # Keep the sign, otherwise u and the vector with the last coordinate flipped
-        # get the same angles.
-        r_next[..., -1] = vector[..., -1]
-
-        # We use atan2 as this fixes the angle.
-        # Regular np.arctan does not fix the quadrant.
-        return np.arctan2(r_next, vector[..., :-1])
+        # The last remainder is the final coordinate itself; it keeps its sign, otherwise
+        # flipping it would give the same angles.
+        remainder_norms[..., -1] = vectors[..., -1]
+        return np.arctan2(remainder_norms, vectors[..., :-1])
 
     def rotation_angles(self) -> NDArray[np.float64]:
         """
-        Givens ladder angles of every direction U[r, b] ([Low2025], appendix 5B).
+        Givens ladder angles of every direction u(R, B) ([Low2025], appendix 5B).
+
+        Returns
+        -------
+        An array of rotation (Givens) angles of shape ``(R, B, N-1)``.
 
         References
         ----------
-        .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+        .. [Low2025]_ G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
             by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
             Oct. 2025.
 

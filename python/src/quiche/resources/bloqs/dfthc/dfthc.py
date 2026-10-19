@@ -40,7 +40,7 @@ from qualtran.resource_counting import (
 from qualtran.symbolics import bit_length
 
 from quiche.core.electronic import DFTHCHamiltonian
-from quiche.core.encodings import angles_to_integer_representation, pack_into_word
+from quiche.core._encodings import angles_to_integer_representation, pack_into_word
 from quiche.resources.bloqs.dfthc.prep import (
     InnerPrepareDFTHC,
     OuterPrepareDFTHC,
@@ -80,6 +80,12 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
         Log of the block size for inner QROAM, :math:`k_2` in [Low2025]_.
     log_block_size_inner_adjoint : int
         Log of the block size for inner QROAM adjoint, :math:`k_4` in [Low2025]_.
+
+    rotation_data : tuple[tuple[int, ...], ...] | None, optional
+        Packed Givens rotation words loaded by the rotation QROM, indexed
+        ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
+        If None (default), placeholder data is used, which is sufficient for
+        resource estimation.
 
     Registers
     ---------
@@ -350,6 +356,11 @@ class DFTHCBlockEncoding(BlockEncoding):
 
     num_controls : int, optional
         Number of control qubits (default = 0).
+    rotation_data : tuple[tuple[int, ...], ...] | None, optional
+        Packed Givens rotation words loaded by the rotation QROM, indexed
+        ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
+        If None (default), placeholder data is used, which is sufficient for
+        resource estimation. :meth:`from_dfthc_hamiltonian` always sets it.
 
     Registers
     ---------
