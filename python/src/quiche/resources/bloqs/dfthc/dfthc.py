@@ -39,8 +39,8 @@ from qualtran.resource_counting import (
 )
 from qualtran.symbolics import bit_length
 
-from quiche.core.electronic import DFTHCHamiltonian
 from quiche.core._encodings import angles_to_integer_representation, pack_into_word
+from quiche.core.electronic import DFTHCHamiltonian
 from quiche.resources.bloqs.dfthc.prep import (
     InnerPrepareDFTHC,
     OuterPrepareDFTHC,

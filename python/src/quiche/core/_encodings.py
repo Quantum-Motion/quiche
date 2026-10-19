@@ -45,7 +45,7 @@ def angles_to_integer_representation(
         If `num_bits` < 2.
     ValueError
         If angles are NaN or infinite.
-        
+
     """
     if num_bits < 2:
         error_msg = f"`num_bits` must be at least 2, got {num_bits}."
@@ -54,7 +54,9 @@ def angles_to_integer_representation(
     if not np.all(np.isfinite(angles)):
         error_msg = "`angles` must be finite, got NaN or infinite values."
         raise ValueError(error_msg)
-    radian_angle_values = np.mod(np.asarray(angles, dtype=float), 2 * np.pi) / (4 * np.pi)
+    radian_angle_values = np.mod(np.asarray(angles, dtype=float), 2 * np.pi) / (
+        4 * np.pi
+    )
     integer_angles = radian_angle_values * 2**num_bits
     integer_angles = np.rint(integer_angles)
     return np.mod(integer_angles.astype(np.int64), 2 ** (num_bits - 1))
@@ -81,14 +83,16 @@ def pack_into_word(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.objec
     ------
     ValueError
         If entries in the array of angles don't match `num_bits`.
-    
+
     """
     if np.any((integer_angles < 0) | (integer_angles >= 2**num_bits)):
-       error_msg = f"Entries must be in [0, 2**{num_bits}) to fit in the word."
-       raise ValueError(error_msg)
+        error_msg = f"Entries must be in [0, 2**{num_bits}) to fit in the word."
+        raise ValueError(error_msg)
     integer_angles = np.asarray(integer_angles)
     num_angles = integer_angles.shape[-1]
-    words = np.empty(integer_angles.shape[:-1], dtype=object) # `object` as words can exceed 64 bits.
+    words = np.empty(
+        integer_angles.shape[:-1], dtype=object
+    )  # `object` as words can exceed 64 bits.
     for idx in np.ndindex(words.shape):
         words[idx] = sum(
             int(integer_angles[(*idx, k)]) << (num_bits * (num_angles - 1 - k))

@@ -331,8 +331,8 @@ class DFTHCHamiltonian(BaseModel):
         tail_norms = np.sqrt(np.cumsum((vectors**2)[..., ::-1], axis=-1)[..., ::-1])
         remainder_norms = tail_norms[..., 1:].copy()
 
-        # The last remainder is the final coordinate itself; it keeps its sign, otherwise
-        # flipping it would give the same angles.
+        # The last remainder is the final coordinate itself; it keeps its sign,
+        # otherwise flipping it would give the same angles.
         remainder_norms[..., -1] = vectors[..., -1]
         return np.arctan2(remainder_norms, vectors[..., :-1])
 
