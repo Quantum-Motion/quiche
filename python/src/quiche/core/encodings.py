@@ -19,7 +19,7 @@ from numpy.typing import ArrayLike, NDArray
 
 
 def angles_to_integer_representation(
-    angles: ArrayLike, num_bits: int, *, rng: np.random.Generator | None = None
+    angles: ArrayLike, num_bits: int
 ) -> NDArray[np.int64]:
     """
     Angles (radians) -> integers q in [0, 2**(num_bits - 1)).
@@ -30,7 +30,7 @@ def angles_to_integer_representation(
     """
     x = np.mod(np.asarray(angles, dtype=float), 2 * np.pi) / (4 * np.pi)
     q = x * 2**num_bits
-    q = np.rint(q) if rng is None else np.floor(q + rng.random(q.shape))
+    q = np.rint(q)
     return np.mod(q.astype(np.int64), 2 ** (num_bits - 1))
 
 
@@ -42,7 +42,7 @@ def pack_into_word(q: ArrayLike, num_bits: int) -> NDArray[np.object_]:
     """
     q = np.asarray(q)
     num_angles = q.shape[-1]
-    words = np.empty(q.shape[:-1], dtype=object)  # Python ints: rows can exceed 64 bits
+    words = np.empty(q.shape[:-1], dtype=object)
     for idx in np.ndindex(words.shape):
         words[idx] = sum(
             int(q[(*idx, k)]) << (num_bits * (num_angles - 1 - k))
