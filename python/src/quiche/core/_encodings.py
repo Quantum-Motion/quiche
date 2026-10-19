@@ -104,7 +104,7 @@ def pack_into_word(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.objec
     num_angles = integer_angles.shape[-1]
     words = np.empty(
         integer_angles.shape[:-1], dtype=object
-    )  # `object` as words can exceed 64 bits.
+    )  # `object` because words can exceed 64 bits.
     for idx in np.ndindex(words.shape):
         words[idx] = sum(
             int(integer_angles[(*idx, k)]) << (num_bits * (num_angles - 1 - k))
