@@ -70,8 +70,8 @@ def _get_simulation_bloq_factory(spec: QPESpec) -> Callable[[int], Bloq]:
     match spec.simulation:
         case Simulation.QDRIFT:
             bloq = QDRIFT(
-                h=spec.hamiltonian.paulis,
-                t=spec.time,
+                sum=spec.hamiltonian.paulis,
+                time=spec.time,
                 num_samples=spec.reps,
                 seed=spec.seed,
             )
@@ -99,8 +99,8 @@ def _get_simulation_bloq_factory(spec: QPESpec) -> Callable[[int], Bloq]:
 
         case Simulation.Trotter:
             bloq = Trotterisation(
-                h=spec.hamiltonian.paulis,
-                t=spec.time,
+                sum=spec.hamiltonian.paulis,
+                time=spec.time,
                 num_steps=spec.reps,
                 order=spec.order,
             )
