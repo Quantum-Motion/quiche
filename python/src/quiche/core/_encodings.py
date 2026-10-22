@@ -21,16 +21,20 @@ from numpy.typing import ArrayLike, NDArray
 def angles_to_integer_representation(
     radian_angles: ArrayLike, num_bits: int, *, rng: np.random.Generator | None = None
 ) -> NDArray[np.int64]:
-    """
+    r"""
     Encode the radian angles as integers.
 
     Each angle ``theta`` in ``radian_angles`` is reduced modulo ``2*pi``,
     expressed as a fraction ``x`` of ``4*pi``, and scaled onto a grid of
     ``2**num_bits`` points:
 
-        x = (theta mod 2*pi) / (4*pi)    in [0, 1/2)
-        q = round(x * 2**num_bits)       (see ``rng`` for the rounding mode)
-        n = q mod 2**(num_bits - 1)      (rounding can land exactly on 2**(num_bits - 1))
+    .. math::
+
+        \begin{aligned}
+            x &= \frac{\theta \bmod 2\pi}{4\pi} \in \left[0, \tfrac{1}{2}\right), \\
+            q &= \mathrm{round}\left(x \, 2^{b}\right), \\
+            n &= q \bmod 2^{b-1}.
+        \end{aligned}
 
     The result ``n`` is the encoded integer, so each entry occupies at most
     ``num_bits - 1`` bits. Period ``4*pi`` follows the [Qualtran]_ phase gradient convention.
@@ -89,7 +93,7 @@ def angles_to_integer_representation(
 
 
 def pack_into_word(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.object_]:
-    """
+    r"""
     Pack the last axis of an integer array into a single binary word.
 
     Each row ``q_0, ..., q_{K-1}`` of ``num_bits``-bit integers is concatenated into
