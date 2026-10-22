@@ -139,7 +139,7 @@ def pack_integers(integer_angles: ArrayLike, num_bits: int) -> int:
 
 
 def encode_rotation_data(
-    radian_angles: ArrayLike, num_bits: int
+    radian_angles: ArrayLike, num_bits: int, *, rng: np.random.Generator | None = None
 ) -> tuple[tuple[int, ...], ...]:
     """
     Encode Givens rotation angles as the words loaded by the rotation QROM.
@@ -155,6 +155,9 @@ def encode_rotation_data(
         An array-like object containing radian angles, as floats.
     num_bits : int
         Number of bits used to encode each angle.
+    rng : np.random.Generator, optional
+            Random number generator for unbiased rounding ([Low2025]_, appendix D).
+            If None (default), angles are rounded to the nearest integer.
 
     Returns
     -------
@@ -164,7 +167,7 @@ def encode_rotation_data(
         significant bits.
 
     """
-    integers = quantise_angles(radian_angles, num_bits)
+    integers = quantise_angles(radian_angles, num_bits, rng=rng)
     return tuple(
         tuple(pack_integers(angles, num_bits) for angles in row) for row in integers
     )

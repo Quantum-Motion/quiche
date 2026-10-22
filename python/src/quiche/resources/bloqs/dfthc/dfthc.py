@@ -18,6 +18,7 @@ from functools import cached_property
 from typing import Self
 
 import attrs
+import numpy as np
 from qualtran import (
     Bloq,
     BloqBuilder,
@@ -454,6 +455,7 @@ class DFTHCBlockEncoding(BlockEncoding):
         log_block_size_outer: int,
         log_block_size_outer_adjoint: int,
         num_controls: int = 0,
+        rng: np.random.Generator | None = None,
     ) -> Self:
         """
         DFTHC Hamiltonian block encoding, starting from DFTHCHamiltonian parameters.
@@ -488,6 +490,10 @@ class DFTHCBlockEncoding(BlockEncoding):
         num_controls : int, optional
             Number of control qubits (default = 0).
 
+        rng : np.random.Generator, optional
+                Random number generator for unbiased rounding ([Low2025]_, appendix D).
+                If None (default), angles are rounded to the nearest integer.
+
         Notes
         -----
         The Givens rotation words computed from `hamiltonian` are always loaded
@@ -516,7 +522,7 @@ class DFTHCBlockEncoding(BlockEncoding):
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
             rotation_data=encode_rotation_data(
-                hamiltonian.rotation_angles(), num_bits_phase_grad),
+                hamiltonian.rotation_angles(), num_bits_phase_grad, rng=rng),
         )
 
     @property
@@ -811,6 +817,7 @@ class DFTHCWalkOperator(Bloq):
         log_block_size_outer: int,
         log_block_size_outer_adjoint: int,
         num_controls: int = 0,
+        rng: np.random.Generator | None = None,
     ) -> Self:
         """
         DFTHC Hamiltonian walk operator, starting from DFTHCHamiltonian parameters.
@@ -845,6 +852,10 @@ class DFTHCWalkOperator(Bloq):
         num_controls : int, optional
             Number of control qubits (default = 0).
 
+        rng : np.random.Generator, optional
+                Random number generator for unbiased rounding ([Low2025]_, appendix D).
+                If None (default), angles are rounded to the nearest integer.
+
         Notes
         -----
         The Givens rotation words computed from `hamiltonian` are always loaded
@@ -873,7 +884,7 @@ class DFTHCWalkOperator(Bloq):
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
             rotation_data=encode_rotation_data(
-                hamiltonian.rotation_angles(), num_bits_phase_grad),
+                hamiltonian.rotation_angles(), num_bits_phase_grad, rng=rng),
         )
 
     @property
