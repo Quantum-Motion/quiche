@@ -19,6 +19,7 @@ import random
 import attrs
 import numpy as np
 import pytest
+from numpy.typing import ArrayLike
 from qualtran.resource_counting.generalizers import ignore_alloc_free, ignore_split_join
 from qualtran.simulation.classical_sim import ClassicalValT
 from qualtran.testing import (
@@ -37,6 +38,7 @@ from quiche.resources.bloqs.dfthc import (
     RotationPrepareDFTHC,
     SelectDFTHC,
 )
+from quiche.resources.bloqs.dfthc.encodings import pack_integers, quantise_angles
 from quiche.resources.bloqs.dfthc.qrom import RotationQROM
 from quiche.resources.bloqs.dfthc.select import GivensLadder
 
@@ -49,6 +51,8 @@ K_1 = K_4 = 2
 K_2 = K_5 = 4
 S = 7
 N_SMALL, R_SMALL, B_SMALL, B_ROT_SMALL = 4, 3, 2, 6
+
+RESOLUTION = 4 * np.pi / 2**N_SMALL  # The angle of the least significant bit.
 
 
 @pytest.fixture
@@ -398,3 +402,110 @@ class TestDFTHCWalkOperator:
         )
         qrom = walk_from_fh.block_encoding.inner.rotation_prep.qrom
         assert qrom.rotation_data == walk_from_fh.rotation_data
+
+
+class TestQuantiseAngles:
+    """Tests for converting angles to integers."""
+
+    @pytest.mark.parametrize(
+        ("angles", "expected"),
+        [
+            ([0.0, RESOLUTION, 2 * RESOLUTION, 4 * RESOLUTION], [0, 1, 2, 4]),
+            ([-2 * RESOLUTION, 8 * RESOLUTION, 9 * RESOLUTION], [6, 0, 1]),
+            ([0.4 * RESOLUTION, 0.6 * RESOLUTION], [0, 1]),
+            ([7.9 * RESOLUTION], [0]),
+        ],
+        ids=[
+            "exact_multiples",
+            "negative_and_beyond_2pi",
+            "rounds_to_nearest",
+            "rounds_up_and_wraps_to_zero",
+        ],
+    )
+    def test_values(self, angles: list[float], expected: list[int]):
+        np.testing.assert_array_equal(quantise_angles(angles, N_SMALL), expected)
+
+    @pytest.mark.parametrize("num_bits", [6, 12, 15])
+    def test_accuracy(self, num_bits: int):
+        rng = np.random.default_rng(0)
+        angles = rng.uniform(-4 * np.pi, 4 * np.pi, size=(5, 4, 7))
+
+        integers = quantise_angles(angles, num_bits)
+
+        assert integers.shape == angles.shape
+        assert integers.min() >= 0
+        assert integers.max() < 2 ** (num_bits - 1)
+        # Decoding gives back the angle up to half the angle of the least significant
+        # bit, compared as points on the circle since rotations are periodic in 2 pi.
+        decoded = integers * 4 * np.pi / 2**num_bits
+        np.testing.assert_allclose(
+            np.exp(1j * decoded),
+            np.exp(1j * angles),
+            rtol=0,
+            atol=2 * np.pi / 2**num_bits,
+        )
+
+    @pytest.mark.parametrize("num_bits", [1, 0, -3])
+    def test_too_few_bits(self, num_bits: int):
+        with pytest.raises(ValueError, match="must be at least 2"):
+            quantise_angles([0.5], num_bits)
+
+    @pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
+    def test_non_finite_angles(self, value: float):
+        with pytest.raises(ValueError, match="must be finite"):
+            quantise_angles([0.5, value], N_SMALL)
+
+    @pytest.mark.parametrize(
+        ("angle", "neighbours"),
+        [(0.3, {0, 1}), (1.7, {1, 2}), (7.9, {7, 0})],  # In steps; 8 wraps to 0.
+        ids=["lower_half", "upper_half", "rounds_up_and_wraps_to_zero"],
+    )
+    def test_unbiased_rounding_neighbours(self, angle: float, neighbours: set[int]):
+        rng = np.random.default_rng(0)
+        integers = quantise_angles(np.full(1000, angle * RESOLUTION), N_SMALL, rng=rng)
+        assert set(integers.tolist()) == neighbours
+
+    def test_unbiased_rounding_mean(self):
+        angles = np.full(100_000, 0.3 * RESOLUTION)
+        integers = quantise_angles(angles, N_SMALL, rng=np.random.default_rng(0))
+        # Rounded up with probability equal to the fractional part, 0.3.
+        np.testing.assert_allclose(integers.mean(), 0.3, atol=0.01)
+
+    def test_unbiased_rounding_reproducible(self):
+        angles = np.random.default_rng(1).uniform(0, 2 * np.pi, size=100)
+        first = quantise_angles(angles, N_SMALL, rng=np.random.default_rng(5))
+        second = quantise_angles(angles, N_SMALL, rng=np.random.default_rng(5))
+        np.testing.assert_array_equal(first, second)
+
+
+class TestPackIntegers:
+    """Tests for packing integers into a single word."""
+
+    def test_order(self):
+        # The first integer takes the most significant bits.
+        assert pack_integers([1, 2, 3], num_bits=4) == 0x123
+
+    def test_large_words(self):
+        # FeMoco-54 sizes, where each word exceeds 64 bits.
+        num_bits, num_angles = 15, 53
+        rng = np.random.default_rng(1)
+        integers = rng.integers(0, 2 ** (num_bits - 1), size=num_angles)
+
+        word = pack_integers(integers, num_bits)
+
+        assert isinstance(word, int)
+        mask = 2**num_bits - 1
+        unpacked = [
+            (word >> (num_bits * (num_angles - 1 - k))) & mask
+            for k in range(num_angles)
+        ]
+        np.testing.assert_array_equal(unpacked, integers)
+
+    @pytest.mark.parametrize(
+        "integers",
+        [[16], [-1], np.array([16]), np.array([-1])],
+        ids=["list_too_large", "list_negative", "array_too_large", "array_negative"],
+    )
+    def test_entries_must_fit(self, integers: ArrayLike):
+        with pytest.raises(ValueError, match="to fit in the word"):
+            pack_integers(integers, num_bits=4)
