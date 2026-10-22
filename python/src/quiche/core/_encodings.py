@@ -40,7 +40,9 @@ def angles_to_integer_representation(
 
     Returns
     -------
-    An array of N-1 angles, encoded as integers.
+    NDArray[np.int64]
+        Integer encodings of the angles, with the same shape as ``radian_angles``.
+        Each entry lies in ``[0, 2**(num_bits - 1))``.
 
     Raises
     ------
