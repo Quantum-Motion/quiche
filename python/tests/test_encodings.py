@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 from numpy.typing import ArrayLike
 
-from quiche.core._encodings import pack_integers, quantise_angles
+from quiche.resources.bloqs.dfthc.encodings import pack_integers, quantise_angles
 
 NUM_BITS = 4
 RESOLUTION = 4 * np.pi / 2**NUM_BITS  # The angle of the least significant bit.

@@ -40,7 +40,7 @@ from qualtran.resource_counting import (
 )
 from qualtran.symbolics import bit_length
 
-from quiche.core._encodings import encode_rotation_data
+from quiche.resources.bloqs.dfthc.encodings import encode_rotation_data
 from quiche.core.electronic import DFTHCHamiltonian
 from quiche.resources.bloqs.dfthc.prep import (
     InnerPrepareDFTHC,
