@@ -39,7 +39,7 @@ from qualtran.resource_counting import (
 )
 from qualtran.symbolics import bit_length
 
-from quiche.core._encodings import quantise_angles, pack_into_word
+from quiche.core._encodings import encode_rotation_data
 from quiche.core.electronic import DFTHCHamiltonian
 from quiche.resources.bloqs.dfthc.prep import (
     InnerPrepareDFTHC,
@@ -501,11 +501,6 @@ class DFTHCBlockEncoding(BlockEncoding):
            p. 041016, Oct. 2025.
 
         """
-        # (R, B, N - 1) angles -> (R, B) words of (N - 1) * b_rot bits.
-        integers = quantise_angles(hamiltonian.rotation_angles(), num_bits_phase_grad)
-        words = pack_last_axis(integers, num_bits_phase_grad)
-        rotation_data = tuple(tuple(int(word) for word in row) for row in words)
-
         return cls(
             num_orbitals=hamiltonian.num_orbitals,
             num_ranks=hamiltonian.num_ranks,
@@ -520,7 +515,8 @@ class DFTHCBlockEncoding(BlockEncoding):
             log_block_size_outer=log_block_size_outer,
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
-            rotation_data=rotation_data,
+            rotation_data=encode_rotation_data(
+                hamiltonian.rotation_angles(), num_bits_phase_grad),
         )
 
     @property
@@ -862,15 +858,6 @@ class DFTHCWalkOperator(Bloq):
            p. 041016, Oct. 2025.
 
         """
-        # (R, B, N - 1) angles -> (R, B) words of (N - 1) * b_rot bits.
-        words = pack_into_word(
-            quantise_angles(
-                hamiltonian.rotation_angles(), num_bits_phase_grad
-            ),
-            num_bits_phase_grad,
-        )
-        rotation_data = tuple(tuple(int(word) for word in row) for row in words)
-
         return cls(
             num_orbitals=hamiltonian.num_orbitals,
             num_ranks=hamiltonian.num_ranks,
@@ -885,7 +872,8 @@ class DFTHCWalkOperator(Bloq):
             log_block_size_outer=log_block_size_outer,
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
-            rotation_data=rotation_data,
+            rotation_data=encode_rotation_data(
+                hamiltonian.rotation_angles(), num_bits_phase_grad),
         )
 
     @property

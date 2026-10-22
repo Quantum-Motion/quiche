@@ -92,7 +92,7 @@ def quantise_angles(
     return np.mod(rounded_angles.astype(np.int64), 2 ** (num_bits - 1))
 
 
-def pack_into_word(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.object_]:
+def pack_last_axis(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.object_]:
     r"""
     Pack the last axis of an integer array into a single binary word.
 
@@ -143,3 +143,33 @@ def pack_into_word(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.objec
             for k in range(num_angles)
         )
     return words
+
+def encode_rotation_data(
+    radian_angles: ArrayLike, num_bits: int
+) -> tuple[tuple[int, ...], ...]:
+    """
+    Encode Givens rotation angles as the words loaded by the rotation QROM.
+    
+    Takes an array-like object containing radian angles as floats and quantises the 
+    angles to integers, before subsequently packing the last axis into binary words.
+    The words are returned as nested tuples of Python integers, as expected by
+    ``RotationQROM``.
+
+    Parameters
+    ----------
+    radian_angles : ArrayLike
+        An array-like object containing radian angles, as floats.
+    num_bits : int
+        Number of bits used to encode each angle.
+
+    Returns
+    -------
+    tuple[tuple[int, ...], ...]
+        Packed rotation words, indexed ``[rank][inner_index]``. Each word is a Python
+        ``int`` of ``(N - 1) * num_bits`` bits, with the first angle in the most
+        significant bits.
+
+    """
+    integers = quantise_angles(radian_angles, num_bits)
+    words = pack_last_axis(integers, num_bits)
+    return tuple(tuple(int(word) for word in row) for row in words)

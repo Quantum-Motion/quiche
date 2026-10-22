@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 from numpy.typing import ArrayLike
 
-from quiche.core._encodings import quantise_angles, pack_into_word
+from quiche.core._encodings import quantise_angles, pack_last_axis
 
 NUM_BITS = 4
 RESOLUTION = 4 * np.pi / 2**NUM_BITS  # The angle of the least significant bit.
@@ -112,7 +112,7 @@ class TestPackIntoWord:
     """Tests for packing integers into a single word."""
 
     def test_order(self):
-        words = pack_into_word([[1, 2, 3], [4, 5, 6]], num_bits=4)
+        words = pack_last_axis([[1, 2, 3], [4, 5, 6]], num_bits=4)
 
         assert words.shape == (2,)
         # The first integer takes the most significant bits.
@@ -124,7 +124,7 @@ class TestPackIntoWord:
         rng = np.random.default_rng(1)
         integers = rng.integers(0, 2 ** (num_bits - 1), size=(3, 2, num_angles))
 
-        words = pack_into_word(integers, num_bits)
+        words = pack_last_axis(integers, num_bits)
 
         assert words.shape == (3, 2)
         mask = 2**num_bits - 1
@@ -143,4 +143,4 @@ class TestPackIntoWord:
     )
     def test_entries_must_fit(self, integers: ArrayLike):
         with pytest.raises(ValueError, match="to fit in the word"):
-            pack_into_word(integers, num_bits=4)
+            pack_last_axis(integers, num_bits=4)
