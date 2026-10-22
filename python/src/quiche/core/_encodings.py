@@ -92,11 +92,11 @@ def quantise_angles(
     return np.mod(rounded_angles.astype(np.int64), 2 ** (num_bits - 1))
 
 
-def pack_last_axis(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.object_]:
+def pack_integers(integer_angles: ArrayLike, num_bits: int) -> int:
     r"""
-    Pack the last axis of an integer array into a single binary word.
+    Pack an integer array into a single binary word.
 
-    Each row ``q_0, ..., q_{K-1}`` of ``num_bits``-bit integers is concatenated into
+    The ``num_bits``-bit integers ``q_0, ..., q_{K-1}`` are concatenated into
     one ``K * num_bits``-bit integer ``W``, with ``q_0`` in the most significant bits:
 
      .. math::
@@ -111,16 +111,15 @@ def pack_last_axis(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.objec
     Parameters
     ----------
     integer_angles : ArrayLike
-        An array-like object containing angles, encoded as as integers in
+        An array-like object containing angles, encoded as integers in
         ``[0, 2**num_bits)``.
     num_bits : int
         Number of bits used to encode each angle.
 
     Returns
     -------
-    NDArray[np.int64]
-        Array of shape ``integer_angles.shape[:-1]``. Each entry is a Python
-        ``int`` holding the ``K`` integers along the last axis packed into one
+    int
+        Python ``int`` holding the ``K`` integers packed into one
         word, with the first in the most significant bits.
 
     Raises
@@ -129,28 +128,23 @@ def pack_last_axis(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.objec
         If entries in the array of angles don't match `num_bits`.
 
     """
-    integer_angles = np.asarray(integer_angles)
-    if np.any((integer_angles < 0) | (integer_angles >= 2**num_bits)):
+    values = np.asarray(integer_angles).tolist()
+    if any(not 0 <= value < 2**num_bits for value in values):
         error_msg = f"Entries must be in [0, 2**{num_bits}) to fit in the word."
         raise ValueError(error_msg)
-    num_angles = integer_angles.shape[-1]
-    words = np.empty(
-        integer_angles.shape[:-1], dtype=object
-    )  # `object` to preserve arbitrary-size Python `int`s.
-    for idx in np.ndindex(words.shape):
-        words[idx] = sum(
-            int(integer_angles[(*idx, k)]) << (num_bits * (num_angles - 1 - k))
-            for k in range(num_angles)
-        )
-    return words
+    word = 0
+    for value in values:
+        word = (word << num_bits) | value
+    return word
+
 
 def encode_rotation_data(
     radian_angles: ArrayLike, num_bits: int
 ) -> tuple[tuple[int, ...], ...]:
     """
     Encode Givens rotation angles as the words loaded by the rotation QROM.
-    
-    Takes an array-like object containing radian angles as floats and quantises the 
+
+    Takes an array-like object containing radian angles as floats and quantises the
     angles to integers, before subsequently packing the last axis into binary words.
     The words are returned as nested tuples of Python integers, as expected by
     ``RotationQROM``.
@@ -171,5 +165,6 @@ def encode_rotation_data(
 
     """
     integers = quantise_angles(radian_angles, num_bits)
-    words = pack_last_axis(integers, num_bits)
-    return tuple(tuple(int(word) for word in row) for row in words)
+    return tuple(
+        tuple(pack_integers(angles, num_bits) for angles in row) for row in integers
+    )
