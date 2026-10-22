@@ -90,9 +90,19 @@ def angles_to_integer_representation(
 
 def pack_into_word(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.object_]:
     """
-    Pack integers along the last axis.
+    Pack the last axis of an integer array into a single binary word.
 
-    W = sum_k q_k * 2**(num_bits * (K - 1 - k))
+    Each row ``q_0, ..., q_{K-1}`` of ``num_bits``-bit integers is concatenated into
+    one ``K * num_bits``-bit integer ``W``, with ``q_0`` in the most significant bits:
+
+     .. math::
+
+        W = \sum_{k=0}^{K-1} q_k * 2^{b * (K - 1 - k)},
+
+    where :math:`b` is ``num_bits``.
+
+    This is the bit string loaded into a register holding ``K`` consecutive
+    ``num_bits``-bit angles.
 
     Parameters
     ----------
