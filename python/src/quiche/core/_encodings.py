@@ -22,11 +22,18 @@ def angles_to_integer_representation(
     radian_angles: ArrayLike, num_bits: int, *, rng: np.random.Generator | None = None
 ) -> NDArray[np.int64]:
     """
-    Angles (radians) -> integers q in [0, 2**(num_bits - 1)).
+    Encode the radian angles as integers.
 
-    x = (theta mod 2*pi) / (4*pi)    in [0, 1/2)
-    q = x * 2**num_bits              (rounded to an integer)
-    q = q mod 2**(num_bits - 1)      (rounding can land exactly on 2**(num_bits - 1))
+    Each angle ``theta`` in ``radian_angles`` is reduced modulo ``2*pi``,
+    expressed as a fraction ``x`` of ``4*pi``, and scaled onto a grid of
+    ``2**num_bits`` points:
+
+        x = (theta mod 2*pi) / (4*pi)    in [0, 1/2)
+        q = round(x * 2**num_bits)       (see ``rng`` for the rounding mode)
+        n = q mod 2**(num_bits - 1)      (rounding can land exactly on 2**(num_bits - 1))
+
+    The result ``n`` is the encoded integer, so each entry occupies at most
+    ``num_bits - 1`` bits. Period ``4*pi`` follows the [Qualtran]_ phase gradient convention.
 
     Parameters
     ----------
@@ -56,6 +63,8 @@ def angles_to_integer_representation(
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
         by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
         Oct. 2025.
+    .. [Qualtran] https://qualtran.readthedocs.io/en/latest/bloqs/rotations/
+                    rz_via_phase_gradient.html
 
     """
     if num_bits < 2:
