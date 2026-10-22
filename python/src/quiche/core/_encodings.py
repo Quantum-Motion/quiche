@@ -59,10 +59,12 @@ def angles_to_integer_representation(
     if num_bits < 2:
         error_msg = f"`num_bits` must be at least 2, got {num_bits}."
         raise ValueError(error_msg)
+
     radian_angles = np.asarray(radian_angles, dtype=float)
     if not np.all(np.isfinite(radian_angles)):
         error_msg = "`angles` must be finite, got NaN or infinite values."
         raise ValueError(error_msg)
+        
     fractional_angle_values = np.mod(radian_angles, 2 * np.pi) / (4 * np.pi)
     scaled_angles = fractional_angle_values * 2**num_bits
     if rng is None:
@@ -70,7 +72,8 @@ def angles_to_integer_representation(
     else:
         # Round up with probability equal to the fractional part, so that the
         # expected value of the rounded integer is the unrounded value.
-        rounded_angles = np.floor(scaled_angles + rng.random(scaled_angles.shape))
+        dither = rng.random(scaled_angles.shape)
+        rounded_angles = np.floor(scaled_angles + dither)
     return np.mod(rounded_angles.astype(np.int64), 2 ** (num_bits - 1))
 
 

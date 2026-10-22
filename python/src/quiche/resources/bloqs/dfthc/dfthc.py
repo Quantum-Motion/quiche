@@ -502,12 +502,8 @@ class DFTHCBlockEncoding(BlockEncoding):
 
         """
         # (R, B, N - 1) angles -> (R, B) words of (N - 1) * b_rot bits.
-        words = pack_into_word(
-            angles_to_integer_representation(
-                hamiltonian.rotation_angles(), num_bits_phase_grad
-            ),
-            num_bits_phase_grad,
-        )
+        integers = quantise_angles(hamiltonian.rotation_angles(), num_bits_phase_grad)
+        words = pack_last_axis(integers, num_bits_phase_grad)
         rotation_data = tuple(tuple(int(word) for word in row) for row in words)
 
         return cls(
