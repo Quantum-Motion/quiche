@@ -343,7 +343,8 @@ class DFTHCHamiltonian(BaseModel):
 
         Returns
         -------
-        An array of rotation (Givens) angles of shape ``(R, B, N-1)``.
+        NDArray[np.float64]
+            An array of rotation (Givens) angles of shape ``(R, B, N-1)``.
 
         References
         ----------

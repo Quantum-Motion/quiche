@@ -491,8 +491,8 @@ class DFTHCBlockEncoding(BlockEncoding):
             Number of control qubits (default = 0).
 
         rng : np.random.Generator, optional
-                Random number generator for unbiased rounding ([Low2025]_, appendix D).
-                If None (default), angles are rounded to the nearest integer.
+            Random number generator for unbiased rounding ([Low2025]_, appendix D).
+            If None (default), angles are rounded to the nearest integer.
 
         Notes
         -----
@@ -853,8 +853,8 @@ class DFTHCWalkOperator(Bloq):
             Number of control qubits (default = 0).
 
         rng : np.random.Generator, optional
-                Random number generator for unbiased rounding ([Low2025]_, appendix D).
-                If None (default), angles are rounded to the nearest integer.
+            Random number generator for unbiased rounding ([Low2025]_, appendix D).
+            If None (default), angles are rounded to the nearest integer.
 
         Notes
         -----
