@@ -117,7 +117,10 @@ def pack_into_word(integer_angles: ArrayLike, num_bits: int) -> NDArray[np.objec
 
     Returns
     -------
-    An array of binary words, each encoding a series of angles.
+    NDArray[np.int64]
+        Array of shape ``integer_angles.shape[:-1]``. Each entry is a Python
+        ``int`` holding the ``K`` integers along the last axis packed into one
+        word, with the first in the most significant bits.
 
     Raises
     ------
