@@ -900,12 +900,11 @@ class RotationQROM(UnaryIterationGate):
         if inner_index == self.num_bases:
             return {(CNOT(), 1)}
 
-        # Without data nothing is loaded.
         if self.rotation_data is None:
             return {(CNOT(), 0)}
 
-        # Each set bit of the word is one CNOT from the control onto the data register.
-        return {(CNOT(), self.rotation_data[rank][inner_index].bit_count())}
+        data = self.rotation_data[rank][inner_index]
+        return {(XorK(QAny(self.rotations_size), data).controlled(), 1)}
 
     def adjoint(self) -> Bloq:
         """Get the measurement-based erasure of this QROM."""

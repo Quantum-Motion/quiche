@@ -14,6 +14,8 @@
 
 """Tests for the DFTHC bloqs."""
 
+import random
+
 import attrs
 import numpy as np
 import pytest
@@ -63,6 +65,17 @@ def dummy_dfthc_hamiltonian() -> DFTHCHamiltonian:
         factorised_one_body=np.eye(N),
         const=0.0,
         num_electrons=N,
+    )
+
+
+def random_rotation_data(
+    num_ranks: int, num_bases: int, num_bits: int, seed: int = 0
+) -> tuple[tuple[int, ...], ...]:
+    """Get random rotation words, indexed ``[rank][inner_index]``, of ``num_bits`` bits."""
+    rng = random.Random(seed)  # noqa: S311 (not used for cryptography)
+    return tuple(
+        tuple(rng.getrandbits(num_bits) for _ in range(num_bases))
+        for _ in range(num_ranks)
     )
 
 
@@ -144,6 +157,25 @@ class TestRotationPrepareDFTHC:
 
 class TestRotationQROM:
     """Tests for the QROM that loads the rotation words."""
+
+    qrom = RotationQROM(
+        num_orbitals=N_SMALL,
+        num_ranks=R_SMALL,
+        num_bases=B_SMALL,
+        num_bits_phase_grad=B_ROT_SMALL,
+        num_controls=1,
+        rotation_data=random_rotation_data(
+            R_SMALL, B_SMALL, (N_SMALL - 1) * B_ROT_SMALL
+        ),
+    )
+
+    def test_decomposition(self):
+        assert_valid_bloq_decomposition(self.qrom)
+
+    def test_bloq_counts(self):
+        assert_equivalent_bloq_counts(
+            self.qrom, generalizer=[ignore_split_join, ignore_alloc_free]
+        )
 
     def test_loads_rotation_data(self):
         data = tuple(
@@ -272,7 +304,16 @@ class TestDFTHCBlockEncoding:
         log_block_size_inner_adjoint=K_4,
         log_block_size_outer=K_1,
         log_block_size_outer_adjoint=K_5,
+        rotation_data=random_rotation_data(R, B, (N - 1) * B_ROT),
     )
+
+    def test_decomposition(self):
+        assert_valid_bloq_decomposition(self.block_encoding)
+
+    def test_bloq_counts(self):
+        assert_equivalent_bloq_counts(
+            self.block_encoding, generalizer=[ignore_split_join, ignore_alloc_free]
+        )
 
     def test_from_dfthc_hamiltonian(self, dummy_dfthc_hamiltonian: DFTHCHamiltonian):
         block_encoding_from_fh = DFTHCBlockEncoding.from_dfthc_hamiltonian(
@@ -288,7 +329,7 @@ class TestDFTHCBlockEncoding:
         )
 
         # Apart from the rotation data, it is the bloq built from the parameters.
-        assert self.block_encoding == attrs.evolve(
+        assert attrs.evolve(self.block_encoding, rotation_data=None) == attrs.evolve(
             block_encoding_from_fh, rotation_data=None
         )
         assert block_encoding_from_fh.rotation_data is not None
@@ -319,7 +360,16 @@ class TestDFTHCWalkOperator:
         log_block_size_inner_adjoint=K_4,
         log_block_size_outer=K_1,
         log_block_size_outer_adjoint=K_5,
+        rotation_data=random_rotation_data(R, B, (N - 1) * B_ROT),
     )
+
+    def test_decomposition(self):
+        assert_valid_bloq_decomposition(self.walk)
+
+    def test_bloq_counts(self):
+        assert_equivalent_bloq_counts(
+            self.walk, generalizer=[ignore_split_join, ignore_alloc_free]
+        )
 
     def test_from_dfthc_hamiltonian(self, dummy_dfthc_hamiltonian: DFTHCHamiltonian):
         walk_from_fh = DFTHCWalkOperator.from_dfthc_hamiltonian(
@@ -335,7 +385,9 @@ class TestDFTHCWalkOperator:
         )
 
         # Apart from the rotation data, it is the bloq built from the parameters.
-        assert self.walk == attrs.evolve(walk_from_fh, rotation_data=None)
+        assert attrs.evolve(self.walk, rotation_data=None) == attrs.evolve(
+            walk_from_fh, rotation_data=None
+        )
         assert walk_from_fh.rotation_data is not None
         # The angles the ladder reads from the words are those of the Hamiltonian.
         np.testing.assert_allclose(
