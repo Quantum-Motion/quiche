@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 from numpy.typing import ArrayLike
 
-from quiche.core._encodings import angles_to_integer_representation, pack_into_word
+from quiche.core._encodings import quantise_angles, pack_into_word
 
 NUM_BITS = 4
 RESOLUTION = 4 * np.pi / 2**NUM_BITS  # The angle of the least significant bit.
@@ -44,7 +44,7 @@ class TestAnglesToIntegerRepresentation:
     )
     def test_values(self, angles: list[float], expected: list[int]):
         np.testing.assert_array_equal(
-            angles_to_integer_representation(angles, NUM_BITS), expected
+            quantise_angles(angles, NUM_BITS), expected
         )
 
     @pytest.mark.parametrize("num_bits", [6, 12, 15])
@@ -52,7 +52,7 @@ class TestAnglesToIntegerRepresentation:
         rng = np.random.default_rng(0)
         angles = rng.uniform(-4 * np.pi, 4 * np.pi, size=(5, 4, 7))
 
-        integers = angles_to_integer_representation(angles, num_bits)
+        integers = quantise_angles(angles, num_bits)
 
         assert integers.shape == angles.shape
         assert integers.min() >= 0
@@ -70,12 +70,12 @@ class TestAnglesToIntegerRepresentation:
     @pytest.mark.parametrize("num_bits", [1, 0, -3])
     def test_too_few_bits(self, num_bits: int):
         with pytest.raises(ValueError, match="must be at least 2"):
-            angles_to_integer_representation([0.5], num_bits)
+            quantise_angles([0.5], num_bits)
 
     @pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
     def test_non_finite_angles(self, value: float):
         with pytest.raises(ValueError, match="must be finite"):
-            angles_to_integer_representation([0.5, value], NUM_BITS)
+            quantise_angles([0.5, value], NUM_BITS)
 
     @pytest.mark.parametrize(
         ("angle", "neighbours"),
@@ -84,14 +84,14 @@ class TestAnglesToIntegerRepresentation:
     )
     def test_unbiased_rounding_neighbours(self, angle: float, neighbours: set[int]):
         rng = np.random.default_rng(0)
-        integers = angles_to_integer_representation(
+        integers = quantise_angles(
             np.full(1000, angle * RESOLUTION), NUM_BITS, rng=rng
         )
         assert set(integers.tolist()) == neighbours
 
     def test_unbiased_rounding_mean(self):
         angles = np.full(100_000, 0.3 * RESOLUTION)
-        integers = angles_to_integer_representation(
+        integers = quantise_angles(
             angles, NUM_BITS, rng=np.random.default_rng(0)
         )
         # Rounded up with probability equal to the fractional part, 0.3.
@@ -99,10 +99,10 @@ class TestAnglesToIntegerRepresentation:
 
     def test_unbiased_rounding_reproducible(self):
         angles = np.random.default_rng(1).uniform(0, 2 * np.pi, size=100)
-        first = angles_to_integer_representation(
+        first = quantise_angles(
             angles, NUM_BITS, rng=np.random.default_rng(5)
         )
-        second = angles_to_integer_representation(
+        second = quantise_angles(
             angles, NUM_BITS, rng=np.random.default_rng(5)
         )
         np.testing.assert_array_equal(first, second)

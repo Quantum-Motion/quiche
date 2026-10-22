@@ -18,7 +18,7 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 
-def angles_to_integer_representation(
+def quantise_angles(
     radian_angles: ArrayLike, num_bits: int, *, rng: np.random.Generator | None = None
 ) -> NDArray[np.int64]:
     r"""

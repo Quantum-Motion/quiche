@@ -39,7 +39,7 @@ from qualtran.resource_counting import (
 )
 from qualtran.symbolics import bit_length
 
-from quiche.core._encodings import angles_to_integer_representation, pack_into_word
+from quiche.core._encodings import quantise_angles, pack_into_word
 from quiche.core.electronic import DFTHCHamiltonian
 from quiche.resources.bloqs.dfthc.prep import (
     InnerPrepareDFTHC,
@@ -864,7 +864,7 @@ class DFTHCWalkOperator(Bloq):
         """
         # (R, B, N - 1) angles -> (R, B) words of (N - 1) * b_rot bits.
         words = pack_into_word(
-            angles_to_integer_representation(
+            quantise_angles(
                 hamiltonian.rotation_angles(), num_bits_phase_grad
             ),
             num_bits_phase_grad,
