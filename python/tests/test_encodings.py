@@ -18,13 +18,13 @@ import numpy as np
 import pytest
 from numpy.typing import ArrayLike
 
-from quiche.core._encodings import pack_last_axis, quantise_angles
+from quiche.core._encodings import pack_integers, quantise_angles
 
 NUM_BITS = 4
 RESOLUTION = 4 * np.pi / 2**NUM_BITS  # The angle of the least significant bit.
 
 
-class TestAnglesToIntegerRepresentation:
+class TestQuantiseAngles:
     """Tests for converting angles to integers."""
 
     @pytest.mark.parametrize(
@@ -98,39 +98,34 @@ class TestAnglesToIntegerRepresentation:
         np.testing.assert_array_equal(first, second)
 
 
-class TestPackIntoWord:
+class TestPackIntegers:
     """Tests for packing integers into a single word."""
 
     def test_order(self):
-        words = pack_last_axis([[1, 2, 3], [4, 5, 6]], num_bits=4)
-
-        assert words.shape == (2,)
         # The first integer takes the most significant bits.
-        np.testing.assert_array_equal(words, [0x123, 0x456])
+        assert pack_integers([1, 2, 3], num_bits=4) == 0x123
 
     def test_large_words(self):
         # FeMoco-54 sizes, where each word exceeds 64 bits.
         num_bits, num_angles = 15, 53
         rng = np.random.default_rng(1)
-        integers = rng.integers(0, 2 ** (num_bits - 1), size=(3, 2, num_angles))
+        integers = rng.integers(0, 2 ** (num_bits - 1), size=num_angles)
 
-        words = pack_last_axis(integers, num_bits)
+        word = pack_integers(integers, num_bits)
 
-        assert words.shape == (3, 2)
+        assert isinstance(word, int)
         mask = 2**num_bits - 1
-        for idx in np.ndindex(words.shape):
-            word = int(words[idx])
-            unpacked = [
-                (word >> (num_bits * (num_angles - 1 - k))) & mask
-                for k in range(num_angles)
-            ]
-            np.testing.assert_array_equal(unpacked, integers[idx])
+        unpacked = [
+            (word >> (num_bits * (num_angles - 1 - k))) & mask
+            for k in range(num_angles)
+        ]
+        np.testing.assert_array_equal(unpacked, integers)
 
     @pytest.mark.parametrize(
         "integers",
-        [[[16]], [[-1]], np.array([[16]]), np.array([[-1]])],
+        [[16], [-1], np.array([16]), np.array([-1])],
         ids=["list_too_large", "list_negative", "array_too_large", "array_negative"],
     )
     def test_entries_must_fit(self, integers: ArrayLike):
         with pytest.raises(ValueError, match="to fit in the word"):
-            pack_last_axis(integers, num_bits=4)
+            pack_integers(integers, num_bits=4)
