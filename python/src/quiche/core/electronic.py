@@ -233,6 +233,9 @@ class DFTHCHamiltonian(BaseModel):
         if np.issubdtype(array.dtype, np.complexfloating):
             error_msg = "The factors must be real, got complex values."
             raise ValueError(error_msg)
+        if not np.all(np.isfinite(array)):
+            error_msg = "The factors must be finite, got NaN or infinite values."
+            raise ValueError(error_msg)
         array = np.array(array, dtype=float)
         array.flags.writeable = False
         return array
@@ -321,3 +324,33 @@ class DFTHCHamiltonian(BaseModel):
             num_electrons=self.num_electrons,
             core_energy=self.const,
         )
+
+    @staticmethod
+    def _givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Transform the given vectors into a set of rotation angles."""
+        # Norm of each vector from coordinate k onwards.
+        tail_norms = np.sqrt(np.cumsum((vectors**2)[..., ::-1], axis=-1)[..., ::-1])
+        remainder_norms = tail_norms[..., 1:].copy()
+
+        # The last remainder is the final coordinate itself; it keeps its sign,
+        # otherwise flipping it would give the same angles.
+        remainder_norms[..., -1] = vectors[..., -1]
+        return np.arctan2(remainder_norms, vectors[..., :-1])
+
+    def rotation_angles(self) -> NDArray[np.float64]:
+        """
+        Givens ladder angles of every direction u(R, B) ([Low2025]_, appendix 5B).
+
+        Returns
+        -------
+        NDArray[np.float64]
+            An array of rotation (Givens) angles of shape ``(R, B, N-1)``.
+
+        References
+        ----------
+        .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+            by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
+            Oct. 2025.
+
+        """
+        return self._givens_angles(self.unit_vectors)

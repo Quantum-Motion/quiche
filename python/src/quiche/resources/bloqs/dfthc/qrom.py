@@ -755,6 +755,11 @@ class RotationQROM(UnaryIterationGate):
     num_controls : int, optional
         Number of control qubits (default = 0).
 
+    rotation_data : tuple[tuple[int, ...], ...] | None, optional
+        Packed Givens rotation words, indexed ``rotation_data[rank][inner_index]``
+        for ``inner_index < num_bases``. Each word holds :math:`N - 1` angles of
+        :math:`b_{rot}` bits, with the first angle in the most significant bits.
+
     Registers
     ---------
     inner_index : BQUInt
@@ -786,6 +791,32 @@ class RotationQROM(UnaryIterationGate):
     num_bits_phase_grad: int
 
     num_controls: int = 0
+
+    rotation_data: tuple[tuple[int, ...], ...] | None = attrs.field(
+        default=None, repr=False
+    )
+
+    def __attrs_post_init__(self) -> None:
+        """Validate the shape and bit width of the rotation data."""
+        if self.rotation_data is None:
+            return
+
+        if len(self.rotation_data) != self.num_ranks or any(
+            len(row) != self.num_bases for row in self.rotation_data
+        ):
+            err_msg = (
+                f"`rotation_data` must have shape ({self.num_ranks}, "
+                f"{self.num_bases}) indexed [rank][inner_index]."
+            )
+            raise ValueError(err_msg)
+
+        if any(
+            not 0 <= word < 2**self.rotations_size
+            for row in self.rotation_data
+            for word in row
+        ):
+            err_msg = f"`rotation_data` words must fit in {self.rotations_size} bits."
+            raise ValueError(err_msg)
 
     @property
     def rotations_size(self) -> int:
@@ -831,15 +862,17 @@ class RotationQROM(UnaryIterationGate):
         rotations: Sequence[Qid],
         non_identity: Sequence[Qid],
     ) -> Iterator[OP_TREE]:  # ty: ignore[invalid-method-override]
-        # Placeholder data
-        data = 0
-
         # For b = B output to the flag (check whether to invert or not)
         if inner_index == self.num_bases:
             yield XGate().on(*non_identity).controlled_by(control)
 
         # For b < B iterate over r and output rotations
         else:
+            data = (
+                0
+                if self.rotation_data is None
+                else self.rotation_data[rank][inner_index]
+            )
             yield (
                 XorK(QAny(self.rotations_size), data)
                 .on(*rotations)
@@ -861,9 +894,17 @@ class RotationQROM(UnaryIterationGate):
             and selection_index_prefix[0] >= self.num_bases
         )
 
-    def nth_operation_callgraph(self, **_: int) -> set[BloqCountT]:
+    def nth_operation_callgraph(self, inner_index: int, rank: int) -> set[BloqCountT]:
         """Get the data loading cost for each index."""
-        return {(CNOT(), 0)}
+        # Flag qubit: a single CNOT.
+        if inner_index == self.num_bases:
+            return {(CNOT(), 1)}
+
+        if self.rotation_data is None:
+            return {(CNOT(), 0)}
+
+        data = self.rotation_data[rank][inner_index]
+        return {(XorK(QAny(self.rotations_size), data).controlled(), 1)}
 
     def adjoint(self) -> Bloq:
         """Get the measurement-based erasure of this QROM."""

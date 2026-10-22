@@ -182,6 +182,17 @@ class TestDFTHCHamiltonian:
             DFTHCHamiltonian(**factors)
 
     @pytest.mark.parametrize(
+        "name",
+        ["unit_vectors", "weight_vectors", "bliss_matrix", "factorised_one_body"],
+    )
+    @pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
+    def test_non_finite_factors(self, factors: dict, name: str, value: float):
+        factors[name][(0,) * factors[name].ndim] = value
+
+        with pytest.raises(ValueError, match="must be finite"):
+            DFTHCHamiltonian(**factors)
+
+    @pytest.mark.parametrize(
         ("name", "shape"),
         [
             ("unit_vectors", (2, 4, 5)),
@@ -201,6 +212,22 @@ class TestDFTHCHamiltonian:
 
         with pytest.raises(ValueError, match="contains a zero vector"):
             DFTHCHamiltonian(**factors)
+
+    def test_rotation_angles(self, factors: dict):
+        # Un-normalised vectors with mixed signs, including the last coordinate.
+        vectors = 3.7 * np.random.default_rng(0).normal(size=(2, 4, 3))
+        factors["unit_vectors"] = vectors
+
+        angles = DFTHCHamiltonian(**factors).rotation_angles()
+
+        assert angles.shape == (2, 4, 2)
+        # Invert the Givens ladder: u_j = (prod_{k<j} sin t_k) cos t_j for j < N - 1,
+        # and u_{N-1} = prod_k sin t_k.
+        sines = np.cumprod(np.sin(angles), axis=-1)
+        prefix = np.concatenate([np.ones((2, 4, 1)), sines[..., :-1]], axis=-1)
+        rebuilt = np.concatenate([prefix * np.cos(angles), sines[..., -1:]], axis=-1)
+        expected = vectors / np.linalg.norm(vectors, axis=-1, keepdims=True)
+        np.testing.assert_allclose(rebuilt, expected, atol=1e-12)
 
     def test_reconstruct(
         self,
