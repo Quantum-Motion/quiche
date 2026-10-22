@@ -37,7 +37,8 @@ def quantise_angles(
         \end{aligned}
 
     The result ``n`` is the encoded integer, so each entry occupies at most
-    ``num_bits - 1`` bits. Period ``4*pi`` follows the [Qualtran]_ phase gradient convention.
+    ``num_bits - 1`` bits.
+    Period ``4*pi`` follows the [Qualtran]_ phase gradient convention.
 
     Parameters
     ----------
@@ -79,7 +80,7 @@ def quantise_angles(
     if not np.all(np.isfinite(radian_angles)):
         error_msg = "`radian_angles` must be finite, got NaN or infinite values."
         raise ValueError(error_msg)
-        
+
     fractional_angle_values = np.mod(radian_angles, 2 * np.pi) / (4 * np.pi)
     scaled_angles = fractional_angle_values * 2**num_bits
     if rng is None:

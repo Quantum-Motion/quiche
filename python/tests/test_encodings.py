@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 from numpy.typing import ArrayLike
 
-from quiche.core._encodings import quantise_angles, pack_last_axis
+from quiche.core._encodings import pack_last_axis, quantise_angles
 
 NUM_BITS = 4
 RESOLUTION = 4 * np.pi / 2**NUM_BITS  # The angle of the least significant bit.
@@ -43,9 +43,7 @@ class TestAnglesToIntegerRepresentation:
         ],
     )
     def test_values(self, angles: list[float], expected: list[int]):
-        np.testing.assert_array_equal(
-            quantise_angles(angles, NUM_BITS), expected
-        )
+        np.testing.assert_array_equal(quantise_angles(angles, NUM_BITS), expected)
 
     @pytest.mark.parametrize("num_bits", [6, 12, 15])
     def test_accuracy(self, num_bits: int):
@@ -84,27 +82,19 @@ class TestAnglesToIntegerRepresentation:
     )
     def test_unbiased_rounding_neighbours(self, angle: float, neighbours: set[int]):
         rng = np.random.default_rng(0)
-        integers = quantise_angles(
-            np.full(1000, angle * RESOLUTION), NUM_BITS, rng=rng
-        )
+        integers = quantise_angles(np.full(1000, angle * RESOLUTION), NUM_BITS, rng=rng)
         assert set(integers.tolist()) == neighbours
 
     def test_unbiased_rounding_mean(self):
         angles = np.full(100_000, 0.3 * RESOLUTION)
-        integers = quantise_angles(
-            angles, NUM_BITS, rng=np.random.default_rng(0)
-        )
+        integers = quantise_angles(angles, NUM_BITS, rng=np.random.default_rng(0))
         # Rounded up with probability equal to the fractional part, 0.3.
         np.testing.assert_allclose(integers.mean(), 0.3, atol=0.01)
 
     def test_unbiased_rounding_reproducible(self):
         angles = np.random.default_rng(1).uniform(0, 2 * np.pi, size=100)
-        first = quantise_angles(
-            angles, NUM_BITS, rng=np.random.default_rng(5)
-        )
-        second = quantise_angles(
-            angles, NUM_BITS, rng=np.random.default_rng(5)
-        )
+        first = quantise_angles(angles, NUM_BITS, rng=np.random.default_rng(5))
+        second = quantise_angles(angles, NUM_BITS, rng=np.random.default_rng(5))
         np.testing.assert_array_equal(first, second)
 
 

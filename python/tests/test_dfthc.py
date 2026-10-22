@@ -71,7 +71,7 @@ def dummy_dfthc_hamiltonian() -> DFTHCHamiltonian:
 def random_rotation_data(
     num_ranks: int, num_bases: int, num_bits: int, seed: int = 0
 ) -> tuple[tuple[int, ...], ...]:
-    """Get random rotation words, indexed ``[rank][inner_index]``, of ``num_bits`` bits."""
+    """Get random rotations, indexed ``[rank][inner_index]``, of ``num_bits`` bits."""
     rng = random.Random(seed)  # noqa: S311 (not used for cryptography)
     return tuple(
         tuple(rng.getrandbits(num_bits) for _ in range(num_bases))

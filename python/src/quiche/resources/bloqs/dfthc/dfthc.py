@@ -522,7 +522,8 @@ class DFTHCBlockEncoding(BlockEncoding):
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
             rotation_data=encode_rotation_data(
-                hamiltonian.rotation_angles(), num_bits_phase_grad, rng=rng),
+                hamiltonian.rotation_angles(), num_bits_phase_grad, rng=rng
+            ),
         )
 
     @property
@@ -884,7 +885,8 @@ class DFTHCWalkOperator(Bloq):
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
             rotation_data=encode_rotation_data(
-                hamiltonian.rotation_angles(), num_bits_phase_grad, rng=rng),
+                hamiltonian.rotation_angles(), num_bits_phase_grad, rng=rng
+            ),
         )
 
     @property
