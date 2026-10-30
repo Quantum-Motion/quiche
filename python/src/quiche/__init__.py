@@ -78,7 +78,8 @@ if TYPE_CHECKING:
     from .core.errors import Errors
     from .core.paulis import Pauli, PauliSum, PauliWord
     from .dispatch import QPESpec
-    from .dispatch.backends import QualtranBackend, QuESTBackend
+    from .dispatch.backends.qualtran import QualtranBackend
+    from .dispatch.backends.quest import QuESTBackend
 
 
 def __getattr__(name: str) -> object:
