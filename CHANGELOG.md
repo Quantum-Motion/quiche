@@ -50,7 +50,6 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ### Removed
 - Removed `Trotterisation.get_coeffs_indices()` (use `trotter_coeffs` and `trotter_indices` instead).
 - Removed `QPESpec.get_composite_bloq()` and `QPESpec.to_quest()`. Use `QPESpec.generate(QualtranBackend())` and `QPESpec.generate(QuESTBackend())` instead.
-- Removed the `python/examples/qpespec.ipynb` example notebook.
 
 ### Fixed
 - Fixed `QDRIFT` and `Trotterisation` call graphs undercounting rotations for repeated `PauliWord`s.
