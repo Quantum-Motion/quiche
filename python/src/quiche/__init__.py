@@ -19,18 +19,15 @@ from typing import TYPE_CHECKING
 
 __all__ = [
     "ElectronicHamiltonian",
-    "Errors",
     "HartreeFockState",
     "Mapping",
     "Pauli",
     "PauliSum",
     "PauliWord",
-    "PhaseEstimation",
     "QPESpec",
     "QuESTBackend",
     "QualtranBackend",
     "SecondQuantisedHamiltonian",
-    "Simulation",
     "bindings",
     "chemistry",
     "core",
@@ -42,18 +39,15 @@ __all__ = [
 
 _REEXPORTS = {
     "ElectronicHamiltonian": ".core.electronic",
-    "Errors": ".core.errors",
     "HartreeFockState": ".chemistry",
     "Mapping": ".chemistry",
     "Pauli": ".core.paulis",
     "PauliSum": ".core.paulis",
     "PauliWord": ".core.paulis",
-    "PhaseEstimation": ".core.algorithms",
     "QPESpec": ".dispatch.qpespec",
     "QuESTBackend": ".dispatch.backends.quest",
     "QualtranBackend": ".dispatch.backends.qualtran",
     "SecondQuantisedHamiltonian": ".core.electronic",
-    "Simulation": ".core.algorithms",
 }
 
 if TYPE_CHECKING:
@@ -67,9 +61,7 @@ if TYPE_CHECKING:
         simulation,
     )
     from .chemistry import HartreeFockState, Mapping
-    from .core.algorithms import PhaseEstimation, Simulation
     from .core.electronic import ElectronicHamiltonian, SecondQuantisedHamiltonian
-    from .core.errors import Errors
     from .core.paulis import Pauli, PauliSum, PauliWord
     from .dispatch import QPESpec
     from .dispatch.backends import QualtranBackend, QuESTBackend
