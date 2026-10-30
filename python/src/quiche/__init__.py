@@ -25,7 +25,6 @@ __all__ = [
     "Pauli",
     "PauliSum",
     "PauliWord",
-    "QPESpec",
     "QuESTBackend",
     "QualtranBackend",
     "SecondQuantisedHamiltonian",
@@ -46,7 +45,6 @@ _REEXPORTS = {
     "Pauli": ".core.paulis",
     "PauliSum": ".core.paulis",
     "PauliWord": ".core.paulis",
-    "QPESpec": ".dispatch.qpespec",
     "QuESTBackend": ".dispatch.backends.quest",
     "QualtranBackend": ".dispatch.backends.qualtran",
     "SecondQuantisedHamiltonian": ".core.electronic",
@@ -69,7 +67,6 @@ if TYPE_CHECKING:
         SecondQuantisedHamiltonian,
     )
     from .core.paulis import Pauli, PauliSum, PauliWord
-    from .dispatch import QPESpec
     from .dispatch.backends.qualtran import QualtranBackend
     from .dispatch.backends.quest import QuESTBackend
 
