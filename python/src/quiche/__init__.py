@@ -18,6 +18,7 @@ import importlib
 from typing import TYPE_CHECKING
 
 __all__ = [
+    "DFTHCHamiltonian",
     "ElectronicHamiltonian",
     "HartreeFockState",
     "Mapping",
@@ -38,6 +39,7 @@ __all__ = [
 ]
 
 _REEXPORTS = {
+    "DFTHCHamiltonian": ".core.electronic",
     "ElectronicHamiltonian": ".core.electronic",
     "HartreeFockState": ".chemistry",
     "Mapping": ".chemistry",
@@ -61,10 +63,15 @@ if TYPE_CHECKING:
         simulation,
     )
     from .chemistry import HartreeFockState, Mapping
-    from .core.electronic import ElectronicHamiltonian, SecondQuantisedHamiltonian
+    from .core.electronic import (
+        DFTHCHamiltonian,
+        ElectronicHamiltonian,
+        SecondQuantisedHamiltonian,
+    )
     from .core.paulis import Pauli, PauliSum, PauliWord
     from .dispatch import QPESpec
-    from .dispatch.backends import QualtranBackend, QuESTBackend
+    from .dispatch.backends.qualtran import QualtranBackend
+    from .dispatch.backends.quest import QuESTBackend
 
 
 def __getattr__(name: str) -> object:

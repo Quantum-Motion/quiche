@@ -14,10 +14,15 @@
 
 """Core data structures representing quantum primitives."""
 
-from .electronic import ElectronicHamiltonian, SecondQuantisedHamiltonian
+from .electronic import (
+    DFTHCHamiltonian,
+    ElectronicHamiltonian,
+    SecondQuantisedHamiltonian,
+)
 from .paulis import Pauli, PauliSum, PauliWord
 
 __all__ = [
+    "DFTHCHamiltonian",
     "ElectronicHamiltonian",
     "Pauli",
     "PauliSum",

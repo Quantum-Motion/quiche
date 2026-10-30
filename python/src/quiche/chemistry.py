@@ -45,7 +45,7 @@ def get_hf_state(num_spin_orbitals: int, num_electrons: int) -> NDArray[np.int_]
 
     Returns
     -------
-    NDArray[np.int_]
+    ``NDArray[np.int_]``
         The HF state with the lowest ``num_electrons`` number of orbitals occupied.
 
     """
@@ -73,12 +73,12 @@ def get_jw_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int
 
     Parameters
     ----------
-    occupation : Sequence[int] | NDArray[np.int_]
+    occupation : Sequence[int] | ``NDArray[np.int_]``
         Occupation basis state to convert.
 
     Returns
     -------
-    NDArray[np.int_]
+    ``NDArray[np.int_]``
         The qubit basis state resulting from the fermion-to-qubit mapping.
 
     """
@@ -91,12 +91,12 @@ def get_parity_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np
 
     Parameters
     ----------
-    occupation : Sequence[int] | NDArray[np.int_]
+    occupation : Sequence[int] | ``NDArray[np.int_]``
         Occupation basis state to convert.
 
     Returns
     -------
-    NDArray[np.int_]
+    ``NDArray[np.int_]``
         The qubit basis state resulting from the fermion-to-qubit mapping.
 
     """
@@ -115,7 +115,7 @@ def _bk_transformation_matrix(size: int) -> NDArray[np.int_]:
 
     Returns
     -------
-    NDArray
+    ``NDArray[np.int_]``
         Matrix transforming from occupation basis to qubit basis.
 
     """
@@ -135,12 +135,12 @@ def get_bk_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int
 
     Parameters
     ----------
-    occupation : Sequence[int] | NDArray[np.int_]
+    occupation : Sequence[int] | ``NDArray[np.int_]``
         Occupation basis state to convert.
 
     Returns
     -------
-    NDArray[np.int_]
+    ``NDArray[np.int_]``
         The qubit basis state resulting from the fermion-to-qubit mapping.
 
     """
@@ -158,14 +158,14 @@ def get_qubit_state(
 
     Parameters
     ----------
-    occupation : Sequence[int] | NDArray[np.int_]
+    occupation : Sequence[int] | ``NDArray[np.int_]``
         Occupation basis state to convert.
     mapping : Mapping
         Fermion-to-qubit mapping to apply.
 
     Returns
     -------
-    NDArray[np.int_]
+    ``NDArray[np.int_]``
         The qubit basis state resulting from the fermion-to-qubit mapping.
 
     """

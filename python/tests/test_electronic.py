@@ -14,11 +14,51 @@
 
 """Tests for electronic module."""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 from numpy.typing import NDArray
 
 from quiche.core import SecondQuantisedHamiltonian
+from quiche.core.electronic import DFTHCHamiltonian
+from quiche.io import dfthc_db
+
+
+@pytest.fixture
+def factors() -> dict:
+    """Return a consistent set of DFTHC factors (ones, so no zero vectors)."""
+    norb, ranks, bases, copies = 3, 2, 4, 2
+    return {
+        "num_orbitals": norb,
+        "num_ranks": ranks,
+        "num_bases": bases,
+        "num_copies": copies,
+        "unit_vectors": np.ones((ranks, bases, norb)),
+        "weight_vectors": np.ones((ranks, bases, copies)),
+        "bliss_matrix": np.ones((norb, norb)),
+        "factorised_one_body": np.ones((norb, norb)),
+        "const": 0.5,
+        "num_electrons": 2,
+    }
+
+
+@pytest.fixture
+def path_to_dfthc_input_data() -> str:
+    """Path to the DFTHC database test file."""
+    return str(Path(__file__).parent / "dfthc_data" / "sq_results.db")
+
+
+@pytest.fixture
+def path_to_dfthc_one_body_reference() -> str:
+    """Return the path to the reference reconstructed one-body integrals."""
+    return str(Path(__file__).parent / "dfthc_data" / "reconstructed_one_body.npy")
+
+
+@pytest.fixture
+def path_to_dfthc_two_body_reference() -> str:
+    """Return the path to the reference reconstructed two-body integrals."""
+    return str(Path(__file__).parent / "dfthc_data" / "reconstructed_two_body.npy")
 
 
 class TestSecondQuantisedHamiltonian:
@@ -105,3 +145,81 @@ class TestSecondQuantisedHamiltonian:
 
         assert hamiltonian.num_spatial_orbitals == norb
         assert hamiltonian.num_spin_orbitals == 2 * norb
+
+
+class TestDFTHCHamiltonian:
+    """Test DFTHCHamiltonian class."""
+
+    @pytest.mark.parametrize(
+        "name", ["num_orbitals", "num_ranks", "num_bases", "num_copies"]
+    )
+    @pytest.mark.parametrize("value", [0, -1])
+    def test_non_positive_dimensions(self, factors: dict, name: str, value: int):
+        factors[name] = value
+
+        with pytest.raises(ValueError, match="All dimensions must be positive"):
+            DFTHCHamiltonian(**factors)
+
+    @pytest.mark.parametrize(
+        ("num_electrons", "error_msg"),
+        [
+            (-1, "number of electrons must be non-negative"),
+            (7, "number of electrons must not exceed the number of spin orbitals"),
+        ],
+    )
+    def test_invalid_num_electrons(
+        self, factors: dict, num_electrons: int, error_msg: str
+    ):
+        factors["num_electrons"] = num_electrons  # 3 orbitals, so at most 6.
+
+        with pytest.raises(ValueError, match=error_msg):
+            DFTHCHamiltonian(**factors)
+
+    def test_complex_factors(self, factors: dict):
+        factors["bliss_matrix"] = factors["bliss_matrix"] * 1j
+
+        with pytest.raises(ValueError, match="must be real"):
+            DFTHCHamiltonian(**factors)
+
+    @pytest.mark.parametrize(
+        ("name", "shape"),
+        [
+            ("unit_vectors", (2, 4, 5)),
+            ("weight_vectors", (2, 5, 2)),
+            ("bliss_matrix", (3, 4)),
+            ("factorised_one_body", (2, 2)),
+        ],
+    )
+    def test_invalid_shapes(self, factors: dict, name: str, shape: tuple[int, ...]):
+        factors[name] = np.ones(shape)
+
+        with pytest.raises(ValueError, match=f"{name} has shape"):
+            DFTHCHamiltonian(**factors)
+
+    def test_zero_unit_vector(self, factors: dict):
+        factors["unit_vectors"][0, 0, :] = 0.0
+
+        with pytest.raises(ValueError, match="contains a zero vector"):
+            DFTHCHamiltonian(**factors)
+
+    def test_reconstruct(
+        self,
+        path_to_dfthc_input_data: str,
+        path_to_dfthc_one_body_reference: str,
+        path_to_dfthc_two_body_reference: str,
+    ):
+        hamiltonian = dfthc_db.read(path_to_dfthc_input_data, 1)
+        reconstructed = hamiltonian.reconstruct()
+
+        assert isinstance(reconstructed, SecondQuantisedHamiltonian)
+        assert reconstructed.num_spatial_orbitals == 15
+        assert reconstructed.num_electrons == hamiltonian.num_electrons
+        assert reconstructed.core_energy == hamiltonian.const
+        assert reconstructed.one_body.shape == (15, 15)
+        assert reconstructed.two_body.shape == (15,) * 4
+        np.testing.assert_allclose(
+            reconstructed.one_body, np.load(path_to_dfthc_one_body_reference), atol=1e-6
+        )
+        np.testing.assert_allclose(
+            reconstructed.two_body, np.load(path_to_dfthc_two_body_reference), atol=1e-6
+        )
