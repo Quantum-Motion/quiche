@@ -39,11 +39,3 @@ class Simulation(StrEnum):
     QDRIFT = auto()
     Qubitised = auto()
     Trotter = auto()
-
-
-class Mapping(StrEnum):
-    """Fermion-to-Qubit mappings."""
-
-    BravyiKitaev = auto()
-    JordanWigner = auto()
-    Parity = auto()

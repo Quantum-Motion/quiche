@@ -32,7 +32,8 @@ Pairing the sum with the electron count and the relevant fermion-to-qubit mappin
 an {py:class}`~quiche.core.electronic.ElectronicHamiltonian`.
 
 ```python
-from quiche.core import ElectronicHamiltonian, Mapping
+from quiche.chemistry import Mapping
+from quiche.core import ElectronicHamiltonian
 
 ham = ElectronicHamiltonian(
     num_electrons=2,

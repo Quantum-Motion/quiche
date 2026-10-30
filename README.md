@@ -40,11 +40,10 @@ from quiche.io import hamlib
 from quiche.core import (
     ElectronicHamiltonian,
     Errors,
-    Mapping,
     PhaseEstimation,
     Simulation,
 )
-from quiche.chemistry import HartreeFockState
+from quiche.chemistry import HartreeFockState, Mapping
 from quiche.dispatch import QPESpec
 from quiche.dispatch.backends import QualtranBackend
 from quiche.resources.logical import logical_gate_resources, logical_qubit_resources

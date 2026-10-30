@@ -44,7 +44,7 @@ _REEXPORTS = {
     "ElectronicHamiltonian": ".core.electronic",
     "Errors": ".core.errors",
     "HartreeFockState": ".chemistry",
-    "Mapping": ".core.algorithms",
+    "Mapping": ".chemistry",
     "Pauli": ".core.paulis",
     "PauliSum": ".core.paulis",
     "PauliWord": ".core.paulis",
@@ -66,8 +66,8 @@ if TYPE_CHECKING:
         resources,
         simulation,
     )
-    from .chemistry import HartreeFockState
-    from .core.algorithms import Mapping, PhaseEstimation, Simulation
+    from .chemistry import HartreeFockState, Mapping
+    from .core.algorithms import PhaseEstimation, Simulation
     from .core.electronic import ElectronicHamiltonian, SecondQuantisedHamiltonian
     from .core.errors import Errors
     from .core.paulis import Pauli, PauliSum, PauliWord

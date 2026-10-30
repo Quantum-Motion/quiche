@@ -16,13 +16,20 @@
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from enum import StrEnum, auto
 from math import ceil, log2
 from typing import Self
 
 import numpy as np
 from numpy.typing import NDArray
 
-from quiche.core import Mapping
+
+class Mapping(StrEnum):
+    """Fermion-to-Qubit mappings."""
+
+    BravyiKitaev = auto()
+    JordanWigner = auto()
+    Parity = auto()
 
 
 def get_hf_state(num_spin_orbitals: int, num_electrons: int) -> NDArray[np.int_]:
