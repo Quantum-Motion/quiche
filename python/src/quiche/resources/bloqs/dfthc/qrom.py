@@ -901,7 +901,9 @@ class RotationQROM(UnaryIterationGate):
             return {(CNOT(), 1)}
 
         # Same placeholder data as `nth_operation`, so counts match the decomposition.
-        data = 0 if self.rotation_data is None else self.rotation_data[rank][inner_index]
+        data = (
+            0 if self.rotation_data is None else self.rotation_data[rank][inner_index]
+        )
         return {(XorK(QAny(self.rotations_size), data).controlled(), 1)}
 
     def adjoint(self) -> Bloq:

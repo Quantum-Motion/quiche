@@ -20,6 +20,8 @@ import attrs
 import numpy as np
 import pytest
 from numpy.typing import ArrayLike
+from qualtran import BloqBuilder
+from qualtran.resource_counting import QECGatesCost, get_cost_value
 from qualtran.resource_counting.generalizers import ignore_alloc_free, ignore_split_join
 from qualtran.simulation.classical_sim import ClassicalValT
 from qualtran.testing import (
@@ -244,6 +246,14 @@ class TestRotationQROM:
                 rotation_data=data,
             )
 
+    def test_bloq_counts_without_data(self):
+        # Without data the call graph must still match the decomposition, which loads
+        # zeros with a controlled XorK rather than the `(CNOT(), 0)` placeholder.
+        assert_equivalent_bloq_counts(
+            attrs.evolve(self.qrom, rotation_data=None),
+            generalizer=[ignore_split_join, ignore_alloc_free],
+        )
+
 
 class TestMajorana:
     """Tests for the Majorana operator."""
@@ -257,6 +267,52 @@ class TestMajorana:
         assert_equivalent_bloq_counts(
             self.majorana, generalizer=[ignore_split_join, ignore_alloc_free]
         )
+
+
+class TestGivensLadder:
+    """Tests for the ladder of Givens rotations."""
+
+    ladder = GivensLadder(num_orbitals=N, num_bits_phase_grad=B_ROT)
+
+    def test_decomposition(self):
+        assert_valid_bloq_decomposition(self.ladder)
+
+    def test_bloq_counts(self):
+        assert_equivalent_bloq_counts(
+            self.ladder, generalizer=[ignore_split_join, ignore_alloc_free]
+        )
+
+    def test_cliffords_per_rung(self):
+        cost = get_cost_value(self.ladder, QECGatesCost())
+        # Per rung: 12 explicit Cliffords, plus 9 b_rot - 8 for each of the two
+        # additions into the phase gradient.
+        assert cost.clifford == (N - 1) * (12 + 2 * (9 * B_ROT - 8))
+
+    @pytest.mark.xfail(
+        reason=(
+            "Qualtran's RealGivensRotationByPhaseGradient differs from the rotation it "
+            "documents by a Z on target_i. GivensLadder does not add the compensating "
+            "Z per rung, so it flips signs of the rotated orbital. Resource counts are "
+            "unaffected. Remove once fixed upstream."
+        ),
+        strict=True,
+    )
+    def test_zero_angles_is_identity(self):
+        ladder = GivensLadder(num_orbitals=2, num_bits_phase_grad=4)
+        bb = BloqBuilder()
+        system = bb.add_register("system", 2)
+        rotations = bb.allocate(ladder.rotations_size)
+        phase_grad = bb.allocate(4)
+        rotations, phase_grad, system = bb.add(
+            ladder, rotations=rotations, phase_grad=phase_grad, system=system
+        )
+        bb.free(rotations)
+        bb.free(phase_grad)
+        unitary = bb.finalize(system=system).tensor_contract()
+
+        # Zero angles rotate nothing, so the ladder is the identity up to a global
+        # phase. Qualtran's rotation gives -iZ on target_i instead.
+        np.testing.assert_allclose(unitary / unitary[0, 0], np.eye(4), atol=1e-10)
 
 
 class TestSelectDFTHC:
