@@ -39,6 +39,7 @@ from quiche.resources.bloqs.dfthc import (
     SelectDFTHC,
 )
 from quiche.resources.bloqs.dfthc.encodings import (
+    _givens_angles,
     pack_integers,
     quantise_angles,
     rotation_qrom_angles,
@@ -411,12 +412,11 @@ class TestDFTHCWalkOperator:
 class TestQuantiseAngles:
     """Tests for converting angles to integers."""
 
-    def test_rotation_angles_generation(self, factors: dict):
+    def test_rotation_angles_generation(self):
         # Un-normalised vectors with mixed signs, including the last coordinate.
         vectors = 3.7 * np.random.default_rng(0).normal(size=(2, 4, 3))
-        factors["unit_vectors"] = vectors
 
-        angles = rotation_qrom_angles(DFTHCHamiltonian(**factors))
+        angles = _givens_angles(vectors)
 
         assert angles.shape == (2, 4, 2)
         # Invert the Givens ladder: u_j = (prod_{k<j} sin t_k) cos t_j for j < N - 1,
