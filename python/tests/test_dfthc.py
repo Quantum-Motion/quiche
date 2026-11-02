@@ -285,7 +285,7 @@ class TestGivensLadder:
     def test_cliffords_per_rung(self):
         cost = get_cost_value(self.ladder, QECGatesCost())
         # Per rung: 12 explicit Cliffords, plus 9 b_rot - 8 for each of the two
-        # additions into the phase gradient.
+        # additions into the phase gradient (Qualtran 0.7 counts).
         assert cost.clifford == (N - 1) * (12 + 2 * (9 * B_ROT - 8))
 
     @pytest.mark.xfail(
