@@ -291,9 +291,9 @@ class TestGivensLadder:
     @pytest.mark.xfail(
         reason=(
             "Qualtran's RealGivensRotationByPhaseGradient differs from the rotation it "
-            "documents by a Z on target_i. GivensLadder does not add the compensating "
-            "Z per rung, so it flips signs of the rotated orbital. Resource counts are "
-            "unaffected. Remove once fixed upstream."
+            "documents by a Z on target_i, so the ladder does not equal the identity"
+            "with a zero rotation angle. Resource counts are unaffected."
+            "Remove once fixed upstream."
         ),
         strict=True,
     )
@@ -310,8 +310,6 @@ class TestGivensLadder:
         bb.free(phase_grad)
         unitary = bb.finalize(system=system).tensor_contract()
 
-        # Zero angles rotate nothing, so the ladder is the identity up to a global
-        # phase. Qualtran's rotation gives -iZ on target_i instead.
         np.testing.assert_allclose(unitary / unitary[0, 0], np.eye(4), atol=1e-10)
 
 
