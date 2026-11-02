@@ -31,7 +31,8 @@ def _givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
     remainder_norms[..., -1] = vectors[..., -1]
     return np.arctan2(remainder_norms, vectors[..., :-1])
 
-def rotation_qrom_angles(DFTHCHamiltonian: DFTHCHamiltonian) -> NDArray[np.float64]:
+
+def rotation_qrom_angles(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.float64]:
     """
     Givens ladder angles of every direction u(R, B) ([Low2025]_, appendix 5B).
 
@@ -47,7 +48,8 @@ def rotation_qrom_angles(DFTHCHamiltonian: DFTHCHamiltonian) -> NDArray[np.float
         Oct. 2025.
 
     """
-    return _givens_angles(DFTHCHamiltonian.unit_vectors)
+    return _givens_angles(dfthc_hamiltonian.unit_vectors)
+
 
 def quantise_angles(
     radian_angles: ArrayLike, num_bits: int, *, rng: np.random.Generator | None = None

@@ -426,7 +426,7 @@ class TestQuantiseAngles:
         rebuilt = np.concatenate([prefix * np.cos(angles), sines[..., -1:]], axis=-1)
         expected = vectors / np.linalg.norm(vectors, axis=-1, keepdims=True)
         np.testing.assert_allclose(rebuilt, expected, atol=1e-12)
-    
+
     @pytest.mark.parametrize(
         ("angles", "expected"),
         [
