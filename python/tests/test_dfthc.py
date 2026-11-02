@@ -39,7 +39,7 @@ from quiche.resources.bloqs.dfthc import (
     SelectDFTHC,
 )
 from quiche.resources.bloqs.dfthc.encodings import (
-    _givens_angles,
+    givens_angles,
     pack_integers,
     quantise_angles,
     rotation_qrom_angles,
@@ -416,7 +416,7 @@ class TestQuantiseAngles:
         # Un-normalised vectors with mixed signs, including the last coordinate.
         vectors = 3.7 * np.random.default_rng(0).normal(size=(2, 4, 3))
 
-        angles = _givens_angles(vectors)
+        angles = givens_angles(vectors)
 
         assert angles.shape == (2, 4, 2)
         # Invert the Givens ladder: u_j = (prod_{k<j} sin t_k) cos t_j for j < N - 1,

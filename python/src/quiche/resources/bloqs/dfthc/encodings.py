@@ -20,16 +20,21 @@ from numpy.typing import ArrayLike, NDArray
 from quiche.core.electronic import DFTHCHamiltonian
 
 
-def _givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
+def givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
     """Transform the given vectors into a set of rotation angles."""
-    # Norm of each vector from coordinate k onwards.
-    tail_norms = np.sqrt(np.cumsum((vectors**2)[..., ::-1], axis=-1)[..., ::-1])
-    remainder_norms = tail_norms[..., 1:].copy()
+    current = vectors[..., :-1]
+    next_ = vectors[..., 1:]
+
+    suffix_sum_squares = np.flip(
+        np.cumsum(np.flip(next_**2, axis=-1), axis=-1), axis=-1
+    )
+    suffix_norm = np.sqrt(suffix_sum_squares)
 
     # The last remainder is the final coordinate itself; it keeps its sign,
     # otherwise flipping it would give the same angles.
-    remainder_norms[..., -1] = vectors[..., -1]
-    return np.arctan2(remainder_norms, vectors[..., :-1])
+    suffix_norm[..., -1:] = next_[..., -1:]
+
+    return np.arctan2(suffix_norm, current)
 
 
 def rotation_qrom_angles(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.float64]:
@@ -48,7 +53,7 @@ def rotation_qrom_angles(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.floa
         Oct. 2025.
 
     """
-    return _givens_angles(dfthc_hamiltonian.unit_vectors)
+    return givens_angles(dfthc_hamiltonian.unit_vectors)
 
 
 def quantise_angles(
