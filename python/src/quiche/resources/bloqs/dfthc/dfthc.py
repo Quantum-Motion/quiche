@@ -41,7 +41,10 @@ from qualtran.resource_counting import (
 from qualtran.symbolics import bit_length
 
 from quiche.core.electronic import DFTHCHamiltonian
-from quiche.resources.bloqs.dfthc.encodings import encode_rotation_data
+from quiche.resources.bloqs.dfthc.encodings import (
+    encode_rotation_data,
+    rotation_qrom_angles,
+)
 from quiche.resources.bloqs.dfthc.prep import (
     InnerPrepareDFTHC,
     OuterPrepareDFTHC,
@@ -522,7 +525,7 @@ class DFTHCBlockEncoding(BlockEncoding):
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
             rotation_data=encode_rotation_data(
-                hamiltonian.rotation_angles(), num_bits_phase_grad, rng=rng
+                rotation_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
             ),
         )
 
@@ -885,7 +888,7 @@ class DFTHCWalkOperator(Bloq):
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
             rotation_data=encode_rotation_data(
-                hamiltonian.rotation_angles(), num_bits_phase_grad, rng=rng
+                rotation_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
             ),
         )
 

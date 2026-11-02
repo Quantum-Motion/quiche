@@ -38,7 +38,11 @@ from quiche.resources.bloqs.dfthc import (
     RotationPrepareDFTHC,
     SelectDFTHC,
 )
-from quiche.resources.bloqs.dfthc.encodings import pack_integers, quantise_angles
+from quiche.resources.bloqs.dfthc.encodings import (
+    pack_integers,
+    quantise_angles,
+    rotation_qrom_angles,
+)
 from quiche.resources.bloqs.dfthc.qrom import RotationQROM
 from quiche.resources.bloqs.dfthc.select import GivensLadder
 
@@ -340,7 +344,7 @@ class TestDFTHCBlockEncoding:
         # The angles the ladder reads from the words are those of the Hamiltonian.
         np.testing.assert_allclose(
             np.exp(1j * decode_rotation_data(block_encoding_from_fh.rotation_data)),
-            np.exp(1j * dummy_dfthc_hamiltonian.rotation_angles()),
+            np.exp(1j * rotation_qrom_angles(dummy_dfthc_hamiltonian)),
             rtol=0,
             atol=2 * np.pi / 2**B_ROT,
         )
@@ -396,7 +400,7 @@ class TestDFTHCWalkOperator:
         # The angles the ladder reads from the words are those of the Hamiltonian.
         np.testing.assert_allclose(
             np.exp(1j * decode_rotation_data(walk_from_fh.rotation_data)),
-            np.exp(1j * dummy_dfthc_hamiltonian.rotation_angles()),
+            np.exp(1j * rotation_qrom_angles(dummy_dfthc_hamiltonian)),
             rtol=0,
             atol=2 * np.pi / 2**B_ROT,
         )
@@ -407,6 +411,22 @@ class TestDFTHCWalkOperator:
 class TestQuantiseAngles:
     """Tests for converting angles to integers."""
 
+    def test_rotation_angles_generation(self, factors: dict):
+        # Un-normalised vectors with mixed signs, including the last coordinate.
+        vectors = 3.7 * np.random.default_rng(0).normal(size=(2, 4, 3))
+        factors["unit_vectors"] = vectors
+
+        angles = rotation_qrom_angles(DFTHCHamiltonian(**factors))
+
+        assert angles.shape == (2, 4, 2)
+        # Invert the Givens ladder: u_j = (prod_{k<j} sin t_k) cos t_j for j < N - 1,
+        # and u_{N-1} = prod_k sin t_k.
+        sines = np.cumprod(np.sin(angles), axis=-1)
+        prefix = np.concatenate([np.ones((2, 4, 1)), sines[..., :-1]], axis=-1)
+        rebuilt = np.concatenate([prefix * np.cos(angles), sines[..., -1:]], axis=-1)
+        expected = vectors / np.linalg.norm(vectors, axis=-1, keepdims=True)
+        np.testing.assert_allclose(rebuilt, expected, atol=1e-12)
+    
     @pytest.mark.parametrize(
         ("angles", "expected"),
         [
