@@ -466,10 +466,9 @@ class TestDFTHCWalkOperator:
 class TestQuantiseAngles:
     """Tests for converting angles to integers."""
 
-    def test_rotation_angles_generation(self):
+    def test_givens_angles_generation(self):
         # Un-normalised vectors with mixed signs, including the last coordinate.
         vectors = 3.7 * np.random.default_rng(0).normal(size=(2, 4, 3))
-
         angles = givens_angles(vectors)
 
         assert angles.shape == (2, 4, 2)
