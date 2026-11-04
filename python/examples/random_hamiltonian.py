@@ -1,19 +1,38 @@
+# Copyright 2026 Quantum Motion Technologies Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Random second quantised Hamiltonians for the example notebooks."""
+
 import numpy as np
 
 from quiche.core import SecondQuantisedHamiltonian
 
 
-def generate_random_one_body_integrals(n_orb: int, seed: int = None) -> np.ndarray:
-    """Generates a random matrix representing one body integrals for real-valued spatial orbitals.
+def generate_random_one_body_integrals(
+    n_orb: int, seed: int | None = None
+) -> np.ndarray:
+    """
+    Generate random one body integrals for real-valued spatial orbitals.
 
     Args:
-        n_orb (int): The number of sptial orbitals
+        n_orb (int): The number of spatial orbitals
         seed (int, optional): Random seed. Defaults to None.
 
     Returns:
         np.ndarray: A valid n_orb X n_orb symmetric matrix.
-    """
 
+    """
     rng = np.random.default_rng(seed)
     h_core = np.zeros([n_orb] * 2)
 
@@ -29,17 +48,20 @@ def generate_random_one_body_integrals(n_orb: int, seed: int = None) -> np.ndarr
     return h_core
 
 
-def generate_random_two_body_integrals(n_orb: int, seed: int = None) -> np.ndarray:
-    """Generates a random tensor representing two body integrals for real-valued spatial orbitals.
+def generate_random_two_body_integrals(
+    n_orb: int, seed: int | None = None
+) -> np.ndarray:
+    """
+    Generate random two body integrals for real-valued spatial orbitals.
 
     Args:
-        n_orb (int): The number of sptial orbitals
+        n_orb (int): The number of spatial orbitals
         seed (int, optional): Random seed. Defaults to None.
 
     Returns:
         np.ndarray: A valid n_orb X n_orb X n_orb X n_orb tensor.
-    """
 
+    """
     rng = np.random.default_rng(seed)
     eri = np.zeros([n_orb] * 4)
 
@@ -71,8 +93,21 @@ def generate_random_two_body_integrals(n_orb: int, seed: int = None) -> np.ndarr
     return eri
 
 
-def generate_random_sq_hamiltonian(n_orb: int, n_elec: int, seed: int = None):
+def generate_random_sq_hamiltonian(
+    n_orb: int, n_elec: int, seed: int | None = None
+) -> SecondQuantisedHamiltonian:
+    """
+    Generate a random second quantised Hamiltonian for real-valued spatial orbitals.
 
+    Args:
+        n_orb (int): The number of spatial orbitals
+        n_elec (int): The number of electrons
+        seed (int, optional): Random seed. Defaults to None.
+
+    Returns:
+        SecondQuantisedHamiltonian: Hamiltonian with random integrals and core energy.
+
+    """
     # Define the chemical system.
     rng = np.random.default_rng(seed)
     one_body = generate_random_one_body_integrals(n_orb, seed)
@@ -80,11 +115,9 @@ def generate_random_sq_hamiltonian(n_orb: int, n_elec: int, seed: int = None):
     core_energy = rng.random()
 
     # Define the second quantisation electronic Hamiltonian.
-    sq_ham = SecondQuantisedHamiltonian(
+    return SecondQuantisedHamiltonian(
         one_body=one_body,
         two_body=two_body,
         num_electrons=n_elec,
         core_energy=core_energy,
     )
-
-    return sq_ham
