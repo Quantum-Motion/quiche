@@ -21,7 +21,31 @@ from quiche.core.electronic import DFTHCHamiltonian
 
 
 def givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
-    """Transform the given vectors into a set of rotation angles."""
+    """
+    Transform the given vectors into a set of rotation angles.
+
+    Any given array of vectors gets encoded into an array containing
+    Givens rotation angles as floats, following the encoding scheme from
+    [Low2025]_, appendix 5B.
+
+    Parameters
+    ----------
+    vectors : ArrayLike
+        An array like object containing floats that can be encoded as
+        Givens rotation angles.
+
+    Returns
+    -------
+    NDArray[np.float64]
+        An array of rotation (Givens) angles of shape ``(R, B, N-1)``.
+
+    References
+    ----------
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+        by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
+        Oct. 2025.
+
+    """
     current = vectors[..., :-1]
     next_ = vectors[..., 1:]
 
@@ -40,6 +64,15 @@ def givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
 def rotation_qrom_angles(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.float64]:
     """
     Givens ladder angles of every direction u(R, B) ([Low2025]_, appendix 5B).
+
+    This method specifically calculates those angles that are loaded into the
+    RotationQROM, from the `unit_vectors` of the DFTHCHamiltonian object.
+
+    Parameters
+    ----------
+    dfthc_hamiltonian : DFTHCHamiltonian
+        A QUICHE DFTHCHamiltonian object containing the factors that
+        need to be encoded into angles
 
     Returns
     -------
