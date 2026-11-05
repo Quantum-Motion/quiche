@@ -784,14 +784,6 @@ class RotationQROM(UnaryIterationGate):
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
 
-    Notes
-    -----
-        If implemented correctly, applying a rotation of zero degrees
-        corresponds to applying the identity operation.
-        However, due to a Qualtran bug, a zero degree rotation currently
-        returns -iZ. The corresponding test is set to fail,
-        because of this upstream bug. This bug has no effect on the Toffoli count.
-
     """
 
     num_orbitals: int
