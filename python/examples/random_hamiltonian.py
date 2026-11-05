@@ -80,15 +80,15 @@ def generate_random_two_body_integrals(
                             # off-diagonal transition elements.
                             val = rng.uniform(-0.5, 0.5)
 
-                    # eight-fold symmetry (real-valued spatial orbitals)
-                    eri[p, q, r, s] = val
-                    eri[q, p, r, s] = val
-                    eri[p, q, s, r] = val
-                    eri[q, p, s, r] = val
-                    eri[r, s, p, q] = val
-                    eri[s, r, p, q] = val
-                    eri[r, s, q, p] = val
-                    eri[s, r, q, p] = val
+                        # eight-fold symmetry (real-valued spatial orbitals)
+                        eri[p, q, r, s] = val
+                        eri[q, p, r, s] = val
+                        eri[p, q, s, r] = val
+                        eri[q, p, s, r] = val
+                        eri[r, s, p, q] = val
+                        eri[s, r, p, q] = val
+                        eri[r, s, q, p] = val
+                        eri[s, r, q, p] = val
 
     return eri
 
