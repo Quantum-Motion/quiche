@@ -298,11 +298,6 @@ class TestGivensLadder:
         strict=True,
     )
     def test_zero_angles_is_identity(self):
-        # If implemented correctly in Qualtran, applying a rotation of zero degrees
-        # corresponds to applying the identity operation.
-        # However, due to a Qualtran bug, a zero degree rotation currently
-        # returns -iZ. Because of this, this test should fail, until a fix
-        # is implemented upstream.
         ladder = GivensLadder(num_orbitals=2, num_bits_phase_grad=4)
         bb = BloqBuilder()
         system = bb.add_register("system", 2)
