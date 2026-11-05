@@ -14,10 +14,47 @@
 
 """Binary word encodings of rotation angles for QROM data loading."""
 
+from collections.abc import Iterable
+from operator import index
+from typing import SupportsIndex
+
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from quiche.core.electronic import DFTHCHamiltonian
+
+type RotationData = tuple[tuple[int, ...], ...]
+"""Packed rotation words loaded by ``RotationQROM``, indexed ``[rank][inner_index]``."""
+
+
+def as_rotation_data(
+    value: Iterable[Iterable[SupportsIndex]] | None,
+) -> RotationData | None:
+    """
+    Coerce packed rotation words to nested tuples of Python integers.
+
+    Used as the attrs converter for every ``rotation_data`` field, so that lists and
+    NumPy arrays are accepted. Shape and bit width are validated by ``RotationQROM``.
+
+    Parameters
+    ----------
+    value : Iterable[Iterable[SupportsIndex]] | None
+        Nested iterable of integer words, indexed ``[rank][inner_index]``, or None.
+
+    Returns
+    -------
+    RotationData | None
+        The words as a tuple of tuples of ``int``, or None if ``value`` is None.
+
+    Raises
+    ------
+    TypeError
+        If any word is not an integer (e.g. a float).
+
+    """
+    if value is None:
+        return None
+    return tuple(tuple(index(word) for word in row) for row in value)
 
 
 def givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -212,7 +249,7 @@ def pack_integers(integer_angles: ArrayLike, num_bits: int) -> int:
 
 def encode_rotation_data(
     radian_angles: ArrayLike, num_bits: int, *, rng: np.random.Generator | None = None
-) -> tuple[tuple[int, ...], ...]:
+) -> RotationData:
     """
     Encode Givens rotation angles as the words loaded by the rotation QROM.
 

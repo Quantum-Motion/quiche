@@ -37,6 +37,7 @@ from qualtran.resource_counting import (
 )
 from qualtran.symbolics import bit_length
 
+from quiche.resources.bloqs.dfthc.encodings import RotationData, as_rotation_data
 from quiche.resources.bloqs.dfthc.qrom import (
     InnerQROAM,
     InnerQROMTail,
@@ -673,9 +674,10 @@ class RotationPrepareDFTHC(Bloq):
         [Low2025]_.
 
     rotation_data : tuple[tuple[int, ...], ...] | None, optional
-        Packed Givens rotation words, indexed ``rotation_data[rank][inner_index]``
-        for ``inner_index < num_bases``. Each word holds :math:`N - 1` angles of
-        :math:`b_{rot}` bits, with the first angle in the most significant bits.
+        Packed Givens rotation words loaded by the rotation QROM, indexed
+        ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
+        If None (default), placeholder data is used, which is sufficient for
+        Toffoli resource estimation.
 
     Registers
     ---------
@@ -705,8 +707,8 @@ class RotationPrepareDFTHC(Bloq):
 
     num_bits_phase_grad: int
 
-    rotation_data: tuple[tuple[int, ...], ...] | None = attrs.field(
-        default=None, repr=False
+    rotation_data: RotationData | None = attrs.field(
+        default=None, repr=False, converter=as_rotation_data
     )
 
     @property

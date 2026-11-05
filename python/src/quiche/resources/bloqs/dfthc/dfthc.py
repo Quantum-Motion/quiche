@@ -42,6 +42,8 @@ from qualtran.symbolics import bit_length
 
 from quiche.core.electronic import DFTHCHamiltonian
 from quiche.resources.bloqs.dfthc.encodings import (
+    RotationData,
+    as_rotation_data,
     encode_rotation_data,
     rotation_qrom_angles,
 )
@@ -145,8 +147,8 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
     log_block_size_inner: int
     log_block_size_inner_adjoint: int
 
-    rotation_data: tuple[tuple[int, ...], ...] | None = attrs.field(
-        default=None, repr=False
+    rotation_data: RotationData | None = attrs.field(
+        default=None, repr=False, converter=as_rotation_data
     )
 
     def __attrs_post_init__(self) -> None:
@@ -432,8 +434,8 @@ class DFTHCBlockEncoding(BlockEncoding):
 
     num_controls: int = 0
 
-    rotation_data: tuple[tuple[int, ...], ...] | None = attrs.field(
-        default=None, repr=False
+    rotation_data: RotationData | None = attrs.field(
+        default=None, repr=False, converter=as_rotation_data
     )
 
     def __attrs_post_init__(self) -> None:
@@ -803,8 +805,8 @@ class DFTHCWalkOperator(Bloq):
 
     num_controls: int = 0
 
-    rotation_data: tuple[tuple[int, ...], ...] | None = attrs.field(
-        default=None, repr=False
+    rotation_data: RotationData | None = attrs.field(
+        default=None, repr=False, converter=as_rotation_data
     )
 
     @classmethod

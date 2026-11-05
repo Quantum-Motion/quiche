@@ -40,6 +40,7 @@ from qualtran.bloqs.multiplexers.unary_iteration_bloq import UnaryIterationGate
 from qualtran.bloqs.swap_network import SwapWithZero
 from qualtran.symbolics import bit_length
 
+from quiche.resources.bloqs.dfthc.encodings import RotationData, as_rotation_data
 from quiche.resources.bloqs.dfthc.utils import extract_soqs
 
 if TYPE_CHECKING:
@@ -782,14 +783,15 @@ class RotationQROM(UnaryIterationGate):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
+    
+    Notes
+    -----
+        If implemented correctly, applying a rotation of zero degrees
+        corresponds to applying the identity operation.
+        However, due to a Qualtran bug, a zero degree rotation currently
+        returns -iZ. The corresponding test is set to fail,
+        because of this upstream bug. This bug has no effect on the Toffoli count.
     """
-
-    # NOTE: If implemented correctly, applying a rotation of zero degrees
-    # corresponds to applying the identity operation.
-    # However, due to a Qualtran bug, a zero degree rotation currently
-    # returns -iZ. The corresponding test is set to fail,
-    # because of this upstream bug. This bug has no effect on the Toffoli count.
 
     num_orbitals: int
     num_ranks: int
@@ -799,8 +801,8 @@ class RotationQROM(UnaryIterationGate):
 
     num_controls: int = 0
 
-    rotation_data: tuple[tuple[int, ...], ...] | None = attrs.field(
-        default=None, repr=False
+    rotation_data: RotationData | None = attrs.field(
+        default=None, repr=False, converter=as_rotation_data
     )
 
     def __attrs_post_init__(self) -> None:
