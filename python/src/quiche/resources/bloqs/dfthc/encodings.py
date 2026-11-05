@@ -59,11 +59,13 @@ def as_rotation_data(
 
 def givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
     """
-    Transform the given vectors into a set of rotation angles.
+    Compute the Givens rotation angles that encode each vector along the last axis.
 
-    Any given array of vectors gets encoded into an array containing
-    Givens rotation angles as floats, following the encoding scheme from
-    [Low2025]_, appendix 5B.
+    Each vector of length :math:`N` is encoded as the :math:`N - 1` angles of a
+    ladder of nearest-neighbour Givens rotations ([Low2025]_, appendix 5B). Angle
+    :math:`k` is ``arctan2(norm(v[k + 1:]), v[k])``, except that the last angle keeps
+    the sign of the final component. The angles are unchanged by positive rescaling,
+    so the vectors do not need to be normalised.
 
     Parameters
     ----------
@@ -100,10 +102,11 @@ def givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
 
 def rotation_qrom_angles(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.float64]:
     """
-    Givens ladder angles of every direction u(R, B) ([Low2025]_, appendix 5B).
+    Compute the Givens rotation angles loaded by ``RotationQROM``.
 
-    This method specifically calculates those angles that are loaded into the
-    RotationQROM, from the `unit_vectors` of the DFTHCHamiltonian object.
+    Applies :func:`givens_angles` to the ``unit_vectors`` of a DFTHC Hamiltonian,
+    giving the basis rotation angles for every unit vector :math:`u_b^{(r)}`
+    ([Low2025]_, appendix 5B).
 
     Parameters
     ----------
