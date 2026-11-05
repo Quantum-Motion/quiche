@@ -89,7 +89,7 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
         Packed Givens rotation words loaded by the rotation QROM, indexed
         ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
         If None (default), placeholder data is used, which is sufficient for
-        resource estimation.
+        Toffoli resource estimation.
 
     Registers
     ---------
@@ -364,7 +364,7 @@ class DFTHCBlockEncoding(BlockEncoding):
         Packed Givens rotation words loaded by the rotation QROM, indexed
         ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
         If None (default), placeholder data is used, which is sufficient for
-        resource estimation. :meth:`from_dfthc_hamiltonian` always sets it.
+        Toffoli resource estimation. :meth:`from_dfthc_hamiltonian` always sets it.
 
     Registers
     ---------
@@ -754,7 +754,7 @@ class DFTHCWalkOperator(Bloq):
         Packed Givens rotation words loaded by the rotation QROM, indexed
         ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
         If None (default), placeholder data is used, which is sufficient for
-        resource estimation. :meth:`from_dfthc_hamiltonian` always sets it.
+        Toffoli resource estimation. :meth:`from_dfthc_hamiltonian` always sets it.
 
     Registers
     ---------
