@@ -25,12 +25,17 @@ def generate_random_one_body_integrals(
     """
     Generate random one body integrals for real-valued spatial orbitals.
 
-    Args:
-        n_orb (int): The number of spatial orbitals
-        seed (int, optional): Random seed. Defaults to None.
+    Parameters
+    ----------
+    n_orb : int
+        The number of spatial orbitals.
+    seed : int, optional
+        Random seed, by default None.
 
-    Returns:
-        np.ndarray: A valid n_orb X n_orb symmetric matrix.
+    Returns
+    -------
+    ``np.ndarray``
+        A valid ``n_orb`` x ``n_orb`` symmetric matrix.
 
     """
     rng = np.random.default_rng(seed)
@@ -54,12 +59,18 @@ def generate_random_two_body_integrals(
     """
     Generate random two body integrals for real-valued spatial orbitals.
 
-    Args:
-        n_orb (int): The number of spatial orbitals
-        seed (int, optional): Random seed. Defaults to None.
+    Parameters
+    ----------
+    n_orb : int
+        The number of spatial orbitals.
+    seed : int, optional
+        Random seed, by default None.
 
-    Returns:
-        np.ndarray: A valid n_orb X n_orb X n_orb X n_orb tensor.
+    Returns
+    -------
+    ``np.ndarray``
+        A valid ``n_orb`` x ``n_orb`` x ``n_orb`` x ``n_orb`` tensor with
+        eight-fold symmetry.
 
     """
     rng = np.random.default_rng(seed)
@@ -99,13 +110,19 @@ def generate_random_sq_hamiltonian(
     """
     Generate a random second quantised Hamiltonian for real-valued spatial orbitals.
 
-    Args:
-        n_orb (int): The number of spatial orbitals
-        n_elec (int): The number of electrons
-        seed (int, optional): Random seed. Defaults to None.
+    Parameters
+    ----------
+    n_orb : int
+        The number of spatial orbitals.
+    n_elec : int
+        The number of electrons.
+    seed : int, optional
+        Random seed, by default None.
 
-    Returns:
-        SecondQuantisedHamiltonian: Hamiltonian with random integrals and core energy.
+    Returns
+    -------
+    ``SecondQuantisedHamiltonian``
+        Hamiltonian with random integrals and core energy.
 
     """
     # Define the chemical system.
