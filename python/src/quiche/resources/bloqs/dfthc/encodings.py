@@ -67,14 +67,14 @@ def givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
 
     Parameters
     ----------
-    vectors : ArrayLike
-        An array like object containing floats that can be encoded as
-        Givens rotation angles.
+    vectors : NDArray[np.float64]
+        Real array of shape ``(..., N)``. Each vector along the last axis is encoded
+        independently.
 
     Returns
     -------
     NDArray[np.float64]
-        An array of rotation (Givens) angles of shape ``(R, B, N-1)``.
+        An array of rotation (Givens) angles in radians of shape ``(R, B, N-1)``.
 
     References
     ----------
@@ -114,7 +114,7 @@ def rotation_qrom_angles(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.floa
     Returns
     -------
     NDArray[np.float64]
-        An array of rotation (Givens) angles of shape ``(R, B, N-1)``.
+        An array of rotation (Givens) angles in radians of shape ``(R, B, N-1)``.
 
     References
     ----------
