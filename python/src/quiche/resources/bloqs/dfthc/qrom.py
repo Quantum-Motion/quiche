@@ -756,9 +756,10 @@ class RotationQROM(UnaryIterationGate):
         Number of control qubits (default = 0).
 
     rotation_data : tuple[tuple[int, ...], ...] | None, optional
-        Packed Givens rotation words, indexed ``rotation_data[rank][inner_index]``
-        for ``inner_index < num_bases``. Each word holds :math:`N - 1` angles of
-        :math:`b_{rot}` bits, with the first angle in the most significant bits.
+        Packed Givens rotation words loaded by the rotation QROM, indexed
+        ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
+        If None (default), placeholder data is used, which is sufficient for
+        Toffoli resource estimation.
 
     Registers
     ---------
