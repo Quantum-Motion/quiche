@@ -234,6 +234,9 @@ class DFTHCHamiltonian(BaseModel):
             error_msg = "The factors must be real, got complex values."
             raise ValueError(error_msg)
         array = np.array(array, dtype=float)
+        if not np.all(np.isfinite(array)):
+            error_msg = "The factors must be finite, got NaN or infinite values."
+            raise ValueError(error_msg)
         array.flags.writeable = False
         return array
 
