@@ -14,122 +14,196 @@
 
 """Methods to generate the QuEST implementation of a QPESpec object."""
 
-from __future__ import annotations
-
+from collections.abc import Callable
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import assert_never
 
-from quiche.bindings.quiche_bindings import initClassicalState
-from quiche.chemistry import (
-    HartreeFockState,
-    get_qubit_state,
+from quiche import PauliSum, algorithms
+from quiche.algorithms import (
+    EstimationAlgorithm,
+    SimulationAlgorithm,
+    StateprepAlgorithm,
 )
-from quiche.core import (
-    PhaseEstimation,
-    Simulation,
-)
-from quiche.simulation import SimulationRoutine
-from quiche.simulation.estimation import (
+from quiche.bindings.quest_bindings import Qureg
+from quiche.bindings.quiche_bindings import (
+    getPhaseIterativeQDRIFT,
+    getPhaseIterativeTrotter,
     getPhaseKitaevQDRIFT,
     getPhaseKitaevTrotter,
+    getPhaseNaiveQDRIFT,
+    getPhaseNaiveTrotter,
     getPhaseTextbookQDRIFT,
     getPhaseTextbookQubitised,
     getPhaseTextbookTrotter,
+    initClassicalState,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from quiche import QPESpec
+from quiche.simulation import SimulationRoutine
+from quiche.simulation.qubit_mapping import QubitMapping
+from quiche.simulation.routine import QuestOp
 
 
-def _get_stateprep(spec: QPESpec) -> Callable:
+def _with_quest_hamiltonian(
+    binding: Callable[..., float],
+    hamiltonian: PauliSum,
+    **kwargs: object,
+) -> QuestOp:
+    """Defer PauliSum -> PauliStrSum conversion until run inside a QuESTEnv."""
+
+    def op(qureg: Qureg) -> float:
+        return binding(qureg, hamiltonian.to_quest(), **kwargs)
+
+    return op
+
+
+def get_stateprep_questop(stateprep: StateprepAlgorithm) -> QuestOp:
     """Pattern matching and construction for QuEST state preparation."""
-    match spec.state_prep:
-        case None:
+    match stateprep:
+        case algorithms.IdentityStateprep():
             return lambda _qureg: None
-
-        case HartreeFockState():
-            occupation = spec.state_prep.occupation
-            mapping = spec.hamiltonian.mapping
-            bitstring = get_qubit_state(occupation, mapping)
+        case algorithms.BitstringStateprep(bitstring=bitstring):
             return partial(initClassicalState, state=bitstring)
+        case _:
+            assert_never(stateprep)
 
 
-def _get_estimation(spec: QPESpec) -> Callable:
+def get_estimation_questop(
+    estimation: EstimationAlgorithm,
+    simulation: SimulationAlgorithm,
+    *,
+    mapping: QubitMapping,
+) -> QuestOp:
     """Pattern matching and construction for QuEST phase estimation."""
-    # Register layout: [data | qpe ancillas | index ancillas]
-    qpe_ancillas_start = spec.num_data
+    match estimation, simulation:
+        case algorithms.IterativeQPE(), algorithms.QDRIFT():
+            return _with_quest_hamiltonian(
+                getPhaseIterativeQDRIFT,
+                simulation.hamiltonian,
+                reps=simulation.num_samples,
+                time=simulation.time,
+                seed=simulation.seed,
+                num_bits=estimation.num_rounds,
+                ancilla_index=mapping["estimation"][0],
+            )
 
-    # Simulation doesn't use rotation ancillas, so only index ancillas are included
-    index_ancillas_start = spec.num_data + spec.num_qpe_ancillas
-    index_ancillas_end = index_ancillas_start + spec.num_index_ancillas
+        case algorithms.IterativeQPE(), algorithms.Trotter():
+            return _with_quest_hamiltonian(
+                getPhaseIterativeTrotter,
+                simulation.hamiltonian,
+                order=simulation.order,
+                reps=simulation.num_steps,
+                time=simulation.time,
+                num_bits=estimation.num_rounds,
+                ancilla_index=mapping["estimation"][0],
+            )
 
-    qpe_ancillas = list(range(qpe_ancillas_start, index_ancillas_start))
-    index_ancillas = list(range(index_ancillas_start, index_ancillas_end))
-
-    match spec.algorithm, spec.simulation:
-        case PhaseEstimation.Kitaev, Simulation.QDRIFT:
-            return partial(
+        case algorithms.KitaevQPE(), algorithms.QDRIFT():
+            return _with_quest_hamiltonian(
                 getPhaseKitaevQDRIFT,
-                hamiltonian=spec.hamiltonian.paulis,
-                ancilla_index=qpe_ancillas[0],
-                reps=spec.reps,
-                time=spec.time,
-                num_bits=spec.num_rounds,
-                seed=spec.seed,
+                simulation.hamiltonian,
+                reps=simulation.num_samples,
+                time=simulation.time,
+                seed=simulation.seed,
+                num_bits=estimation.num_rounds,
+                ancilla_index=mapping["estimation"][0],
             )
 
-        case PhaseEstimation.Kitaev, Simulation.Trotter:
-            return partial(
+        case algorithms.KitaevQPE(), algorithms.Trotter():
+            return _with_quest_hamiltonian(
                 getPhaseKitaevTrotter,
-                hamiltonian=spec.hamiltonian.paulis,
-                ancilla_index=qpe_ancillas[0],
-                order=spec.order,
-                reps=spec.reps,
-                time=spec.time,
-                num_bits=spec.num_rounds,
+                simulation.hamiltonian,
+                order=simulation.order,
+                reps=simulation.num_steps,
+                time=simulation.time,
+                num_bits=estimation.num_rounds,
+                ancilla_index=mapping["estimation"][0],
             )
 
-        case PhaseEstimation.Textbook, Simulation.QDRIFT:
-            return partial(
+        case algorithms.NaiveQPE(), algorithms.QDRIFT():
+            return _with_quest_hamiltonian(
+                getPhaseNaiveQDRIFT,
+                simulation.hamiltonian,
+                reps=simulation.num_samples,
+                time=simulation.time,
+                seed=simulation.seed,
+                ancilla_index=mapping["estimation"][0],
+            )
+
+        case algorithms.NaiveQPE(), algorithms.Trotter():
+            return _with_quest_hamiltonian(
+                getPhaseNaiveTrotter,
+                simulation.hamiltonian,
+                order=simulation.order,
+                reps=simulation.num_steps,
+                time=simulation.time,
+                ancilla_index=mapping["estimation"][0],
+            )
+
+        case algorithms.TextbookQPE(), algorithms.QDRIFT():
+            return _with_quest_hamiltonian(
                 getPhaseTextbookQDRIFT,
-                hamiltonian=spec.hamiltonian.paulis,
-                ancillas=qpe_ancillas,
-                reps=spec.reps,
-                time=spec.time,
-                seed=spec.seed,
+                simulation.hamiltonian,
+                reps=simulation.num_samples,
+                time=simulation.time,
+                seed=simulation.seed,
+                ancillas=mapping["estimation"],
             )
 
-        case PhaseEstimation.Textbook, Simulation.Qubitised:
-            return partial(
+        case algorithms.TextbookQPE(), algorithms.Qubitisation():
+            return _with_quest_hamiltonian(
                 getPhaseTextbookQubitised,
-                hamiltonian=spec.hamiltonian.paulis,
-                qpe_ancillas=qpe_ancillas,
-                qubitisation_ancillas=index_ancillas,
+                simulation.hamiltonian,
+                qpe_ancillas=mapping["estimation"],
+                qubitisation_ancillas=mapping["simulation"],
             )
 
-        case PhaseEstimation.Textbook, Simulation.Trotter:
-            return partial(
+        case algorithms.TextbookQPE(), algorithms.Trotter():
+            return _with_quest_hamiltonian(
                 getPhaseTextbookTrotter,
-                hamiltonian=spec.hamiltonian.paulis,
-                ancillas=qpe_ancillas,
-                order=spec.order,
-                reps=spec.reps,
-                time=spec.time,
+                simulation.hamiltonian,
+                order=simulation.order,
+                reps=simulation.num_steps,
+                time=simulation.time,
+                ancillas=mapping["estimation"],
             )
 
-        case algorithm, simulation:
-            msg = f"{algorithm} QPE with {simulation} not available in QuEST backend."
+        case _:
+            msg = f"{estimation} QPE with {simulation} not available in QuEST backend."
             raise NotImplementedError(msg)
+
+
+def _num_simulation_ancillas(simulation: SimulationAlgorithm) -> int:
+    """Ancillas the QuEST implementation of `simulation` needs."""
+    match simulation:
+        case algorithms.Trotter() | algorithms.QDRIFT():
+            return 0
+        case algorithms.Qubitisation():
+            # QuEST prepares the index state with direct rotations, so its PREP
+            # needs no QROM or phase gradient register, whatever `prep` says.
+            return simulation.num_index_ancillas
+        case _:
+            assert_never(simulation)
 
 
 class QuESTBackend:
     """QuEST backend generating a SimulationRoutine for statevector simulation."""
 
-    def generate(self, spec: QPESpec) -> SimulationRoutine:
+    def generate(
+        self,
+        stateprep: StateprepAlgorithm,
+        estimation: EstimationAlgorithm,
+        simulation: SimulationAlgorithm,
+    ) -> SimulationRoutine:
         """Build the QuEST SimulationRoutine implementing the given QPESpec."""
-        routine = SimulationRoutine()
-        routine.append(_get_stateprep(spec))
-        routine.append(_get_estimation(spec))
-        return routine
+        mapping = QubitMapping.contiguous(
+            data=simulation.hamiltonian.num_qubits,
+            estimation=estimation.num_ancillas,
+            simulation=_num_simulation_ancillas(simulation),
+        )
+
+        return SimulationRoutine(
+            mapping=mapping,
+            ops=(
+                get_stateprep_questop(stateprep),
+                get_estimation_questop(estimation, simulation, mapping=mapping),
+            ),
+        )

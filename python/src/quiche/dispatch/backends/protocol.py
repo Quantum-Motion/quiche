@@ -14,16 +14,22 @@
 
 """Interface for objects defining an implementation of a QPESpec."""
 
-from __future__ import annotations
+from typing import Protocol
 
-from typing import TYPE_CHECKING, Protocol
-
-if TYPE_CHECKING:
-    from quiche import QPESpec
+from quiche.algorithms import (
+    EstimationAlgorithm,
+    SimulationAlgorithm,
+    StateprepAlgorithm,
+)
 
 
 class QPESpecBackend[T](Protocol):
     """Backend capable of generating an implementation of a QPESpec."""
 
-    def generate(self, spec: QPESpec) -> T:
+    def generate(
+        self,
+        stateprep: StateprepAlgorithm,
+        estimation: EstimationAlgorithm,
+        simulation: SimulationAlgorithm,
+    ) -> T:
         """Generate the backend implementation of the given QPESpec."""
