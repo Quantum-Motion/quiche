@@ -23,18 +23,24 @@ order.
   `generate_random_sq_hamiltonian`). Notebooks 03–05 use them to build systems of any
   size from a NumPy random number generator (`np.random.Generator`). These Hamiltonians
   are not real molecules.
-- [data/hydrogen.fcidump](data/hydrogen.fcidump): integrals for minimal-basis H<sub>2</sub>
-  (2 spatial orbitals, 2 electrons).
-- [data/H2.hdf5](data/H2.hdf5): qubit Hamiltonians for H<sub>2</sub> from
-  [Hamlib](https://portal.nersc.gov/cfs/m888/dcamps/hamlib/), for several mappings and
+
+## Data sources
+
+The repository doesn't ship any data files. The notebooks get their data as follows:
+
+- **FCIDUMP for H<sub>2</sub>** (2 spatial orbitals, 2 electrons): generated using
+  [ORCA](https://www.faccts.de/orca/) with the STO-3G basis set. Notebooks 01 and 05 contain it as a string.
+- **Qubit Hamiltonians for H<sub>2</sub>** (`H2.hdf5`): from
+  [HamLib](https://portal.nersc.gov/cfs/m888/dcamps/hamlib/)
+  [[Sawaya et al. (2024)](https://arxiv.org/abs/2306.13126)], for several mappings and
   numbers of qubits (for example `ham_JW-4`).
 
 ## Running the notebooks
 
 1. Install QUICHE (see the [top-level README](../../README.md#installation)).
 
-2. Start Jupyter **from this directory**. The notebooks open data files with paths
-   relative to `python/examples`, and import `random_hamiltonian` from it:
+2. Start Jupyter **from this directory**. The notebooks download data into
+   `python/examples`, and import `random_hamiltonian` from it:
 
    ```bash
    cd python/examples
