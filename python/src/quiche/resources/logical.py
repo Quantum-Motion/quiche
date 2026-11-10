@@ -26,8 +26,6 @@ from qualtran.resource_counting import (
 )
 from qualtran.resource_counting.generalizers import ignore_split_join
 
-from quiche.core.errors import Errors
-
 
 def logical_gate_resources(circuit: Bloq) -> GateCounts:
     """Calculate estimated logical gate cost of a bloq provided an error budget."""
@@ -47,12 +45,45 @@ def logical_qubit_resources(circuit: Bloq) -> int:
 # additional ancilla due to synthesis methods. Although and bloqs also incur additional
 # ancillas, these are handled in the my_static_cost subroutine of each bloq and do not
 # need to be accounted for during postprocessing like rotations.
+
+
 def logical_rotations_to_tgates(
     gates: GateCounts,
-    errors: Errors,
+    error: float,
     rotation_synthesis: Literal["direct"],
 ) -> GateCounts:
-    """Transform rotation gates to T gates according to the error budget."""
+    """
+    Transform rotation gates to T gates up to a given synthesis error.
+
+    Parameters
+    ----------
+    gates : GateCounts
+        Logical gate counts. ``gates.rotation`` is the number of arbitrary-angle
+        single-qubit rotations to synthesise.
+    error : float
+        Total synthesis error budget across all rotations, as an operator-norm
+        distance. Errors are assumed to add linearly (triangle inequality).
+    rotation_synthesis : Literal["direct"]
+        Synthesis method. Only ``"direct"`` is supported currently.
+
+    Returns
+    -------
+    GateCounts
+        Gate counts with ``rotation`` set to 0 and the synthesised T gates added
+        to ``t``. If there are no rotations, ``gates`` is returned unchanged.
+
+    Raises
+    ------
+    ValueError
+        If ``rotation_synthesis`` is not recognised.
+
+    References
+    ----------
+    .. [RossSelinger2016] N. J. Ross and P. Selinger, 'Optimal ancilla-free Clifford+T
+        approximation of z-rotations', Jun. 15, 2016, arXiv: arXiv:1403.2975. doi:
+        10.48550/arXiv.1403.2975.
+
+    """
     gc_dict = gates.asdict()
     num_rotations = int(gates.rotation)
     if num_rotations == 0:
@@ -63,7 +94,7 @@ def logical_rotations_to_tgates(
     # of T gates.
     if rotation_synthesis == "direct":
         # Calculate the error allowed per rotation.
-        eps_per_rotation = errors.rotations / num_rotations
+        eps_per_rotation = error / num_rotations
         ts_per_rotation = int(3 * log2(1 / eps_per_rotation))
         total_ts = num_rotations * ts_per_rotation
     else:
