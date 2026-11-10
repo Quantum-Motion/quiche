@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Random second quantised Hamiltonians for the example notebooks."""
+"""Random second-quantised Hamiltonians for the example notebooks."""
 
 import numpy as np
 
@@ -20,17 +20,18 @@ from quiche.core import SecondQuantisedHamiltonian
 
 
 def generate_random_one_body_integrals(
-    n_orb: int, seed: int | None = None
+    n_orb: int, rng: np.random.Generator | None = None
 ) -> np.ndarray:
     """
-    Generate random one body integrals for real-valued spatial orbitals.
+    Generate random one-body integrals for real-valued spatial orbitals.
 
     Parameters
     ----------
     n_orb : int
         The number of spatial orbitals.
-    seed : int, optional
-        Random seed, by default None.
+    rng : ``np.random.Generator``, optional
+        Random number generator, by default None. If None, a new generator is
+        created with ``np.random.default_rng()``.
 
     Returns
     -------
@@ -38,7 +39,8 @@ def generate_random_one_body_integrals(
         A valid ``n_orb`` x ``n_orb`` symmetric matrix.
 
     """
-    rng = np.random.default_rng(seed)
+    if rng is None:
+        rng = np.random.default_rng()
     h_core = np.zeros([n_orb] * 2)
 
     for p in range(n_orb):
@@ -48,23 +50,24 @@ def generate_random_one_body_integrals(
             val = rng.uniform(-3.0, -1.0) if p == q else rng.uniform(-0.5, 0.5)
 
             h_core[p, q] = val
-            h_core[q, p] = val  # Symmetric
+            h_core[q, p] = val  # symmetric
 
     return h_core
 
 
 def generate_random_two_body_integrals(
-    n_orb: int, seed: int | None = None
+    n_orb: int, rng: np.random.Generator | None = None
 ) -> np.ndarray:
     """
-    Generate random two body integrals for real-valued spatial orbitals.
+    Generate random two-body integrals for real-valued spatial orbitals.
 
     Parameters
     ----------
     n_orb : int
         The number of spatial orbitals.
-    seed : int, optional
-        Random seed, by default None.
+    rng : ``np.random.Generator``, optional
+        Random number generator, by default None. If None, a new generator is
+        created with ``np.random.default_rng()``.
 
     Returns
     -------
@@ -73,7 +76,8 @@ def generate_random_two_body_integrals(
         eight-fold symmetry.
 
     """
-    rng = np.random.default_rng(seed)
+    if rng is None:
+        rng = np.random.default_rng()
     eri = np.zeros([n_orb] * 4)
 
     for p in range(n_orb):
@@ -82,16 +86,16 @@ def generate_random_two_body_integrals(
                 for s in range(n_orb):
                     if eri[p, q, r, s] == 0:
                         if p == q and q == r and r == s:
-                            # onsite Coulomb repulsion > 0.
+                            # On-site Coulomb repulsion > 0.
                             val = rng.uniform(0.5, 2.0)
                         elif p == q and r == s:
                             # Inter-site Coulomb repulsion > 0.
                             val = rng.uniform(0.2, 1.5)
                         else:
-                            # off-diagonal transition elements.
+                            # Off-diagonal transition elements.
                             val = rng.uniform(-0.5, 0.5)
 
-                        # eight-fold symmetry (real-valued spatial orbitals)
+                        # Eight-fold symmetry (real-valued spatial orbitals).
                         eri[p, q, r, s] = val
                         eri[q, p, r, s] = val
                         eri[p, q, s, r] = val
@@ -105,10 +109,10 @@ def generate_random_two_body_integrals(
 
 
 def generate_random_sq_hamiltonian(
-    n_orb: int, n_elec: int, seed: int | None = None
+    n_orb: int, n_elec: int, rng: np.random.Generator | None = None
 ) -> SecondQuantisedHamiltonian:
     """
-    Generate a random second quantised Hamiltonian for real-valued spatial orbitals.
+    Generate a random second-quantised Hamiltonian for real-valued spatial orbitals.
 
     Parameters
     ----------
@@ -116,8 +120,9 @@ def generate_random_sq_hamiltonian(
         The number of spatial orbitals.
     n_elec : int
         The number of electrons.
-    seed : int, optional
-        Random seed, by default None.
+    rng : ``np.random.Generator``, optional
+        Random number generator, by default None. If None, a new generator is
+        created with ``np.random.default_rng()``.
 
     Returns
     -------
@@ -126,12 +131,13 @@ def generate_random_sq_hamiltonian(
 
     """
     # Define the chemical system.
-    rng = np.random.default_rng(seed)
-    one_body = generate_random_one_body_integrals(n_orb, seed)
-    two_body = generate_random_two_body_integrals(n_orb, seed)
+    if rng is None:
+        rng = np.random.default_rng()
+    one_body = generate_random_one_body_integrals(n_orb, rng)
+    two_body = generate_random_two_body_integrals(n_orb, rng)
     core_energy = rng.random()
 
-    # Define the second quantisation electronic Hamiltonian.
+    # Define the second-quantised electronic Hamiltonian.
     return SecondQuantisedHamiltonian(
         one_body=one_body,
         two_body=two_body,
