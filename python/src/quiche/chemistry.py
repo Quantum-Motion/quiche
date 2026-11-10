@@ -18,7 +18,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum, auto
 from math import ceil, log2
-from typing import Self
+from typing import Literal, Self
 
 import numpy as np
 from numpy.typing import NDArray
@@ -182,7 +182,7 @@ def get_qubit_state(
 class HartreeFockState:
     """Dataclass representing a single Hartree-Fock state."""
 
-    occupation: tuple[int, ...]
+    occupation: tuple[Literal[0, 1], ...]
 
     @classmethod
     def closed_shell(cls, num_electrons: int, num_spin_orbitals: int) -> Self:
