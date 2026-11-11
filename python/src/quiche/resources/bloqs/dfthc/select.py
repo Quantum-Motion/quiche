@@ -65,7 +65,6 @@ class GivensLadder(Bloq):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     num_orbitals: int
@@ -95,14 +94,14 @@ class GivensLadder(Bloq):
 
     @property
     def partition(self) -> Partition:
-        """Get the partition of `rotations` into the individual angles."""
+        """Partition of `rotations` into the individual angles."""
         theta = QFxp(self.num_bits_phase_grad, self.num_bits_phase_grad)
         registers = (Register("theta", theta, (self.num_rotations,)),)
         return Partition(self.rotations_size, registers)
 
     @property
     def givens_rot(self) -> RealGivensRotationByPhaseGradient:
-        """Get the Givens rotation applied at each step of the ladder."""
+        """Givens rotation applied at each step of the ladder."""
         return RealGivensRotationByPhaseGradient(
             phasegrad_bitsize=self.num_bits_phase_grad
         )
@@ -167,7 +166,6 @@ class SpinSelectSwap(Bloq):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     num_orbitals: int
@@ -188,17 +186,17 @@ class SpinSelectSwap(Bloq):
 
     @property
     def toffoli_01(self) -> Bloq:
-        """Get the Toffoli copying `spin_0` to `spin` if `G_0` = 0 (SF)."""
+        """Toffoli copying `spin_0` to `spin` if `G_0` = 0 (SF)."""
         return XGate().controlled(CtrlSpec(cvs=(0, 1)))
 
     @property
     def toffoli_11(self) -> Bloq:
-        """Get the Toffoli copying `spin_1` to `spin` if `G_0` = 1 (:math:`D_1/Q_1`)."""
+        """Toffoli copying `spin_1` to `spin` if `G_0` = 1 (:math:`D_1/Q_1`)."""
         return Toffoli()
 
     @property
     def cswap(self) -> CSwap:
-        """Get the swap of the two spin sectors, controlled on the selected spin."""
+        """Swap of the two spin sectors, controlled on the selected spin."""
         return CSwap(self.num_orbitals)
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
@@ -264,7 +262,6 @@ class MajoranaDFTHC(Bloq):
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
     .. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
        arXiv: 2605.30455.
-
     """
 
     @property
@@ -282,12 +279,12 @@ class MajoranaDFTHC(Bloq):
 
     @property
     def ccz_01(self) -> Bloq:
-        """Get the CCZ on `target` for SF (`G_0` = 0) and `non_identity` = 1."""
+        """CCZ on `target` for SF (`G_0` = 0) and `non_identity` = 1."""
         return ZGate().controlled(CtrlSpec(cvs=(0, 1)))
 
     @property
     def ccz_11(self) -> Bloq:
-        """Get the CCZ on `target` for :math:`D_1/Q_1` (`G_0` = 1) and `s` = 1."""
+        """CCZ on `target` for :math:`D_1/Q_1` (`G_0` = 1) and `s` = 1."""
         return ZGate().controlled(CtrlSpec(cvs=(1, 1)))
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
@@ -370,7 +367,6 @@ class RotatedMajorana(Bloq):
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
     .. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
        arXiv: 2605.30455.
-
     """
 
     num_orbitals: int
@@ -396,12 +392,12 @@ class RotatedMajorana(Bloq):
 
     @property
     def ladder(self) -> GivensLadder:
-        """Get the Givens rotation ladder used to conjugate the Majorana operator."""
+        """Givens rotation ladder used to conjugate the Majorana operator."""
         return GivensLadder(self.num_orbitals, self.num_bits_phase_grad)
 
     @property
     def cmajorana(self) -> Bloq:
-        """Get the Majorana controlled on the two preparation-success flags."""
+        """Majorana controlled on the two preparation-success flags."""
         return MajoranaDFTHC().controlled(CtrlSpec(cvs=(1, 1)))
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
@@ -503,7 +499,6 @@ class SelectDFTHC(Bloq):
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
     .. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
        arXiv: 2605.30455.
-
     """
 
     num_orbitals: int
@@ -543,12 +538,12 @@ class SelectDFTHC(Bloq):
 
     @property
     def spin_swap(self) -> SpinSelectSwap:
-        """Get the swap moving the selected spin sector into `system_down`."""
+        """Swap moving the selected spin sector into `system_down`."""
         return SpinSelectSwap(self.num_orbitals)
 
     @property
     def rotated_majorana(self) -> RotatedMajorana:
-        """Get the Givens-rotated Majorana applied to the selected spin sector."""
+        """Givens-rotated Majorana applied to the selected spin sector."""
         return RotatedMajorana(self.num_orbitals, self.num_bits_phase_grad)
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002

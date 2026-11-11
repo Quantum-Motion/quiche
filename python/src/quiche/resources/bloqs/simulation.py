@@ -88,7 +88,6 @@ class SelectPauliLCUWrapper(SelectPauliLCU):
     .. [Babbush2018] R. Babbush et al., 'Encoding Electronic Spectra in Quantum Circuits
         with Linear T Complexity', Phys. Rev. X, vol. 8, no. 4, p. 041015, Oct. 2018,
         doi:10.1103/PhysRevX.8.041015.
-
     """
 
     def my_static_costs(self, cost_key: CostKey) -> int:
@@ -150,7 +149,6 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
     Extends Qualtran's ``LCUBlockEncoding`` with a ``from_hamiltonian``
     constructor and an analytic ``build_call_graph``, so resource counts don't
     require a full decomposition.
-
     """
 
     @classmethod
@@ -175,7 +173,6 @@ class LCUBlockEncodingWrapper(LCUBlockEncoding):
         ------
         ValueError
             If the ``phase_bitsize`` is less than 2.
-
         """
         if phase_bitsize < 2:
             error_msg = "Choose phase_bitsize at least 2."
@@ -267,7 +264,6 @@ class PauliWordRotation(Bloq):
     ValueError
         If the highest qubit included in ``word`` is greater than or equal to the
         specified ``num_qubits``.
-
     """
 
     word: PauliWord
@@ -474,7 +470,6 @@ class QDRIFT(Bloq):
     .. [Campbell2019] E. Campbell, 'Random Compiler for Fast Hamiltonian Simulation',
         Phys. Rev. Lett., vol. 123, no. 7, p. 070503, Aug. 2019,
         doi: 10.1103/PhysRevLett.123.070503.
-
     """
 
     sum: PauliSum
@@ -544,23 +539,23 @@ class QDRIFT(Bloq):
 
     @property
     def positive_coefficients(self) -> tuple[float, ...]:
-        """Get absolute value of the coefficients."""
+        """Absolute value of the coefficients."""
         # Identity deliberately not included here (applied as a global phase)
         return tuple(map(abs, self.sum.coefficients))
 
     @cached_property
     def lam(self) -> float:
-        """Get the 1-norm of the coefficients."""
+        """1-norm of the coefficients."""
         return sum(self.positive_coefficients)
 
     @property
     def num_qubits(self) -> int:
-        """Get number of qubits of bloq."""
+        """Number of qubits of bloq."""
         return self.sum.num_qubits
 
     @property
     def dt(self) -> float:
-        """Get timestep for each operator."""
+        """Timestep for each operator."""
         return self.time * self.lam / self.num_samples
 
     @property
@@ -570,14 +565,14 @@ class QDRIFT(Bloq):
 
     @cached_property
     def sampled_counts(self) -> NDArray[np.int_]:
-        """Get the number of times each word in the sum is sampled."""
+        """Number of times each word in the sum is sampled."""
         rng = np.random.default_rng(self._seed_sequences[0])
         probabilities = np.asarray(self.positive_coefficients) / self.lam
         return rng.multinomial(self.num_samples, probabilities)
 
     @cached_property
     def sampled_indices(self) -> NDArray[np.int_]:
-        """Get a random sequence of indices consistent with the sampled counts."""
+        """Random sequence of indices consistent with the sampled counts."""
         rng = np.random.default_rng(self._seed_sequences[1])
         indices = np.repeat(np.arange(self.sum.num_words), self.sampled_counts)
         return rng.permutation(indices)
@@ -604,7 +599,7 @@ class QDRIFT(Bloq):
 
     @property
     def phase(self) -> Bloq:
-        """Get the phase contribution from the identity coefficient."""
+        """Phase contribution from the identity coefficient."""
         phase = GlobalPhase(exponent=-self.sum.identity_coefficient * self.time / pi)
         return phase.controlled() if self.is_controlled else phase
 
@@ -649,7 +644,6 @@ class _PauliWordRotationSequence(Bloq):
     ----------
     rotations : tuple[PauliWordRotation, ...]
         Ordered sequence of rotations to apply. All must share the same signature.
-
     """
 
     rotations: tuple[PauliWordRotation, ...]
@@ -749,7 +743,6 @@ class Trotterisation(Bloq):
     ValueError
         If ``num_steps``, ``time`` or ``order`` aren't positive.
         If ``order`` isn't 1 or a positive even integer.
-
     """
 
     sum: PauliSum
@@ -823,7 +816,7 @@ class Trotterisation(Bloq):
 
     @property
     def num_qubits(self) -> int:
-        """Get number of qubits of bloq."""
+        """Number of qubits of bloq."""
         return self.sum.num_qubits
 
     @property
@@ -833,7 +826,7 @@ class Trotterisation(Bloq):
 
     @property
     def trotter_coeffs(self) -> NDArray[np.float64]:
-        """Get the coefficient for each term in the Trotterised propagator."""
+        """Coefficient for each term in the Trotterised propagator."""
         if self.order == 1:
             coeffs = np.ones(self.sum.num_words)
         else:
@@ -846,7 +839,7 @@ class Trotterisation(Bloq):
 
     @property
     def trotter_indices(self) -> NDArray[np.int_]:
-        """Get the indices for each term in the Trotterised propagator."""
+        """Indices for each term in the Trotterised propagator."""
         forward = np.arange(self.sum.num_words)
         if self.order == 1:
             indices = forward
@@ -883,7 +876,7 @@ class Trotterisation(Bloq):
 
     @property
     def phase(self) -> Bloq:
-        """Get the phase contribution from the identity coefficient."""
+        """Phase contribution from the identity coefficient."""
         phase = GlobalPhase(exponent=-self.sum.identity_coefficient * self.time / pi)
         return phase.controlled() if self.is_controlled else phase
 

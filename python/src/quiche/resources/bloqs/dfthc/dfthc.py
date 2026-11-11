@@ -119,7 +119,6 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
     .. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
        arXiv: 2605.30455.
-
     """
 
     num_orbitals: int
@@ -217,22 +216,22 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
 
     @property
     def alpha(self) -> float:
-        """Get the normalisation factor of the block encoding."""
+        """Normalisation factor of the block encoding."""
         raise NotImplementedError
 
     @property
     def epsilon(self) -> float:
-        """Get the precision of the block encoding."""
+        """Precision of the block encoding."""
         raise NotImplementedError
 
     @property
     def signal_state(self) -> BlackBoxPrepare:
-        """Get the signal state of the block encoding."""
+        """Signal state of the block encoding."""
         return BlackBoxPrepare(PrepareIdentity(self.ancilla_registers))
 
     @property
     def inner_prep(self) -> InnerPrepareDFTHC:
-        """Get the inner index state preparation for the block encoding."""
+        """Inner index state preparation for the block encoding."""
         return InnerPrepareDFTHC(
             num_orbitals=self.num_orbitals,
             num_ranks=self.num_ranks,
@@ -247,7 +246,7 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
 
     @property
     def rotation_prep(self) -> RotationPrepareDFTHC:
-        """Get the rotation state preparation for the block encoding."""
+        """Rotation state preparation for the block encoding."""
         return RotationPrepareDFTHC(
             num_orbitals=self.num_orbitals,
             num_ranks=self.num_ranks,
@@ -257,7 +256,7 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
 
     @property
     def select(self) -> SelectDFTHC:
-        """Get the SELECT operator for the block encoding."""
+        """SELECT operator for the block encoding."""
         return SelectDFTHC(
             num_orbitals=self.num_orbitals,
             num_bits_phase_grad=self.num_bits_phase_grad,
@@ -391,7 +390,6 @@ class DFTHCBlockEncoding(BlockEncoding):
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
     .. [Low2026] G. H. Low et al., "A Denser Planar Surface Code", May 28, 2026,
        arXiv: 2605.30455.
-
     """
 
     num_orbitals: int
@@ -467,12 +465,16 @@ class DFTHCBlockEncoding(BlockEncoding):
         num_controls : int, optional
             Number of control qubits (default = 0).
 
+        Returns
+        -------
+        DFTHCBlockEncoding
+            The DFTHC block encoding built from the provided DFTHC Hamiltonian.
+
         References
         ----------
         .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
            by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4,
            p. 041016, Oct. 2025.
-
         """
         return cls(
             num_orbitals=hamiltonian.num_orbitals,
@@ -572,22 +574,22 @@ class DFTHCBlockEncoding(BlockEncoding):
 
     @property
     def alpha(self) -> float:
-        """Get the normalisation factor of the block encoding."""
+        """Normalisation factor of the block encoding."""
         raise NotImplementedError
 
     @property
     def epsilon(self) -> float:
-        """Get the precision of the block encoding."""
+        """Precision of the block encoding."""
         raise NotImplementedError
 
     @property
     def signal_state(self) -> BlackBoxPrepare:
-        """Get the signal state of the block encoding."""
+        """Signal state of the block encoding."""
         return BlackBoxPrepare(PrepareIdentity(self.ancilla_registers))
 
     @property
     def outer_prep(self) -> OuterPrepareDFTHC:
-        """Get the outer index state preparation for the block encoding."""
+        """Outer index state preparation for the block encoding."""
         return OuterPrepareDFTHC(
             num_orbitals=self.num_orbitals,
             num_ranks=self.num_ranks,
@@ -601,7 +603,7 @@ class DFTHCBlockEncoding(BlockEncoding):
 
     @property
     def inner(self) -> DFTHCInnerBlockEncoding:
-        """Get the inner block encoding."""
+        """Inner block encoding."""
         return DFTHCInnerBlockEncoding(
             num_bases=self.num_bases,
             num_orbitals=self.num_orbitals,
@@ -616,7 +618,7 @@ class DFTHCBlockEncoding(BlockEncoding):
 
     @property
     def t2_reflection(self) -> Bloq:
-        """Get the reflection used for the Chebyshev polynomial (:math:`T_2`)."""
+        """Reflection used for the Chebyshev polynomial (:math:`T_2`)."""
         reflection = ReflectionUsingPrepare(
             PrepareIdentity(self.inner.ancilla_registers),
             control_val=1,
@@ -738,7 +740,6 @@ class DFTHCWalkOperator(Bloq):
     ...     log_block_size_outer=2,
     ...     log_block_size_outer_adjoint=4,
     ... )
-
     """
 
     num_orbitals: int
@@ -806,12 +807,16 @@ class DFTHCWalkOperator(Bloq):
         num_controls : int, optional
             Number of control qubits (default = 0).
 
+        Returns
+        -------
+        DFTHCWalkOperator
+            The DFTHC walk operator built from the provided DFTHC Hamiltonian.
+
         References
         ----------
         .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
            by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4,
            p. 041016, Oct. 2025.
-
         """
         return cls(
             num_orbitals=hamiltonian.num_orbitals,
@@ -846,7 +851,7 @@ class DFTHCWalkOperator(Bloq):
 
     @property
     def block_encoding(self) -> DFTHCBlockEncoding:
-        """Get the block encoding that will be qubitised."""
+        """Block encoding that will be qubitised."""
         return DFTHCBlockEncoding(
             num_orbitals=self.num_orbitals,
             num_ranks=self.num_ranks,
@@ -865,7 +870,7 @@ class DFTHCWalkOperator(Bloq):
 
     @property
     def reflection(self) -> Bloq:
-        """Get the reflection that turns the block encoding into a walk operator."""
+        """Reflection that turns the block encoding into a walk operator."""
         reflection = ReflectionUsingPrepare(
             PrepareIdentity(self.block_encoding.ancilla_registers),
             global_phase=-1,

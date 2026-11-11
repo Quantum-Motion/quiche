@@ -80,7 +80,6 @@ class PrepareUniformSuperpositionDFTHC(Bloq):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     size: int
@@ -176,7 +175,6 @@ class OuterPrepareDFTHC(Bloq):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     num_orbitals: int
@@ -227,7 +225,7 @@ class OuterPrepareDFTHC(Bloq):
 
     @property
     def uniform_prep(self) -> PrepareUniformSuperpositionDFTHC:
-        """Get the equal superposition preparation over the outer indices."""
+        """Equal superposition preparation over the outer indices."""
         return PrepareUniformSuperpositionDFTHC(
             size=self.num_outer,
             num_bits_phase_grad=self.num_bits_phase_grad,
@@ -236,12 +234,12 @@ class OuterPrepareDFTHC(Bloq):
 
     @property
     def hadamards(self) -> Bloq:
-        """Get the Hadamards for preparing the alias sampling comparison."""
+        """Hadamards for preparing the alias sampling comparison."""
         return OnEach(self.num_bits_keep, Hadamard())
 
     @property
     def qroam(self) -> QROAMClean:
-        """Get the QROAM loading the alias sampling data."""
+        """QROAM loading the alias sampling data."""
         return QROAMClean.build_from_bitsize(
             (self.num_outer,),
             (self.num_bits_outer, self.num_bits_keep),
@@ -250,12 +248,12 @@ class OuterPrepareDFTHC(Bloq):
 
     @property
     def inequality_check(self) -> LessThanEqual:
-        """Get the alias sampling inequality test."""
+        """Alias sampling inequality test."""
         return LessThanEqual(self.num_bits_keep, self.num_bits_keep)
 
     @property
     def cswap(self) -> CSwap:
-        """Get the controlled swap between `outer_index` and `alt`."""
+        """Controlled swap between `outer_index` and `alt`."""
         return CSwap(self.num_bits_outer)
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
@@ -336,7 +334,6 @@ class OuterPrepareDFTHCAdjoint(Bloq):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     prepare: OuterPrepareDFTHC
@@ -348,7 +345,7 @@ class OuterPrepareDFTHCAdjoint(Bloq):
 
     @property
     def qroam_adjoint(self) -> Bloq:
-        """Get the QROAM adjoint with the required block sizes."""
+        """QROAM adjoint with the required block sizes."""
         return self.prepare.qroam.adjoint().with_log_block_sizes(
             (self.prepare.log_block_size_adjoint,)
         )
@@ -440,7 +437,6 @@ class InnerPrepareDFTHC(Bloq):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     num_orbitals: int
@@ -536,7 +532,7 @@ class InnerPrepareDFTHC(Bloq):
 
     @property
     def uniform_prep(self) -> PrepareUniformSuperpositionDFTHC:
-        """Get the equal superposition preparation over the inner indices."""
+        """Equal superposition preparation over the inner indices."""
         return PrepareUniformSuperpositionDFTHC(
             size=self.num_inner,
             num_bits_phase_grad=self.num_bits_phase_grad,
@@ -545,12 +541,12 @@ class InnerPrepareDFTHC(Bloq):
 
     @property
     def hadamards(self) -> Bloq:
-        """Get the Hadamards for preparing the alias sampling comparison."""
+        """Hadamards for preparing the alias sampling comparison."""
         return OnEach(self.num_bits_keep, Hadamard())
 
     @property
     def qroam(self) -> InnerQROAM:
-        """Get the QROAM loading the alias sampling data."""
+        """QROAM loading the alias sampling data."""
         return InnerQROAM(
             num_orbitals=self.num_orbitals,
             num_ranks=self.num_ranks,
@@ -563,7 +559,7 @@ class InnerPrepareDFTHC(Bloq):
 
     @property
     def tail_qrom(self) -> InnerQROMTail:
-        """Get the QROM loading the rotations for the :math:`D_1/Q_1` terms."""
+        """QROM loading the rotations for the :math:`D_1/Q_1` terms."""
         return InnerQROMTail(
             num_orbitals=self.num_orbitals,
             num_ranks=self.num_ranks,
@@ -573,12 +569,12 @@ class InnerPrepareDFTHC(Bloq):
 
     @property
     def inequality_check(self) -> LessThanEqual:
-        """Get the alias sampling inequality test."""
+        """Alias sampling inequality test."""
         return LessThanEqual(self.num_bits_keep, self.num_bits_keep)
 
     @property
     def cswap(self) -> CSwap:
-        """Get the controlled swap between `inner_index` and `alt`."""
+        """Controlled swap between `inner_index` and `alt`."""
         return CSwap(self.num_bits_inner)
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
@@ -691,7 +687,6 @@ class RotationPrepareDFTHC(Bloq):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     num_orbitals: int
@@ -735,7 +730,7 @@ class RotationPrepareDFTHC(Bloq):
 
     @property
     def qrom(self) -> RotationQROM:
-        """Get the QROM loading the rotation data."""
+        """QROM loading the rotation data."""
         return RotationQROM(
             num_orbitals=self.num_orbitals,
             num_ranks=self.num_ranks,
