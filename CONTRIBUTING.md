@@ -23,7 +23,7 @@ pytest
 ```
 
 ### Linting and formatting
-Linting and formatting are handled using [`ruff`](https://github.com/astral-sh/ruff).
+Linting and formatting are primarily handled using [`ruff`](https://github.com/astral-sh/ruff).
 For linting execute
 ```bash
 ruff check
@@ -34,6 +34,17 @@ ruff format
 ```
 
 The enabled rules are configured in `pyproject.toml` under `[tool.ruff]`.
+
+Docstrings are checked using [`numpydoc`](https://numpydoc.readthedocs.io/). To check a given file, execute
+```bash
+numpydoc lint somefile.py
+```
+and to run on all tracked files in the source (as CI does), execute from the repo root
+```bash
+PYTHONWARNINGS=ignore::UserWarning numpydoc lint $(git ls-files 'python/src/*.py')
+```
+
+The enabled rules are configured in `pyproject.toml` under `[tool.numpydoc_validation]`.
 
 ---
 
@@ -76,7 +87,7 @@ clang-format --dry-run --Werror some_file.cpp
 Every pull request and push to `main` runs:
 
 - Python tests: `pytest`
-- Python lint: `ruff check` and `ruff format --check`
+- Python lint: `ruff check`, `ruff format --check` and `numpydoc lint`
 - C++ tests: build with `QUICHE_BUILD_TESTS=ON`, then `ctest`
 - C++ lint: `clang-format` in check mode
 - Documentation build: using `sphinx-build`
