@@ -43,16 +43,16 @@
 
 namespace {
 
-double getMean(const std::vector<double> &values) {
-    return std::accumulate(values.begin(), values.end(), 0.0) / values.size();
+// qreal rather than double, so these also work when QuEST is compiled with single or quad precision
+qreal getMean(const std::vector<qreal> &values) {
+    return std::accumulate(values.begin(), values.end(), qreal(0)) / values.size();
 }
 
 // Sample standard deviation, sqrt(sum((x - mean)^2) / (n - 1))
-double getStdDev(const std::vector<double> &values) {
-    double mean = getMean(values);
-    double sqSum = std::accumulate(values.begin(), values.end(), 0.0, [mean](double accumulator, double x) {
-        return accumulator + (x - mean) * (x - mean);
-    });
+qreal getStdDev(const std::vector<qreal> &values) {
+    qreal mean = getMean(values);
+    qreal sqSum = std::accumulate(values.begin(), values.end(), qreal(0),
+                                  [mean](qreal accumulator, qreal x) { return accumulator + (x - mean) * (x - mean); });
     return std::sqrt(sqSum / (values.size() - 1));
 }
 
