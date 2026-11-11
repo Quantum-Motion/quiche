@@ -69,6 +69,7 @@ from qualtran.resource_counting import (
 )
 
 from quiche.core import Pauli, PauliWord
+from quiche.core.qdrift import sample_qdrift_counts, sample_qdrift_indices
 
 from .state_prep import PrepareFromStatePrep
 
@@ -563,24 +564,15 @@ class QDRIFT(Bloq):
         """Get timestep for each operator."""
         return self.time * self.lam / self.num_samples
 
-    @property
-    def _seed_sequences(self) -> list[np.random.SeedSequence]:
-        """Independent seed sequences for count and order sampling."""
-        return np.random.SeedSequence(self.seed).spawn(2)
-
     @cached_property
     def sampled_counts(self) -> NDArray[np.int_]:
         """Get the number of times each word in the sum is sampled."""
-        rng = np.random.default_rng(self._seed_sequences[0])
-        probabilities = np.asarray(self.positive_coefficients) / self.lam
-        return rng.multinomial(self.num_samples, probabilities)
+        return sample_qdrift_counts(self.sum, self.num_samples, self.seed)
 
     @cached_property
     def sampled_indices(self) -> NDArray[np.int_]:
         """Get a random sequence of indices consistent with the sampled counts."""
-        rng = np.random.default_rng(self._seed_sequences[1])
-        indices = np.repeat(np.arange(self.sum.num_words), self.sampled_counts)
-        return rng.permutation(indices)
+        return sample_qdrift_indices(self.sum, self.num_samples, self.seed)
 
     def _get_rotation(self, index: int) -> PauliWordRotation:
         """Get the individual PauliWordRotation for a given term."""

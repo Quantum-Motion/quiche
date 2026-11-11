@@ -61,14 +61,6 @@ class GivensLadder(Bloq):
     system : QAny
         System register of the selected spin sector.
 
-    Notes
-    -----
-        If implemented correctly, applying a rotation of zero degrees in the ladder
-        corresponds to applying the identity operation.
-        However, due to a Qualtran bug, a zero degree rotation currently
-        returns -iZ. The corresponding test is expected to fail,
-        because of this upstream bug. This bug has no effect on the Toffoli count.
-
     References
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by

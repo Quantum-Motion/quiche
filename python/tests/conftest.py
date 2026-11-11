@@ -14,6 +14,16 @@
 
 """Common pytest fixtures and setup for test suite."""
 
+# cudaq's MLIR bindings must be the first native extension loaded in the process,
+# or their initialisation breaks once quiche's own compiled extension (nanobind,
+# wrapping QuEST) has already loaded - a load-order collision between the two,
+# not a quiche/cudaq incompatibility (see tests/test_cudaq.py). cudaq is a soft,
+# optional dependency of quiche, so this is a no-op wherever it isn't installed.
+import contextlib
+
+with contextlib.suppress(ImportError):
+    import cudaq  # noqa: F401
+
 import pytest
 
 from quiche.core import Errors, PauliSum, PauliWord

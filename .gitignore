@@ -22,5 +22,42 @@ build
 # Docs
 docs/_build
 
+# Demo: ORCA by-products (inputs are rewritten by the notebooks)
+demo/sandbox/*
+demo/**/*.2jsonout
+demo/**/*.bibtex
+demo/**/*.densities
+demo/**/*.densitiesinfo
+demo/**/*.ges
+demo/**/*.inp
+demo/**/*.property.txt
+demo/**/*.tmp
+demo/**/*.tmp.*
+demo/**/*.gbw
+!demo/**/*_avas.gbw
+demo/**/*.json
+!demo/**/*.property.json
+!demo/**/*_dmrg_circuit.json
+!demo/**/*_dmrg_info.json
+!demo/**/*_results.json
+!demo/**/*_check.json
+!demo/**/*_rohf.json
+!demo/**/FeSH4.json
+demo/dmrg_mult2.py
+demo/dmrg_mult4.py
+demo/dmrg_mult6.py
+
+# Demo: intermediate RHF/AVAS runs and generated CUDA-Q kernel modules
+demo/**/rhf/
+demo/**/*_avas.out
+demo/**/*_avas.property.json
+demo/generated_kernel_module.py
+
+# Demo: outputs of QPE_error-longrun.ipynb, written next to the H2 geometry
+demo/H2/H2.*
+!demo/H2/H2.xyz
+demo/H2/H2_dmrg_circuit.json
+
 # Other
 .DS_Store
+*.log

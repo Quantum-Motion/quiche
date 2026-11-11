@@ -19,6 +19,7 @@
 
 from collections.abc import Callable
 from functools import partial
+from typing import TYPE_CHECKING, Literal
 
 from pydantic.dataclasses import Field, dataclass
 from qualtran import Bloq, BloqBuilder, CompositeBloq
@@ -69,6 +70,9 @@ from quiche.simulation.estimation import (
     getPhaseTextbookQubitised,
     getPhaseTextbookTrotter,
 )
+
+if TYPE_CHECKING:
+    from quiche.cudaq import CudaqKernel
 
 
 @dataclass()
@@ -359,3 +363,163 @@ class QPESpec:
         routine.append(self._get_stateprep_quest())
         routine.append(self._get_estimation_quest())
         return routine
+
+    def _get_stateprep_bitstring(self) -> tuple[int, ...]:
+        """Get the mapped computational basis state prepared on the data register."""
+        match self.state_prep:
+            case None:
+                return (0,) * self.num_data
+            case HartreeFockState():
+                occupation = self.state_prep.occupation
+                match self.hamiltonian.mapping:
+                    case Mapping.JordanWigner:
+                        bitstring = get_jw_state(occupation)
+                    case Mapping.BravyiKitaev:
+                        bitstring = get_bk_state(occupation)
+                    case Mapping.Parity:
+                        bitstring = get_parity_state(occupation)
+                return tuple(int(bit) for bit in bitstring)
+
+    def _get_estimation_cudaq(self) -> "tuple[CudaqKernel, int]":
+        """Build the `(data, work) -> float` QPE core kernel and its work size."""
+        from quiche.cudaq import (  # noqa: PLC0415
+            iterative_qpe_core,
+            qubitised_qpe_core,
+            textbook_qpe_core,
+        )
+
+        hamiltonian = self.hamiltonian.paulis
+        # Only Trotterisation has an order; QDRIFT is first order by construction.
+        order = self.order if self.simulation == Simulation.Trotter else 1
+
+        match (self.algorithm, self.simulation):
+            case (PhaseEstimation.Textbook, Simulation.Qubitised):
+                return qubitised_qpe_core(
+                    hamiltonian, self.num_qpe_ancillas, n_qubits=self.num_data
+                )
+
+            case (PhaseEstimation.Textbook, _):
+                return textbook_qpe_core(
+                    hamiltonian,
+                    self.simulation,
+                    self.num_qpe_ancillas,
+                    self.time,
+                    self.reps,
+                    order,
+                    seed=self.seed,
+                    n_qubits=self.num_data,
+                )
+
+            case (PhaseEstimation.Iterative, Simulation.Qubitised):
+                msg = (
+                    "Qubitised simulation is not yet implemented for Iterative QPE "
+                    "in the CUDA-Q backend."
+                )
+                raise NotImplementedError(msg)
+
+            case (PhaseEstimation.Iterative, _):
+                return iterative_qpe_core(
+                    hamiltonian,
+                    self.simulation,
+                    self.num_rounds,
+                    self.time,
+                    self.reps,
+                    order,
+                    seed=self.seed,
+                    n_qubits=self.num_data,
+                )
+
+            case (PhaseEstimation.Kitaev, _):
+                msg = (
+                    "Kitaev QPE needs many-shot statistics at several powers combined "
+                    "on the host, so it has no single CUDA-Q kernel; build it from "
+                    "quiche.cudaq.naive_qpe_kernel instead."
+                )
+                raise NotImplementedError(msg)
+
+            case (PhaseEstimation.Naive, _):
+                msg = (
+                    "Naive QPE returns single-shot +-1 outcomes, not energies; use "
+                    "quiche.cudaq.naive_qpe_kernel directly."
+                )
+                raise NotImplementedError(msg)
+
+    def to_cudaq(
+        self, kernel: Literal["all", "circuit", "post"] = "all"
+    ) -> "CudaqKernel | Callable":
+        """
+        Generate a CUDA-Q kernel implementing the specified calculation.
+
+        Requires the optional `cudaq` and `cudaq_algorithms` packages.
+
+        - `kernel="all"` (default): a `() -> float` kernel that prepares the state,
+          runs one QPE and returns the decoded energy (the phase is converted
+          in-kernel using the simulation time, or the block-encoding normalisation
+          for qubitisation).
+        - `kernel="circuit"`: the measured Textbook QPE circuit, including state
+          preparation, to sample with `cudaq.sample`.
+        - `kernel="post"`: the host-side decoder for the `cudaq.sample` result of the
+          `"circuit"` kernel, returning one energy per shot.
+        """
+        from quiche.cudaq import (  # noqa: PLC0415
+            bitstring_kernel,
+            measured_circuit_kernel,
+            qubitised_qpe_circuit,
+            repeated_minimum_kernel,
+            sample_post_processor,
+            textbook_qpe_circuit,
+        )
+
+        if kernel not in {"all", "circuit", "post"}:
+            msg = f"kernel must be 'all', 'circuit' or 'post', got {kernel!r}."
+            raise ValueError(msg)
+
+        if kernel == "all":
+            core, work_qubits = self._get_estimation_cudaq()
+            state_prep = bitstring_kernel(self._get_stateprep_bitstring())
+            return repeated_minimum_kernel(
+                core, work_qubits, state_prep, self.num_data, 1
+            )
+
+        if self.algorithm == PhaseEstimation.Iterative:
+            msg = (
+                "Iterative QPE needs mid-circuit measurement feedback, so it has no "
+                "circuit-only form; use kernel='all'."
+            )
+            raise ValueError(msg)
+
+        if self.algorithm != PhaseEstimation.Textbook:
+            msg = (
+                f"kernel={kernel!r} is only implemented for Textbook QPE in the "
+                "CUDA-Q backend."
+            )
+            raise NotImplementedError(msg)
+
+        hamiltonian = self.hamiltonian.paulis
+        if self.simulation == Simulation.Qubitised:
+            circuit, work_qubits, decode = qubitised_qpe_circuit(
+                hamiltonian, self.num_qpe_ancillas, n_qubits=self.num_data
+            )
+        else:
+            order = self.order if self.simulation == Simulation.Trotter else 1
+            circuit, work_qubits, decode = textbook_qpe_circuit(
+                hamiltonian,
+                self.simulation,
+                self.num_qpe_ancillas,
+                self.time,
+                self.reps,
+                order,
+                seed=self.seed,
+                n_qubits=self.num_data,
+            )
+
+        if kernel == "post":
+            return sample_post_processor(decode, 1)
+
+        return measured_circuit_kernel(
+            circuit,
+            work_qubits,
+            self.num_qpe_ancillas,
+            state_prep=bitstring_kernel(self._get_stateprep_bitstring()),
+            num_data=self.num_data,
+        )

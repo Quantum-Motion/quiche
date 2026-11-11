@@ -20,8 +20,10 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `from_sparse_string`, `from_dense_string` and `to_sparse_string` to `PauliWord` and `PauliSum`, and `to_dense_string` to `PauliSum`.
 - Added `to_matrix` to `Pauli`, `PauliWord` and `PauliSum`.
 - Added `Trotterisation.trotter_coeffs`, `Trotterisation.trotter_indices` and `Trotterisation.rotation_sequence`.
-- Added `bloqs.dfthc.encodings` to encode rotation angles as integers and pack them into binary words.
-- Added a `rotation_data` field to the DFTHC bloqs to load these angles into `RotationQROM`, set by `from_dfthc_hamiltonian`.
+- Added the `quiche.cudaq` CUDA-Q backend (Trotter, QDRIFT and qubitisation simulation kernels; Textbook, Iterative and Naive QPE kernels), built on `cudaq_algorithms`, with `cudaq` as an optional dependency (`pip install pyquiche[cudaq]`).
+- Added `QPESpec.to_cudaq` to build a CUDA-Q kernel for a QPE specification.
+- Added `PauliSum.from_cudaq` to convert a CUDA-Q `SpinOperator`.
+- Added `quiche.core.qdrift.sample_qdrift_indices`, the QDRIFT sampler shared by the Qualtran and CUDA-Q backends.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.

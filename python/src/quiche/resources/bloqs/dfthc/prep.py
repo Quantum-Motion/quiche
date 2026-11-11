@@ -37,7 +37,6 @@ from qualtran.resource_counting import (
 )
 from qualtran.symbolics import bit_length
 
-from quiche.resources.bloqs.dfthc.encodings import RotationData, as_rotation_data
 from quiche.resources.bloqs.dfthc.qrom import (
     InnerQROAM,
     InnerQROMTail,
@@ -673,12 +672,6 @@ class RotationPrepareDFTHC(Bloq):
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
         [Low2025]_.
 
-    rotation_data : tuple[tuple[int, ...], ...] | None, optional
-        Packed Givens rotation words loaded by the rotation QROM, indexed
-        ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
-        If None (default), placeholder data is used, which is sufficient for
-        Toffoli resource estimation.
-
     Registers
     ---------
     inner_index : QAny
@@ -706,10 +699,6 @@ class RotationPrepareDFTHC(Bloq):
     num_bases: int
 
     num_bits_phase_grad: int
-
-    rotation_data: RotationData | None = attrs.field(
-        default=None, repr=False, converter=as_rotation_data
-    )
 
     @property
     def num_inner(self) -> int:
@@ -753,7 +742,6 @@ class RotationPrepareDFTHC(Bloq):
             num_bases=self.num_bases,
             num_bits_phase_grad=self.num_bits_phase_grad,
             num_controls=1,
-            rotation_data=self.rotation_data,
         )
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002

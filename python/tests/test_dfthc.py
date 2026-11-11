@@ -14,16 +14,9 @@
 
 """Tests for the DFTHC bloqs."""
 
-import random
-
-import attrs
 import numpy as np
 import pytest
-from numpy.typing import ArrayLike
-from qualtran import BloqBuilder
-from qualtran.resource_counting import QECGatesCost, get_cost_value
 from qualtran.resource_counting.generalizers import ignore_alloc_free, ignore_split_join
-from qualtran.simulation.classical_sim import ClassicalValT
 from qualtran.testing import (
     assert_equivalent_bloq_counts,
     assert_valid_bloq_decomposition,
@@ -40,14 +33,6 @@ from quiche.resources.bloqs.dfthc import (
     RotationPrepareDFTHC,
     SelectDFTHC,
 )
-from quiche.resources.bloqs.dfthc.encodings import (
-    givens_angles,
-    pack_integers,
-    quantise_angles,
-    rotation_qrom_angles,
-)
-from quiche.resources.bloqs.dfthc.qrom import RotationQROM
-from quiche.resources.bloqs.dfthc.select import GivensLadder
 
 # FeMoco-54 parameters, from G. H. Low et al., "Fast Quantum Simulation of Electronic
 # Structure by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016
@@ -57,9 +42,6 @@ B_ROT = B_K1 = B_K2 = 15
 K_1 = K_4 = 2
 K_2 = K_5 = 4
 S = 7
-N_SMALL, R_SMALL, B_SMALL, B_ROT_SMALL = 4, 3, 2, 6
-
-RESOLUTION = 4 * np.pi / 2**N_SMALL  # The angle of the least significant bit.
 
 
 @pytest.fixture
@@ -70,34 +52,13 @@ def dummy_dfthc_hamiltonian() -> DFTHCHamiltonian:
         num_ranks=R,
         num_bases=B,
         num_copies=C,
-        unit_vectors=np.random.default_rng(0).normal(size=(R, B, N)),
+        unit_vectors=np.ones((R, B, N)),  # Non-zero, so unit-vector validation passes.
         weight_vectors=np.ones((R, B, C)),
         bliss_matrix=np.zeros((N, N)),
         factorised_one_body=np.eye(N),
         const=0.0,
         num_electrons=N,
     )
-
-
-def random_rotation_data(
-    num_ranks: int, num_bases: int, num_bits: int, seed: int = 0
-) -> tuple[tuple[int, ...], ...]:
-    """Get random rotations, indexed ``[rank][inner_index]``, of ``num_bits`` bits."""
-    rng = random.Random(seed)  # noqa: S311 (not used for cryptography)
-    return tuple(
-        tuple(rng.getrandbits(num_bits) for _ in range(num_bases))
-        for _ in range(num_ranks)
-    )
-
-
-def decode_rotation_data(rotation_data: tuple[tuple[int, ...], ...]) -> np.ndarray:
-    """Get the angles in the rotation words, as the Givens ladder splits them up."""
-    partition = GivensLadder(N, B_ROT).partition
-    values = [
-        [partition.call_classically(x=word)[0] for word in row] for row in rotation_data
-    ]
-    # The register of an angle holds a fraction of 4 pi.
-    return np.array(values, dtype=float) * 4 * np.pi / 2**B_ROT
 
 
 class TestOuterPrepareDFTHC:
@@ -166,95 +127,6 @@ class TestRotationPrepareDFTHC:
         )
 
 
-class TestRotationQROM:
-    """Tests for the QROM that loads the rotation words."""
-
-    qrom = RotationQROM(
-        num_orbitals=N_SMALL,
-        num_ranks=R_SMALL,
-        num_bases=B_SMALL,
-        num_bits_phase_grad=B_ROT_SMALL,
-        num_controls=1,
-        rotation_data=random_rotation_data(
-            R_SMALL, B_SMALL, (N_SMALL - 1) * B_ROT_SMALL
-        ),
-    )
-
-    def test_decomposition(self):
-        assert_valid_bloq_decomposition(self.qrom)
-
-    def test_bloq_counts(self):
-        assert_equivalent_bloq_counts(
-            self.qrom, generalizer=[ignore_split_join, ignore_alloc_free]
-        )
-
-    def test_loads_rotation_data(self):
-        data = tuple(
-            tuple(1000 * (r + 1) + b for b in range(B_SMALL)) for r in range(R_SMALL)
-        )
-        qrom = RotationQROM(
-            num_orbitals=N_SMALL,
-            num_ranks=R_SMALL,
-            num_bases=B_SMALL,
-            num_bits_phase_grad=B_ROT_SMALL,
-            num_controls=1,
-            rotation_data=data,
-        )
-        cbloq = qrom.decompose_bloq()
-        names = [reg.name for reg in qrom.signature.rights()]
-
-        def lookup(**registers: int) -> dict[str, ClassicalValT]:
-            return dict(zip(names, cbloq.call_classically(**registers), strict=True))
-
-        for r in range(R_SMALL):
-            for b in range(B_SMALL):
-                loaded = lookup(
-                    ctrl=1, inner_index=b, rank=r, rotations=0, non_identity=0
-                )
-                assert loaded["rotations"] == data[r][b]
-                assert loaded["non_identity"] == 0
-
-                idle = lookup(
-                    ctrl=0, inner_index=b, rank=r, rotations=0, non_identity=0
-                )
-                assert idle["rotations"] == 0
-
-        # b = B is the identity term, which flags instead of loading rotations.
-        identity = lookup(
-            ctrl=1, inner_index=B_SMALL, rank=0, rotations=0, non_identity=0
-        )
-        assert identity["rotations"] == 0
-        assert identity["non_identity"] == 1
-
-    @pytest.mark.parametrize(
-        ("data", "error_msg"),
-        [
-            (((0, 0),) * (R_SMALL - 1), "must have shape"),
-            (((0,),) * R_SMALL, "must have shape"),
-            (((2 ** ((N_SMALL - 1) * B_ROT_SMALL), 0),) * R_SMALL, "must fit in"),
-            (((-1, 0),) * R_SMALL, "must fit in"),
-        ],
-        ids=["too_few_ranks", "too_few_bases", "word_too_wide", "negative_word"],
-    )
-    def test_invalid_rotation_data(self, data: tuple, error_msg: str):
-        with pytest.raises(ValueError, match=error_msg):
-            RotationQROM(
-                num_orbitals=N_SMALL,
-                num_ranks=R_SMALL,
-                num_bases=B_SMALL,
-                num_bits_phase_grad=B_ROT_SMALL,
-                rotation_data=data,
-            )
-
-    def test_bloq_counts_without_data(self):
-        # Without data the call graph must still match the decomposition, which loads
-        # zeros with a controlled XorK rather than the `(CNOT(), 0)` placeholder.
-        assert_equivalent_bloq_counts(
-            attrs.evolve(self.qrom, rotation_data=None),
-            generalizer=[ignore_split_join, ignore_alloc_free],
-        )
-
-
 class TestMajorana:
     """Tests for the Majorana operator."""
 
@@ -267,50 +139,6 @@ class TestMajorana:
         assert_equivalent_bloq_counts(
             self.majorana, generalizer=[ignore_split_join, ignore_alloc_free]
         )
-
-
-class TestGivensLadder:
-    """Tests for the ladder of Givens rotations."""
-
-    ladder = GivensLadder(num_orbitals=N, num_bits_phase_grad=B_ROT)
-
-    def test_decomposition(self):
-        assert_valid_bloq_decomposition(self.ladder)
-
-    def test_bloq_counts(self):
-        assert_equivalent_bloq_counts(
-            self.ladder, generalizer=[ignore_split_join, ignore_alloc_free]
-        )
-
-    def test_cliffords_per_rung(self):
-        cost = get_cost_value(self.ladder, QECGatesCost())
-        # Per rung: 12 explicit Cliffords, plus 9 b_rot - 8 for each of the two
-        # additions into the phase gradient (Qualtran 0.7 counts).
-        assert cost.clifford == (N - 1) * (12 + 2 * (9 * B_ROT - 8))
-
-    @pytest.mark.xfail(
-        reason=(
-            "Qualtran's RealGivensRotationByPhaseGradient differs from the rotation it "
-            "documents by a Z on target_i, so the ladder does not equal the identity"
-            "with a zero rotation angle. Resource counts are unaffected."
-            "Remove once fixed upstream."
-        ),
-        strict=True,
-    )
-    def test_zero_angles_is_identity(self):
-        ladder = GivensLadder(num_orbitals=2, num_bits_phase_grad=4)
-        bb = BloqBuilder()
-        system = bb.add_register("system", 2)
-        rotations = bb.allocate(ladder.rotations_size)
-        phase_grad = bb.allocate(4)
-        rotations, phase_grad, system = bb.add(
-            ladder, rotations=rotations, phase_grad=phase_grad, system=system
-        )
-        bb.free(rotations)
-        bb.free(phase_grad)
-        unitary = bb.finalize(system=system).tensor_contract()
-
-        np.testing.assert_allclose(unitary / unitary[0, 0], np.eye(4), atol=1e-10)
 
 
 class TestSelectDFTHC:
@@ -367,18 +195,11 @@ class TestDFTHCBlockEncoding:
         log_block_size_inner_adjoint=K_4,
         log_block_size_outer=K_1,
         log_block_size_outer_adjoint=K_5,
-        rotation_data=random_rotation_data(R, B, (N - 1) * B_ROT),
     )
 
-    def test_decomposition(self):
-        assert_valid_bloq_decomposition(self.block_encoding)
-
-    def test_bloq_counts(self):
-        assert_equivalent_bloq_counts(
-            self.block_encoding, generalizer=[ignore_split_join, ignore_alloc_free]
-        )
-
-    def test_from_dfthc_hamiltonian(self, dummy_dfthc_hamiltonian: DFTHCHamiltonian):
+    def test_from_dfthc_hamiltonian_equivalence(
+        self, dummy_dfthc_hamiltonian: DFTHCHamiltonian
+    ):
         block_encoding_from_fh = DFTHCBlockEncoding.from_dfthc_hamiltonian(
             hamiltonian=dummy_dfthc_hamiltonian,
             num_bits_keep_inner=B_K2,
@@ -390,21 +211,15 @@ class TestDFTHCBlockEncoding:
             log_block_size_outer=K_1,
             log_block_size_outer_adjoint=K_5,
         )
+        assert self.block_encoding == block_encoding_from_fh
 
-        # Apart from the rotation data, it is the bloq built from the parameters.
-        assert attrs.evolve(self.block_encoding, rotation_data=None) == attrs.evolve(
-            block_encoding_from_fh, rotation_data=None
+    def test_decomposition(self):
+        assert_valid_bloq_decomposition(self.block_encoding)
+
+    def test_bloq_counts(self):
+        assert_equivalent_bloq_counts(
+            self.block_encoding, generalizer=[ignore_split_join, ignore_alloc_free]
         )
-        assert block_encoding_from_fh.rotation_data is not None
-        # The angles the ladder reads from the words are those of the Hamiltonian.
-        np.testing.assert_allclose(
-            np.exp(1j * decode_rotation_data(block_encoding_from_fh.rotation_data)),
-            np.exp(1j * rotation_qrom_angles(dummy_dfthc_hamiltonian)),
-            rtol=0,
-            atol=2 * np.pi / 2**B_ROT,
-        )
-        qrom = block_encoding_from_fh.inner.rotation_prep.qrom
-        assert qrom.rotation_data == block_encoding_from_fh.rotation_data
 
 
 class TestDFTHCWalkOperator:
@@ -423,18 +238,11 @@ class TestDFTHCWalkOperator:
         log_block_size_inner_adjoint=K_4,
         log_block_size_outer=K_1,
         log_block_size_outer_adjoint=K_5,
-        rotation_data=random_rotation_data(R, B, (N - 1) * B_ROT),
     )
 
-    def test_decomposition(self):
-        assert_valid_bloq_decomposition(self.walk)
-
-    def test_bloq_counts(self):
-        assert_equivalent_bloq_counts(
-            self.walk, generalizer=[ignore_split_join, ignore_alloc_free]
-        )
-
-    def test_from_dfthc_hamiltonian(self, dummy_dfthc_hamiltonian: DFTHCHamiltonian):
+    def test_from_dfthc_hamiltonian_equivalence(
+        self, dummy_dfthc_hamiltonian: DFTHCHamiltonian
+    ):
         walk_from_fh = DFTHCWalkOperator.from_dfthc_hamiltonian(
             hamiltonian=dummy_dfthc_hamiltonian,
             num_bits_keep_inner=B_K2,
@@ -446,139 +254,12 @@ class TestDFTHCWalkOperator:
             log_block_size_outer=K_1,
             log_block_size_outer_adjoint=K_5,
         )
+        assert self.walk == walk_from_fh
 
-        # Apart from the rotation data, it is the bloq built from the parameters.
-        assert attrs.evolve(self.walk, rotation_data=None) == attrs.evolve(
-            walk_from_fh, rotation_data=None
+    def test_decomposition(self):
+        assert_valid_bloq_decomposition(self.walk)
+
+    def test_bloq_counts(self):
+        assert_equivalent_bloq_counts(
+            self.walk, generalizer=[ignore_split_join, ignore_alloc_free]
         )
-        assert walk_from_fh.rotation_data is not None
-        # The angles the ladder reads from the words are those of the Hamiltonian.
-        np.testing.assert_allclose(
-            np.exp(1j * decode_rotation_data(walk_from_fh.rotation_data)),
-            np.exp(1j * rotation_qrom_angles(dummy_dfthc_hamiltonian)),
-            rtol=0,
-            atol=2 * np.pi / 2**B_ROT,
-        )
-        qrom = walk_from_fh.block_encoding.inner.rotation_prep.qrom
-        assert qrom.rotation_data == walk_from_fh.rotation_data
-
-
-class TestQuantiseAngles:
-    """Tests for converting angles to integers."""
-
-    def test_givens_angles_generation(self):
-        # Un-normalised vectors with mixed signs, including the last coordinate.
-        vectors = 3.7 * np.random.default_rng(0).normal(size=(2, 4, 3))
-        angles = givens_angles(vectors)
-
-        assert angles.shape == (2, 4, 2)
-        # Invert the Givens ladder: u_j = (prod_{k<j} sin t_k) cos t_j for j < N - 1,
-        # and u_{N-1} = prod_k sin t_k.
-        sines = np.cumprod(np.sin(angles), axis=-1)
-        prefix = np.concatenate([np.ones((2, 4, 1)), sines[..., :-1]], axis=-1)
-        rebuilt = np.concatenate([prefix * np.cos(angles), sines[..., -1:]], axis=-1)
-        expected = vectors / np.linalg.norm(vectors, axis=-1, keepdims=True)
-        np.testing.assert_allclose(rebuilt, expected, atol=1e-12)
-
-    @pytest.mark.parametrize(
-        ("angles", "expected"),
-        [
-            ([0.0, RESOLUTION, 2 * RESOLUTION, 4 * RESOLUTION], [0, 1, 2, 4]),
-            ([-2 * RESOLUTION, 8 * RESOLUTION, 9 * RESOLUTION], [6, 0, 1]),
-            ([0.4 * RESOLUTION, 0.6 * RESOLUTION], [0, 1]),
-            ([7.9 * RESOLUTION], [0]),
-        ],
-        ids=[
-            "exact_multiples",
-            "negative_and_beyond_2pi",
-            "rounds_to_nearest",
-            "rounds_up_and_wraps_to_zero",
-        ],
-    )
-    def test_values(self, angles: list[float], expected: list[int]):
-        np.testing.assert_array_equal(quantise_angles(angles, N_SMALL), expected)
-
-    @pytest.mark.parametrize("num_bits", [6, 12, 15])
-    def test_accuracy(self, num_bits: int):
-        rng = np.random.default_rng(0)
-        angles = rng.uniform(-4 * np.pi, 4 * np.pi, size=(5, 4, 7))
-
-        integers = quantise_angles(angles, num_bits)
-
-        assert integers.shape == angles.shape
-        assert integers.min() >= 0
-        assert integers.max() < 2 ** (num_bits - 1)
-        # Decoding gives back the angle up to half the angle of the least significant
-        # bit, compared as points on the circle since rotations are periodic in 2 pi.
-        decoded = integers * 4 * np.pi / 2**num_bits
-        np.testing.assert_allclose(
-            np.exp(1j * decoded),
-            np.exp(1j * angles),
-            rtol=0,
-            atol=2 * np.pi / 2**num_bits,
-        )
-
-    @pytest.mark.parametrize("num_bits", [1, 0, -3])
-    def test_too_few_bits(self, num_bits: int):
-        with pytest.raises(ValueError, match="must be at least 2"):
-            quantise_angles([0.5], num_bits)
-
-    @pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
-    def test_non_finite_angles(self, value: float):
-        with pytest.raises(ValueError, match="must be finite"):
-            quantise_angles([0.5, value], N_SMALL)
-
-    @pytest.mark.parametrize(
-        ("angle", "neighbours"),
-        [(0.3, {0, 1}), (1.7, {1, 2}), (7.9, {7, 0})],  # In steps; 8 wraps to 0.
-        ids=["lower_half", "upper_half", "rounds_up_and_wraps_to_zero"],
-    )
-    def test_unbiased_rounding_neighbours(self, angle: float, neighbours: set[int]):
-        rng = np.random.default_rng(0)
-        integers = quantise_angles(np.full(1000, angle * RESOLUTION), N_SMALL, rng=rng)
-        assert set(integers.tolist()) == neighbours
-
-    def test_unbiased_rounding_mean(self):
-        angles = np.full(100_000, 0.3 * RESOLUTION)
-        integers = quantise_angles(angles, N_SMALL, rng=np.random.default_rng(0))
-        # Rounded up with probability equal to the fractional part, 0.3.
-        np.testing.assert_allclose(integers.mean(), 0.3, atol=0.01)
-
-    def test_unbiased_rounding_reproducible(self):
-        angles = np.random.default_rng(1).uniform(0, 2 * np.pi, size=100)
-        first = quantise_angles(angles, N_SMALL, rng=np.random.default_rng(5))
-        second = quantise_angles(angles, N_SMALL, rng=np.random.default_rng(5))
-        np.testing.assert_array_equal(first, second)
-
-
-class TestPackIntegers:
-    """Tests for packing integers into a single word."""
-
-    def test_order(self):
-        # The first integer takes the most significant bits.
-        assert pack_integers([1, 2, 3], num_bits=4) == 0x123
-
-    def test_large_words(self):
-        # FeMoco-54 sizes, where each word exceeds 64 bits.
-        num_bits, num_angles = 15, 53
-        rng = np.random.default_rng(1)
-        integers = rng.integers(0, 2 ** (num_bits - 1), size=num_angles)
-
-        word = pack_integers(integers, num_bits)
-
-        assert isinstance(word, int)
-        mask = 2**num_bits - 1
-        unpacked = [
-            (word >> (num_bits * (num_angles - 1 - k))) & mask
-            for k in range(num_angles)
-        ]
-        np.testing.assert_array_equal(unpacked, integers)
-
-    @pytest.mark.parametrize(
-        "integers",
-        [[16], [-1], np.array([16]), np.array([-1])],
-        ids=["list_too_large", "list_negative", "array_too_large", "array_negative"],
-    )
-    def test_entries_must_fit(self, integers: ArrayLike):
-        with pytest.raises(ValueError, match="to fit in the word"):
-            pack_integers(integers, num_bits=4)

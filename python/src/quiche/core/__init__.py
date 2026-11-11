@@ -22,6 +22,7 @@ from .electronic import (
 )
 from .errors import Errors
 from .paulis import Pauli, PauliSum, PauliWord
+from .qdrift import Seed, sample_qdrift_indices
 
 __all__ = [
     "DFTHCHamiltonian",
@@ -33,5 +34,7 @@ __all__ = [
     "PauliWord",
     "PhaseEstimation",
     "SecondQuantisedHamiltonian",
+    "Seed",
     "Simulation",
+    "sample_qdrift_indices",
 ]

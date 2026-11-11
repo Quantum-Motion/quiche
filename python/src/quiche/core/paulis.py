@@ -34,10 +34,42 @@ from pydantic import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    # cudaq is a soft, optional dependency: only imported for real inside
+    # `PauliSum.from_cudaq`, never at module import time.
+    import cudaq
     from cirq import DensePauliString
     from numpy.typing import NDArray
 
 from quiche.bindings.quest_bindings import PauliStr, PauliStrSum
+
+
+def _real_coefficient(value: complex, *, tolerance: float = 1e-10) -> float:
+    """Coerce a Hamiltonian coefficient to float, rejecting complex values."""
+    coefficient = complex(value)
+    if abs(coefficient.imag) > tolerance:
+        error_msg = "Complex Hamiltonian coefficients are not supported."
+        raise ValueError(error_msg)
+    return float(coefficient.real)
+
+
+def _cudaq_term_extent(term: object) -> int:
+    """
+    Register extent a cudaq SpinOperatorTerm needs: largest targeted qubit + 1.
+
+    Not `qubit_count`: cudaq's `qubit_count` is the number of *distinct* targeted
+    indices, which undercounts whenever targets are off-zero or gapped. `max_degree`
+    may be a property or a method depending on cudaq version, and raises (rather
+    than returning a sentinel) for an identity term, which constrains no extent.
+    """
+    try:
+        max_degree = getattr(term, "max_degree", -1)
+        max_degree = max_degree() if callable(max_degree) else max_degree
+    except RuntimeError:
+        # An identity term acts on no degrees; cudaq raises (rather than
+        # returning a sentinel) on access, not on call - the getattr must be
+        # inside this try too.
+        return 0
+    return max_degree + 1 if max_degree >= 0 else 0
 
 
 class Pauli(StrEnum):
@@ -529,6 +561,42 @@ class PauliSum(BaseModel):
     def split_identity(self) -> tuple[float, PauliSum]:
         """Get the identity coefficient and the remaining words separately."""
         return (self.identity_coefficient, self.without_identity())
+
+    @classmethod
+    def from_cudaq(cls, op: cudaq.SpinOperator | cudaq.SpinOperatorTerm) -> Self:
+        """
+        Build a PauliSum from a CUDA-Q `SpinOperator` or `SpinOperatorTerm`.
+
+        Requires `cudaq` to be installed; imported lazily here so `cudaq` stays a
+        soft, optional dependency of quiche rather than a hard requirement.
+        """
+        import cudaq  # noqa: PLC0415
+
+        if isinstance(op, cudaq.SpinOperatorTerm):
+            op = cudaq.SpinOperator(op)
+
+        width = max((_cudaq_term_extent(term) for term in op), default=0)
+
+        identity_coefficient = 0.0
+        coefficients: list[float] = []
+        words: list[PauliWord] = []
+
+        for term in op:
+            coefficient = _real_coefficient(term.evaluate_coefficient())
+            word = str(term.get_pauli_word(width))
+
+            if set(word) <= {"I"}:
+                identity_coefficient += coefficient
+                continue
+
+            coefficients.append(coefficient)
+            words.append(PauliWord.from_dense_string(word, big_endian=True))
+
+        return cls(
+            coefficients=tuple(coefficients),
+            words=tuple(words),
+            identity_coefficient=identity_coefficient,
+        )
 
     def to_quest(self) -> PauliStrSum:
         """
