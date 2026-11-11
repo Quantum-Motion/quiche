@@ -22,26 +22,7 @@
  * For each number of QPE ancillas the demo prints the register size, the estimated energy,
  * its error and the simulation run time.
  *
- * Trade-offs:
- * - With enough ancillas the error is set by the phase grid 1 / 2^n rather than by the simulation
- *   method. The Trotter energy is the same for 6 and 8 ancillas because the true phase, about
- *   -0.2203, rounds to the same grid point -14/64 = -56/256 (error 0.0075). Textbook QPE with n
- *   ancillas extracts the same n bits as iterative QPE with n bits, only in parallel on n ancillas
- *   rather than sequentially on one, so both give the same answer.
- * - QDRIFT matches Trotterisation when its random compilation lands on the same grid point (6
- *   ancillas), but a single random circuit can shift the most likely outcome to a neighbouring
- *   point (errors 0.155 and 0.011 for 4 and 8 ancillas). On hardware this is averaged out by
- *   drawing a new circuit for every shot.
- * - Qubitisation needs ceil(log2(numTerms)) = 4 extra ancillas but no evolution time. Its walk
- *   operator has eigenphases +-arccos(E / lambda), so a phase error is amplified by
- *   2 pi lambda sin(2 pi phase), about 9.9 here. Its true phase, about 0.3428, also rounds to the
- *   same grid point 22/64 = 88/256 with 6 and 8 ancillas, so the energy (error 0.0089) is unchanged.
- * - Optimised qubitisation gives the same energy in about half the simulation time, as it only
- *   controls the reflections and applies 2^(k-1) uncontrolled walk steps instead of 2^k controlled
- *   ones (Babbush et al., arXiv:1805.03662).
- * - Simulation time is not hardware cost: Trotterisation is the slowest to simulate because each
- *   of its rotations is applied in turn, whereas the cost on a quantum computer is measured in
- *   T gates and circuit depth, which the Python resource estimation backend computes.
+ * The results, and the trade-offs between the methods, are discussed at the end of main().
  */
 
 #include <chrono>
@@ -190,6 +171,28 @@ int main() {
             destroyQureg(qureg);
         }
     }
+
+    // Trade-offs:
+    // - With enough ancillas the error is set by the phase grid 1 / 2^n rather than by the
+    //   simulation method. The Trotter energy is the same for 6 and 8 ancillas because the true
+    //   phase, about -0.2203, rounds to the same grid point -14/64 = -56/256 (error 0.0075). Textbook
+    //   QPE with n ancillas extracts the same n bits as iterative QPE with n bits, only in parallel
+    //   on n ancillas rather than sequentially on one, so both give the same answer.
+    // - QDRIFT matches Trotterisation when its random compilation lands on the same grid point (6
+    //   ancillas), but a single random circuit can shift the most likely outcome to a neighbouring
+    //   point (errors 0.155 and 0.011 for 4 and 8 ancillas). On hardware this is averaged out by
+    //   drawing a new circuit for every shot.
+    // - Qubitisation needs ceil(log2(numTerms)) = 4 extra ancillas but no evolution time. Its walk
+    //   operator has eigenphases +-arccos(E / lambda), so a phase error is amplified by
+    //   2 pi lambda sin(2 pi phase), about 9.9 here. Its true phase, about 0.3428, also rounds to the
+    //   same grid point 22/64 = 88/256 with 6 and 8 ancillas, so the energy (error 0.0089) is
+    //   unchanged.
+    // - Optimised qubitisation gives the same energy in about half the simulation time, as it only
+    //   controls the reflections and applies 2^(k-1) uncontrolled walk steps instead of 2^k
+    //   controlled ones (Babbush et al., arXiv:1805.03662).
+    // - Simulation time is not hardware cost: Trotterisation is the slowest to simulate because each
+    //   of its rotations is applied in turn, whereas the cost on a quantum computer is measured in
+    //   T gates and circuit depth, which the Python resource estimation backend computes.
 
     destroyPauliStrSum(rawHamiltonian);
     destroyPauliStrSum(hamiltonian);

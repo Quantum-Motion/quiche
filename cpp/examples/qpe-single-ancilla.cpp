@@ -25,25 +25,7 @@
  * Note that the simulator reads ancilla expectation values exactly, whereas hardware would
  * estimate them from repeated measurements.
  *
- * Where each method performs best:
- * - Naive QPE needs a single controlled evolution, so it has the shortest circuit, but all of its
- *   precision comes from estimating <X> and <Y> on the ancilla. Its error is 0.013 here, and on
- *   hardware the shot noise in that estimate maps to an energy error of 2 pi dphi / t.
- * - Iterative QPE determines one bit per round from a single measurement-like decision, so it
- *   only needs few shots per round. Its error halves with each extra bit (0.53 at 2 bits,
- *   0.0001 at 12 bits), at the cost of evolutions up to 2^(numBits - 1) times longer.
- * - Kitaev QPE is accurate from only 2 bits here (error 0.0006) because the simulator reads <X>
- *   and <Y> exactly. On hardware each round needs enough shots to resolve them, but the later
- *   rounds only need to choose between two candidate phases, which tolerates some noise.
- *
- * The phase E t / 2 pi must lie in [-0.5, 0.5]. Without the identity coefficient E = -1.038, so
- * naive QPE wraps around for t > pi / 1.038 = 3.03: at t = 4 it reports an energy of +0.43.
- * Below that limit a larger t is preferable on hardware, since it shrinks the energy error
- * caused by a given phase error.
- *
- * With QDRIFT, naive QPE is the most sensitive to the random compilation (standard deviation
- * 0.076 vs about 0.02), since it reads the energy directly from one short random circuit, while
- * the iterative and Kitaev methods make bit-by-bit decisions that small errors do not flip.
+ * The results of each part, and where each method performs best, are discussed in main().
  */
 
 #include <cmath>
@@ -148,6 +130,17 @@ int main() {
                   << std::abs(energyKT - exactEnergy) << "\n";
     }
 
+    // Where each method performs best:
+    // - Naive QPE needs a single controlled evolution, so it has the shortest circuit, but all of its
+    //   precision comes from estimating <X> and <Y> on the ancilla. Its error is 0.013 here, and on
+    //   hardware the shot noise in that estimate maps to an energy error of 2 pi dphi / t.
+    // - Iterative QPE determines one bit per round from a single measurement-like decision, so it
+    //   only needs few shots per round. Its error halves with each extra bit (0.53 at 2 bits,
+    //   0.0001 at 12 bits), at the cost of evolutions up to 2^(numBits - 1) times longer.
+    // - Kitaev QPE is accurate from only 2 bits here (error 0.0006) because the simulator reads <X>
+    //   and <Y> exactly. On hardware each round needs enough shots to resolve them, but the later
+    //   rounds only need to choose between two candidate phases, which tolerates some noise.
+
     // Part 2: naive QPE vs evolution time
     std::cout << "\n---------- Trotter: naive QPE vs evolution time ----------\n"
               << "t" << "\t\t" << "phase" << "\t\t" << "energy" << "\t\t" << "|err|" << "\n";
@@ -160,6 +153,10 @@ int main() {
         std::cout << time << "\t" << timePhase << "\t" << timeEnergy << "\t" << std::abs(timeEnergy - exactEnergy)
                   << "\n";
     }
+
+    // Without the identity coefficient E = -1.038, so naive QPE wraps around for
+    // t > pi / 1.038 = 3.03: at t = 4 it reports an energy of +0.43. Below that limit a larger t is
+    // preferable on hardware, since it shrinks the energy error caused by a given phase error.
 
     // Part 3: QDRIFT over several seeds
     std::cout << "\n---------- QDRIFT: 10 seeds, 8 bits ----------\n"
@@ -197,6 +194,10 @@ int main() {
               << std::abs(getMean(energyIterativeVec) - exactEnergy) << "\n";
     std::cout << "Kitaev" << "\t\t" << getMean(energyKitaevVec) << "\t" << getStdDev(energyKitaevVec) << "\t"
               << std::abs(getMean(energyKitaevVec) - exactEnergy) << "\n";
+
+    // Naive QPE is the most sensitive to the random compilation (standard deviation 0.076 vs about
+    // 0.02), since it reads the energy directly from one short random circuit, while the iterative
+    // and Kitaev methods make bit-by-bit decisions that small errors do not flip.
 
     destroyPauliStrSum(rawHamiltonian);
     destroyPauliStrSum(hamiltonian);

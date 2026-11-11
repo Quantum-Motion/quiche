@@ -24,21 +24,7 @@
  * Part 2 compares all three methods inside textbook quantum phase estimation, including
  * qubitisation, which block encodes the Hamiltonian rather than approximating time evolution.
  *
- * Where each method performs best:
- * - Trotterisation suits Hamiltonians with few terms of similar size, such as H2, where a single
- *   second-order step (28 rotations) already reaches a fidelity of 0.99995. Its cost grows with
- *   the number of terms, but higher orders converge quickly once enough steps are affordable.
- * - QDRIFT suits Hamiltonians with many terms dominated by a few large ones, at low precision.
- *   Its cost scales as lambda^2 t^2 / eps independently of the number of terms, so for the
- *   200-term Hamiltonian it is the only option cheaper than one Trotter step (100 rotations give a
- *   fidelity of 0.84), and at t = 5 it reaches 0.62 with 1000 rotations where Trotterisation
- *   reaches 0.08 with 800. Its 1/N convergence means Trotterisation wins again at high precision.
- * - Qubitisation has no time-step error: its accuracy is limited only by the QPE phase grid.
- *   It needs ceil(log2(numTerms)) extra ancillas, and its walk steps are not comparable to Pauli
- *   rotations, so a fair cost comparison needs T gate counts from the resource estimation backend.
- *
- * With 6 QPE ancillas Trotterisation and QDRIFT give the same energy, as the error is dominated by
- * the phase resolution 2 pi / (2^6 t) rather than by the simulation method.
+ * The results of each part, and where each method performs best, are discussed in main().
  */
 
 #include <cmath>
@@ -240,9 +226,25 @@ int main() {
     compareTimeEvolution("Random Skew", randomSkewHamiltonian, 6, 5.0, rng);
     destroyPauliStrSum(randomSkewHamiltonian);
 
+    // Where each method performs best for time evolution:
+    // - Trotterisation suits Hamiltonians with few terms of similar size, such as H2, where a single
+    //   second-order step (28 rotations) already reaches a fidelity of 0.99995. Its cost grows with
+    //   the number of terms, but higher orders converge quickly once enough steps are affordable.
+    // - QDRIFT suits Hamiltonians with many terms dominated by a few large ones, at low precision.
+    //   Its cost scales as lambda^2 t^2 / eps independently of the number of terms, so for the
+    //   200-term Hamiltonian it is the only option cheaper than one Trotter step (100 rotations give
+    //   a fidelity of 0.84), and at t = 5 it reaches 0.62 with 1000 rotations where Trotterisation
+    //   reaches 0.08 with 800. Its 1/N convergence means Trotterisation wins again at high precision.
+
     // Part 2: phase estimation
     qindex hf = mappings::getHartreeFockStateJW(numElectrons);
     compareQPE(hamiltonian, idCoeff.real(), hf, numDataQubits, 6, exactEnergy, rng);
+
+    // With 6 QPE ancillas Trotterisation and QDRIFT give the same energy, as the error is dominated
+    // by the phase resolution 2 pi / (2^6 t) rather than by the simulation method.
+    // Qubitisation has no time-step error: its accuracy is limited only by the QPE phase grid.
+    // It needs ceil(log2(numTerms)) extra ancillas, and its walk steps are not comparable to Pauli
+    // rotations, so a fair cost comparison needs T gate counts from the resource estimation backend.
 
     destroyPauliStrSum(rawHamiltonian);
     destroyPauliStrSum(hamiltonian);
