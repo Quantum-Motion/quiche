@@ -38,3 +38,9 @@ jobs:
       - name: Run ruff format
         if: ${{ !cancelled() }}
         run: uv run --no-sync ruff format --check --output-format=github
+
+      - name: Run numpydoc
+        if: ${{ !cancelled() }}
+        env:
+          PYTHONWARNINGS: ignore::UserWarning
+        run: uv run --no-sync numpydoc lint $(git ls-files 'python/src/*.py')
