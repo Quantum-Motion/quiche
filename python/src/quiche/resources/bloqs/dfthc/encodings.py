@@ -50,8 +50,7 @@ def as_rotation_data(
     ------
     TypeError
         If any word is not an integer (e.g. a float).
-
-    """
+    """  # ruff: ignore[docstring-extraneous-exception]
     if value is None:
         return None
     return tuple(tuple(index(word) for word in row) for row in value)
@@ -83,7 +82,6 @@ def givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
         by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
         Oct. 2025.
-
     """
     current = vectors[..., :-1]
     next_ = vectors[..., 1:]
@@ -112,7 +110,7 @@ def rotation_qrom_angles(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.floa
     ----------
     dfthc_hamiltonian : DFTHCHamiltonian
         A QUICHE DFTHCHamiltonian object containing the factors that
-        need to be encoded into angles
+        need to be encoded into angles.
 
     Returns
     -------
@@ -124,7 +122,6 @@ def rotation_qrom_angles(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.floa
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
         by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
         Oct. 2025.
-
     """
     return givens_angles(dfthc_hamiltonian.unit_vectors)
 
@@ -181,7 +178,6 @@ def quantise_angles(
         Oct. 2025.
     .. [Qualtran] https://qualtran.readthedocs.io/en/latest/bloqs/rotations/
                     rz_via_phase_gradient.html
-
     """
     if num_bits < 2:
         error_msg = f"`num_bits` must be at least 2, got {num_bits}."
@@ -238,7 +234,6 @@ def pack_integers(integer_angles: ArrayLike, num_bits: int) -> int:
     ------
     ValueError
         If entries in the array of angles don't match `num_bits`.
-
     """
     values = np.asarray(integer_angles).tolist()
     if any(not 0 <= value < 2**num_bits for value in values):
@@ -268,8 +263,8 @@ def encode_rotation_data(
     num_bits : int
         Number of bits used to encode each angle.
     rng : np.random.Generator, optional
-            Random number generator for unbiased rounding ([Low2025]_, appendix D).
-            If None (default), angles are rounded to the nearest integer.
+        Random number generator for unbiased rounding ([Low2025]_, appendix D).
+        If None (default), angles are rounded to the nearest integer.
 
     Returns
     -------
@@ -277,7 +272,6 @@ def encode_rotation_data(
         Packed rotation words, indexed ``[rank][inner_index]``. Each word is a Python
         ``int`` of ``(N - 1) * num_bits`` bits, with the first angle in the most
         significant bits.
-
     """
     integers = quantise_angles(radian_angles, num_bits, rng=rng)
     return tuple(

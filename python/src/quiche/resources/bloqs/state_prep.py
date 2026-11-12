@@ -44,7 +44,6 @@ class IdentityStatePrep(Bloq):
     ---------
     q : QAny, RIGHT
         Newly-allocated qubit register initialised to zero state.
-
     """
 
     num_qubits: int
@@ -93,7 +92,6 @@ class BitstringStatePrep(Bloq):
     ------
     ValueError
         If ``bitstring`` contains values other than 0 or 1.
-
     """
 
     bitstring: tuple[int, ...]
@@ -175,7 +173,6 @@ class PrepareFromStatePrep(PrepareOracle):
         Qubits used to represent the selection index for the LCU.
     phase_gradient : QAny
         Qubits used for phase gradient states for rotation synthesis.
-
     """
 
     stateprep: StatePreparationViaRotations
@@ -184,12 +181,12 @@ class PrepareFromStatePrep(PrepareOracle):
 
     @property
     def selection_registers(self) -> tuple[Register, ...]:
-        """Get selection (index) register."""
+        """Selection (index) register."""
         return (Register("selection", QAny(self.num_select_qubits)),)
 
     @property
     def junk_registers(self) -> tuple[Register, ...]:
-        """Get the junk (phase gradient) register."""
+        """Junk (phase gradient) register."""
         return (Register("phase_gradient", QAny(self.phase_bitsize)),)
 
     # We must implement the required abstract method to expose the concrete circuit

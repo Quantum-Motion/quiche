@@ -88,7 +88,6 @@ class _SingleAncillaQPE(Bloq):
     ValueError
         If ``exponent`` is not a positive integer, or if ``mode`` is not ``'re'`` or
         ``'im'``.
-
     """
 
     simulation: Bloq
@@ -106,18 +105,18 @@ class _SingleAncillaQPE(Bloq):
     @property
     @abc.abstractmethod
     def exponent(self) -> int:
-        """Return the power to which the propagator is raised."""
+        """Power to which the propagator is raised."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def apply_feedback(self) -> bool:
-        """Return whether a feedback rotation precedes the final Hadamard or not."""
+        """Whether a feedback rotation precedes the final Hadamard or not."""
         raise NotImplementedError
 
     @property
     def controlled_propagator(self) -> Bloq:
-        """Return the controlled propagator ``C[U^exponent]``."""
+        """The controlled propagator ``C[U^exponent]``."""
         return (
             self.simulation.controlled()
             if self.exponent == 1
@@ -126,12 +125,12 @@ class _SingleAncillaQPE(Bloq):
 
     @property
     def num_simulation_qubits(self) -> int:
-        """Return number of qubits used for Hamiltonian simulation."""
+        """Number of qubits used for Hamiltonian simulation."""
         return self.simulation.signature.get_left("system").total_bits()
 
     @property
     def num_estimation_bits(self) -> int:
-        """Return number of estimation qubits."""
+        """Number of estimation qubits."""
         return 1
 
     @property
@@ -235,7 +234,6 @@ class NaiveQPE(_SingleAncillaQPE):
     ------
     ValueError
         If ``mode`` is not ``'re'`` or ``'im'``.
-
     """
 
     simulation: Bloq
@@ -301,7 +299,6 @@ class KitaevQPE(_SingleAncillaQPE):
     ------
     ValueError
         If ``k`` is negative, or if ``mode`` is not ``'re'`` or ``'im'``.
-
     """
 
     simulation: Bloq
@@ -371,7 +368,6 @@ class IterativeQPE(_SingleAncillaQPE):
     ------
     ValueError
         If ``k`` is negative, or if ``mode`` is not ``'re'`` or ``'im'``.
-
     """
 
     simulation: Bloq
@@ -414,7 +410,6 @@ class TextbookQPE(Bloq):
     ---------
     data : QAny
         Qubits representing the target system.
-
     """
 
     simulation_factory: Callable[[int], Bloq]
@@ -582,7 +577,6 @@ class TrotterLadder(Bloq):
         Qubits representing the target system.
     qpe_ancillas : QAny
         Qubits representing the phase accumulated during phase estimation.
-
     """
 
     # Index must be first parameter
@@ -660,7 +654,6 @@ class QubitisationLadder(Bloq):
         Qubits representing the phase accumulated during phase estimation.
     other_ancillas : QAny
         Block-encoding ancillas.
-
     """
 
     # Index must be first parameter

@@ -59,6 +59,7 @@ dev = [
 lint = [
     "ruff>=0.15",
     "clang-format==23.1.*",
+    "numpydoc>=1.11",
 ]
 docs = [
     "myst-parser>=5.1",
@@ -108,6 +109,21 @@ lint.ignore = [
     "PLR2004", # not applicable
 ]
 
+lint.preview = true
+lint.explicit-preview-rules = true          # only the preview rules named below
+lint.extend-select = [
+    "D213",                      # ensure summary on line after the opening quotes
+    "D417",                      # undocumented parameter
+    "DOC102",                    # documented parameter not in signature
+    "D420",                      # incorrect section order
+    "D421",                      # noun phrases for properties
+    "DOC201", "DOC202",          # missing / extraneous Returns
+    "DOC402", "DOC403",          # missing / extraneous Yields
+    "DOC501", "DOC502",          # missing / extraneous Raises
+]
+lint.pydocstyle.convention = "numpy"
+lint.pydoclint.ignore-one-line-docstrings = true
+
 [tool.ruff.lint.per-file-ignores]
 "docs/conf.py" = ["INP001"] # not applicable
 "python/examples/*.py" = ["INP001"] # Example scripts are not a package
@@ -119,6 +135,20 @@ lint.ignore = [
     "ANN201", # Adding "-> None" is overkill in tests
     "SLF001"  # Tests may access private members
 ]
+
+[tool.numpydoc_validation]
+checks = [
+    "all",
+    # Ignored checks:
+    "EX01", "SA01", "ES01",                  # optional sections
+    "PR02",                                  # false positives
+    "GL05", "GL07", "GL08",                  # covered by Ruff
+    "PR07", "RT01", "YD01",                  # covered by Ruff
+    "SS02", "SS03", "SS04", "SS05", "SS06",  # covered by Ruff
+]
+
+override_PR01 = ['\A[^\n]+\Z']                 # disable PR01 for one-line docstrings
+override_GL06 = ['(?m)^\s*Registers\n\s*-+$']  # disable GL06 for docstrings with Registers section
 
 [tool.pytest]
 testpaths = ["python/tests"]

@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12, <4.0"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -2055,6 +2055,18 @@ wheels = [
 ]
 
 [[package]]
+name = "numpydoc"
+version = "1.11.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sphinx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/2f/5e9bf8ed0a93587b8089242b4926dfd04d4b3b0b65f04345d219a1225f03/numpydoc-1.11.0.tar.gz", hash = "sha256:26db0adaac8087e98da05c86b11198defd962aef7c21f4dffd2703c8c6eb4187", size = 101575, upload-time = "2026-09-15T16:31:08.905Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fb/e5/f5c38d4899cd8edd5b522071c5658202077d113c3225484d779cf257970e/numpydoc-1.11.0-py3-none-any.whl", hash = "sha256:493ad2ce0d8275ca5da484ec37dbdbbc1334c3a6968dffd10ec729b51753e15e", size = 71464, upload-time = "2026-09-15T16:31:07.521Z" },
+]
+
+[[package]]
 name = "openfermion"
 version = "1.8.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2609,6 +2621,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "clang-format" },
+    { name = "numpydoc" },
     { name = "pytest" },
     { name = "ruff" },
     { name = "scipy" },
@@ -2622,6 +2635,7 @@ docs = [
 ]
 lint = [
     { name = "clang-format" },
+    { name = "numpydoc" },
     { name = "ruff" },
 ]
 test = [
@@ -2643,6 +2657,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "clang-format", specifier = "==23.1.*" },
+    { name = "numpydoc", specifier = ">=1.11.0" },
     { name = "pytest", specifier = ">=9.0" },
     { name = "ruff", specifier = ">=0.15" },
     { name = "scipy", specifier = ">=1.15" },
@@ -2656,6 +2671,7 @@ docs = [
 ]
 lint = [
     { name = "clang-format", specifier = "==23.1.*" },
+    { name = "numpydoc", specifier = ">=1.11.0" },
     { name = "ruff", specifier = ">=0.15" },
 ]
 test = [

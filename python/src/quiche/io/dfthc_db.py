@@ -19,7 +19,6 @@ References
 ----------
 .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
     Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
 """
 
 import io
@@ -61,7 +60,6 @@ def read(path: str | Path, job_id: int) -> DFTHCHamiltonian:
         If no row with the given ``job_id`` exists in the database.
     ValueError
         If the job exists but its status is not ``"completed"``.
-
     """
     path = Path(path)
     if not path.is_file():
