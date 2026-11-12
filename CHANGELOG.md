@@ -44,6 +44,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Changed `Trotterisation`'s Suzuki-Trotter expansion to no longer merge adjacent rotations on the same term.
 - Changed `QDRIFT.sampled_indices` to return a NumPy array rather than a tuple.
 - Changed `QDRIFT` to sample term counts directly, speeding up the call graph for large `num_samples` (sampled terms will differ for a given seed from previous sampling).
+- Changed QuEST bindings' validation errors to raise `QuESTError` (a `RuntimeError` subclass).
 
 ### Deprecated
 
@@ -52,6 +53,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Fixed `QDRIFT` and `Trotterisation` call graphs undercounting rotations for repeated `PauliWord`s.
+- Fixed QuEST bindings exiting instead of raising on validation errors before the `QuESTEnv` is initialised.
+- Fixed QuEST bindings exiting instead of raising when re-initialising a `QuESTEnv` after a failed initialisation.
 
 ### Security
 
