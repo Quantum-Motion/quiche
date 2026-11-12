@@ -94,9 +94,9 @@ def test_quiche_quest_call(quest_env: QuESTEnv):  # noqa: ARG001
 
 def test_quest_error_handler(quest_env: QuESTEnv):  # noqa: ARG001
     """Test QuEST errors correctly raise a Python exception."""
-    from quiche.bindings.quest_bindings import Qureg
+    from quiche.bindings.quest_bindings import QuESTError, Qureg
 
     qureg = Qureg(1)
 
-    with pytest.raises(RuntimeError, match="density matrix"):
+    with pytest.raises(QuESTError, match="density matrix"):
         qureg.initRandomMixedState(5)
