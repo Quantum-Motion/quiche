@@ -24,6 +24,7 @@
 #include <nanobind/stl/vector.h>
 
 #include <quest.h>
+#include <quest/src/core/validation.hpp> // validateconfig_setErrorHandler
 
 using std::string;
 using std::vector;
@@ -47,6 +48,12 @@ void init_quest_bindings(nb::module_ &m) {
     nb::module_ quest = m.def_submodule("quest_bindings");
 
     nb::exception<QuESTError>(quest, "QuESTError", PyExc_RuntimeError);
+
+    // QuEST's public setInputErrorHandler() unnecessarily demands that the QuESTEnv is
+    // initialised before the error handler can be set. Instead use the internal setter
+    // directly (skipping the validate_envIsInit check) so errors outside an active
+    // QuESTEnv still throw instead of exiting the process.
+    validateconfig_setErrorHandler(QuESTErrorHandler);
 
     // // Debug
     // nb::module_ debug = m.def_submodule("debug");
@@ -72,12 +79,10 @@ void init_quest_bindings(nb::module_ &m) {
     nb::class_<QuESTEnv>(quest, "QuESTEnv")
         .def(nb::new_([]() {
             initQuESTEnv();
-            setInputErrorHandler(QuESTErrorHandler);
             return getQuESTEnv();
         }))
         .def(nb::new_([](int distrib, int gpu, int multithread) {
             initCustomQuESTEnv(distrib, gpu, multithread);
-            setInputErrorHandler(QuESTErrorHandler);
             return getQuESTEnv();
         }))
         .def_static("report", &reportQuESTEnv)
