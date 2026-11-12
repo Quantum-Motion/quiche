@@ -41,6 +41,21 @@ void QuESTErrorHandler(const char *errFunc, const char *errMsg) {
     throw QuESTError(string(errFunc) + " - " + string(errMsg));
 }
 
+// A failed QuEST initialisation leaves partial state behind, and retrying hits an
+// internal error that exits the process, so retries after a failure are rejected.
+bool envInitIncomplete = false;
+
+template <class Init>
+void attemptEnvInit(Init init) {
+    if (envInitIncomplete)
+        QuESTErrorHandler("QuESTEnv", "The QuEST environment cannot be initialised again in this process, "
+                                      "because a previous initialisation failed");
+
+    envInitIncomplete = true;
+    init();
+    envInitIncomplete = false;
+}
+
 } // namespace
 
 void init_quest_bindings(nb::module_ &m) {
@@ -78,11 +93,11 @@ void init_quest_bindings(nb::module_ &m) {
     // Env
     nb::class_<QuESTEnv>(quest, "QuESTEnv")
         .def(nb::new_([]() {
-            initQuESTEnv();
+            attemptEnvInit([]() { initQuESTEnv(); });
             return getQuESTEnv();
         }))
         .def(nb::new_([](int distrib, int gpu, int multithread) {
-            initCustomQuESTEnv(distrib, gpu, multithread);
+            attemptEnvInit([=]() { initCustomQuESTEnv(distrib, gpu, multithread); });
             return getQuESTEnv();
         }))
         .def_static("report", &reportQuESTEnv)
