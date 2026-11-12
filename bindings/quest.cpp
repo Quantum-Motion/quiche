@@ -120,7 +120,7 @@ void init_quest_bindings(nb::module_ &m) {
     nb::class_<PauliStrSum>(quest, "PauliStrSum")
         .def(nb::new_(nb::overload_cast<vector<PauliStr>, vector<qcomp>>(&createPauliStrSum)))
         .def(nb::new_(nb::overload_cast<string>(&createInlinePauliStrSum)))
-        .def("__del__", &destroyPauliStrSum)
+        .def("destroy", &destroyPauliStrSum)
         .def_static("fromFile", nb::overload_cast<string>(&createPauliStrSumFromFile))
         .def_static("fromReversedFile", nb::overload_cast<string>(&createPauliStrSumFromReversedFile))
         .def("report", &reportPauliStrSum);
@@ -128,7 +128,7 @@ void init_quest_bindings(nb::module_ &m) {
     // Qureg
     nb::class_<Qureg>(quest, "Qureg")
         .def(nb::new_(&createQureg))
-        .def("__del__", &destroyQureg)
+        .def("destroy", &destroyQureg)
 
         // Constructors
         .def_static("createDensityQureg", &createDensityQureg)
@@ -458,8 +458,8 @@ void init_quest_bindings(nb::module_ &m) {
     nb::class_<KrausMap>(quest, "KrausMap")
         .def(nb::new_(&createKrausMap))
         .def(nb::new_(&createInlineKrausMap))
+        .def("destroy", &destroyKrausMap)
         .def("set", nb::overload_cast<KrausMap, vector<vector<vector<qcomp>>>>(&setKrausMap))
-        .def("__del__", &destroyKrausMap)
         .def("sync", &syncKrausMap)
         .def("report", &reportKrausMap);
 
@@ -467,8 +467,8 @@ void init_quest_bindings(nb::module_ &m) {
     nb::class_<SuperOp>(quest, "SuperOp")
         .def(nb::new_(&createSuperOp))
         .def(nb::new_(&createInlineSuperOp))
+        .def("destroy", &destroySuperOp)
         .def("set", nb::overload_cast<SuperOp, vector<vector<qcomp>>>(&setSuperOp))
-        .def("__del__", &destroySuperOp)
         .def("sync", &syncSuperOp)
         .def("report", &reportSuperOp);
 
@@ -485,8 +485,8 @@ void init_quest_bindings(nb::module_ &m) {
     // CompMatr
     nb::class_<CompMatr>(quest, "CompMatr")
         .def(nb::new_(&createCompMatr))
+        .def("destroy", &destroyCompMatr)
         .def("set", nb::overload_cast<CompMatr, vector<vector<qcomp>>>(&setCompMatr))
-        .def("__del__", &destroyCompMatr)
         .def("sync", &syncCompMatr)
         .def("report", &reportCompMatr);
 
@@ -503,16 +503,16 @@ void init_quest_bindings(nb::module_ &m) {
     // DiagMatr
     nb::class_<DiagMatr>(quest, "DiagMatr")
         .def(nb::new_(&createDiagMatr))
+        .def("destroy", &destroyDiagMatr)
         .def("set", nb::overload_cast<DiagMatr, vector<qcomp>>(&setDiagMatr))
-        .def("__del__", &destroyDiagMatr)
         .def("sync", &syncDiagMatr)
         .def("report", &reportDiagMatr);
 
     // FullStateDiagMatr
     nb::class_<FullStateDiagMatr>(quest, "FullStateDiagMatr")
         .def(nb::new_(&createFullStateDiagMatr))
+        .def("destroy", &destroyFullStateDiagMatr)
         .def("set", nb::overload_cast<FullStateDiagMatr, qindex, vector<qcomp>>(&setFullStateDiagMatr))
-        .def("__del__", &destroyFullStateDiagMatr)
         .def("sync", &syncFullStateDiagMatr)
         .def("report", &reportFullStateDiagMatr);
 }
