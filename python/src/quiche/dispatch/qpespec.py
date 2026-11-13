@@ -445,7 +445,10 @@ class QPESpec:
                 raise NotImplementedError(msg)
 
     def to_cudaq(
-        self, kernel: Literal["all", "circuit", "post"] = "all"
+        self,
+        kernel: Literal["all", "circuit", "post"] = "all",
+        *,
+        state_prep: "CudaqKernel | None" = None,
     ) -> "CudaqKernel | Callable":
         """
         Generate a CUDA-Q kernel implementing the specified calculation.
@@ -460,6 +463,10 @@ class QPESpec:
           preparation, to sample with `cudaq.sample`.
         - `kernel="post"`: the host-side decoder for the `cudaq.sample` result of the
           `"circuit"` kernel, returning one energy per shot.
+
+        `state_prep` optionally replaces the spec's own state preparation with a CUDA-Q
+        kernel acting on the `num_data` data qubits, e.g. a DMRG guide state. It is
+        ignored for `kernel="post"`, which needs no state preparation.
         """
         from quiche.cudaq import (  # noqa: PLC0415
             bitstring_kernel,
@@ -474,9 +481,11 @@ class QPESpec:
             msg = f"kernel must be 'all', 'circuit' or 'post', got {kernel!r}."
             raise ValueError(msg)
 
+        if state_prep is None and kernel != "post":
+            state_prep = bitstring_kernel(self._get_stateprep_bitstring())
+
         if kernel == "all":
             core, work_qubits = self._get_estimation_cudaq()
-            state_prep = bitstring_kernel(self._get_stateprep_bitstring())
             return repeated_minimum_kernel(
                 core, work_qubits, state_prep, self.num_data, 1
             )
@@ -520,6 +529,6 @@ class QPESpec:
             circuit,
             work_qubits,
             self.num_qpe_ancillas,
-            state_prep=bitstring_kernel(self._get_stateprep_bitstring()),
+            state_prep=state_prep,
             num_data=self.num_data,
         )
