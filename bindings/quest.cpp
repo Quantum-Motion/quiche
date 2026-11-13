@@ -26,8 +26,14 @@
 #include <quest.h>
 #include <quest/src/core/validation.hpp> // validateconfig_setErrorHandler
 
+#include "resources.hpp"
+#include "wrapper.hpp"
+
 using std::string;
 using std::vector;
+
+using bindings::resources::checked;
+using bindings::resources::CheckedResource;
 
 namespace nb = nanobind;
 
@@ -72,23 +78,23 @@ void init_quest_bindings(nb::module_ &m) {
 
     // // Debug
     // nb::module_ debug = m.def_submodule("debug");
-    // debug.def("setSeeds", nb::overload_cast<vector<unsigned>>(&setSeeds));
-    // debug.def("getSeeds", nb::overload_cast<>(&getSeeds));
-    // debug.def("setSeedsToDefault", &setSeedsToDefault);
-    // debug.def("getNumSeeds", &getNumSeeds);
-    // debug.def("setValidationOn", &setValidationOn);
-    // debug.def("setValidationOff", &setValidationOff);
-    // debug.def("setValidationEpsilonToDefault", &setValidationEpsilonToDefault);
-    // debug.def("setValidationEpsilon", &setValidationEpsilon);
-    // debug.def("getValidationEpsilon", &getValidationEpsilon);
-    // debug.def("setMaxNumReportedItems", &setMaxNumReportedItems);
-    // debug.def("setMaxNumReportedSigFigs", &setMaxNumReportedSigFigs);
-    // debug.def("setNumReportedNewlines", &setNumReportedNewlines);
-    // debug.def("setReportedPauliChars", &setReportedPauliChars);
-    // debug.def("setReportedPauliStrStyle", &setReportedPauliStrStyle);
-    // debug.def("getGpuCacheSize", &getGpuCacheSize);
-    // debug.def("clearGpuCache", &clearGpuCache);
-    // debug.def("getEnvironmentString", &getEnvironmentString);
+    // debug.def("setSeeds", checked(nb::overload_cast<vector<unsigned>>(&setSeeds)));
+    // debug.def("getSeeds", checked(nb::overload_cast<>(&getSeeds)));
+    // debug.def("setSeedsToDefault", checked(&setSeedsToDefault));
+    // debug.def("getNumSeeds", checked(&getNumSeeds));
+    // debug.def("setValidationOn", checked(&setValidationOn));
+    // debug.def("setValidationOff", checked(&setValidationOff));
+    // debug.def("setValidationEpsilonToDefault", checked(&setValidationEpsilonToDefault));
+    // debug.def("setValidationEpsilon", checked(&setValidationEpsilon));
+    // debug.def("getValidationEpsilon", checked(&getValidationEpsilon));
+    // debug.def("setMaxNumReportedItems", checked(&setMaxNumReportedItems));
+    // debug.def("setMaxNumReportedSigFigs", checked(&setMaxNumReportedSigFigs));
+    // debug.def("setNumReportedNewlines", checked(&setNumReportedNewlines));
+    // debug.def("setReportedPauliChars", checked(&setReportedPauliChars));
+    // debug.def("setReportedPauliStrStyle", checked(&setReportedPauliStrStyle));
+    // debug.def("getGpuCacheSize", checked(&getGpuCacheSize));
+    // debug.def("clearGpuCache", checked(&clearGpuCache));
+    // debug.def("getEnvironmentString", checked(&getEnvironmentString));
 
     // Env
     nb::class_<QuESTEnv>(quest, "QuESTEnv")
@@ -100,7 +106,7 @@ void init_quest_bindings(nb::module_ &m) {
             attemptEnvInit([=]() { initCustomQuESTEnv(distrib, gpu, multithread); });
             return getQuESTEnv();
         }))
-        .def_static("report", &reportQuESTEnv)
+        .def_static("report", checked(&reportQuESTEnv))
         .def("__enter__", [](QuESTEnv &self) { return self; })
         .def("__exit__",
              [](QuESTEnv, nb::args) {
@@ -112,407 +118,427 @@ void init_quest_bindings(nb::module_ &m) {
 
     // PauliStr
     nb::class_<PauliStr>(quest, "PauliStr")
-        .def(nb::new_(nb::overload_cast<string, vector<int>>(&getPauliStr)))
-        .def(nb::new_(nb::overload_cast<string>(&getPauliStr)))
-        .def("report", &reportPauliStr);
+        .def(nb::new_(checked(nb::overload_cast<string, vector<int>>(&getPauliStr))))
+        .def(nb::new_(checked(nb::overload_cast<string>(&getPauliStr))))
+        .def("report", checked(&reportPauliStr));
 
     // PauliStrSum
-    nb::class_<PauliStrSum>(quest, "PauliStrSum")
-        .def(nb::new_(nb::overload_cast<vector<PauliStr>, vector<qcomp>>(&createPauliStrSum)))
-        .def(nb::new_(nb::overload_cast<string>(&createInlinePauliStrSum)))
-        .def("destroy", &destroyPauliStrSum)
-        .def_static("fromFile", nb::overload_cast<string>(&createPauliStrSumFromFile))
-        .def_static("fromReversedFile", nb::overload_cast<string>(&createPauliStrSumFromReversedFile))
-        .def("report", &reportPauliStrSum);
+    nb::class_<CheckedResource<PauliStrSum>>(quest, "PauliStrSum")
+        .def(nb::new_(checked(nb::overload_cast<vector<PauliStr>, vector<qcomp>>(&createPauliStrSum))))
+        .def(nb::new_(checked(nb::overload_cast<string>(&createInlinePauliStrSum))))
+        .def("destroy", &CheckedResource<PauliStrSum>::destroy)
+        .def_static("fromFile", checked(nb::overload_cast<string>(&createPauliStrSumFromFile)))
+        .def_static("fromReversedFile", checked(nb::overload_cast<string>(&createPauliStrSumFromReversedFile)))
+        .def("report", checked(&reportPauliStrSum));
 
     // Qureg
-    nb::class_<Qureg>(quest, "Qureg")
-        .def(nb::new_(&createQureg))
-        .def("destroy", &destroyQureg)
+    nb::class_<CheckedResource<Qureg>>(quest, "Qureg")
+        .def(nb::new_(checked(&createQureg)))
+        .def("destroy", &CheckedResource<Qureg>::destroy)
 
         // Constructors
-        .def_static("createDensityQureg", &createDensityQureg)
-        .def_static("createForcedQureg", &createForcedQureg)
-        .def_static("createForcedDensityQureg", &createForcedDensityQureg)
-        .def_static("createCustomQureg", &createCustomQureg)
-        .def("createCloneQureg", &createCloneQureg)
+        .def_static("createDensityQureg", checked(&createDensityQureg))
+        .def_static("createForcedQureg", checked(&createForcedQureg))
+        .def_static("createForcedDensityQureg", checked(&createForcedDensityQureg))
+        .def_static("createCustomQureg", checked(&createCustomQureg))
+        .def("createCloneQureg", checked(&createCloneQureg))
 
         // Initialisations
-        .def("initBlankState", &initBlankState)
-        .def("initZeroState", &initZeroState)
-        .def("initPlusState", &initPlusState)
-        .def("initPureState", &initPureState)
-        .def("initClassicalState", &initClassicalState)
-        .def("initDebugState", &initDebugState)
-        .def("initArbitraryPureState", &initArbitraryPureState)
-        .def("initRandomPureState", &initRandomPureState)
-        .def("initRandomMixedState", &initRandomMixedState)
+        .def("initBlankState", checked(&initBlankState))
+        .def("initZeroState", checked(&initZeroState))
+        .def("initPlusState", checked(&initPlusState))
+        .def("initPureState", checked(&initPureState))
+        .def("initClassicalState", checked(&initClassicalState))
+        .def("initDebugState", checked(&initDebugState))
+        .def("initArbitraryPureState", checked(&initArbitraryPureState))
+        .def("initRandomPureState", checked(&initRandomPureState))
+        .def("initRandomMixedState", checked(&initRandomMixedState))
 
         // Setters
-        .def("setQuregAmps", nb::overload_cast<Qureg, qindex, vector<qcomp>>(&setQuregAmps))
+        .def("setQuregAmps", checked(nb::overload_cast<Qureg, qindex, vector<qcomp>>(&setQuregAmps)))
         .def("setDensityQuregAmps",
-             nb::overload_cast<Qureg, qindex, qindex, vector<vector<qcomp>>>(&setDensityQuregAmps))
-        .def("setDensityQuregFlatAmps", nb::overload_cast<Qureg, qindex, vector<qcomp>>(&setDensityQuregFlatAmps))
-        .def("setQuregToClone", &setQuregToClone)
-        .def("setQuregToWeightedSum", nb::overload_cast<Qureg, vector<qcomp>, vector<Qureg>>(&setQuregToWeightedSum))
-        .def("setQuregToMixture", nb::overload_cast<Qureg, vector<qreal>, vector<Qureg>>(&setQuregToMixture))
-        .def("setQuregToRenormalized", &setQuregToRenormalized)
-        .def("setQuregToPauliStrSum", &setQuregToPauliStrSum)
-        .def("setQuregToPartialTrace", nb::overload_cast<Qureg, Qureg, vector<int>>(&setQuregToPartialTrace))
+             checked(nb::overload_cast<Qureg, qindex, qindex, vector<vector<qcomp>>>(&setDensityQuregAmps)))
+        .def("setDensityQuregFlatAmps",
+             checked(nb::overload_cast<Qureg, qindex, vector<qcomp>>(&setDensityQuregFlatAmps)))
+        .def("setQuregToClone", checked(&setQuregToClone))
+        .def("setQuregToWeightedSum",
+             checked(nb::overload_cast<Qureg, vector<qcomp>, vector<Qureg>>(&setQuregToWeightedSum)))
+        .def("setQuregToMixture", checked(nb::overload_cast<Qureg, vector<qreal>, vector<Qureg>>(&setQuregToMixture)))
+        .def("setQuregToRenormalized", checked(&setQuregToRenormalized))
+        .def("setQuregToPauliStrSum", checked(&setQuregToPauliStrSum))
+        .def("setQuregToPartialTrace", checked(nb::overload_cast<Qureg, Qureg, vector<int>>(&setQuregToPartialTrace)))
         .def("setQuregToReducedDensityMatrix",
-             nb::overload_cast<Qureg, Qureg, vector<int>>(&setQuregToReducedDensityMatrix))
+             checked(nb::overload_cast<Qureg, Qureg, vector<int>>(&setQuregToReducedDensityMatrix)))
 
         // Getters
-        .def("getQuregAmps", nb::overload_cast<Qureg, qindex, qindex>(&getQuregAmps))
-        .def("getDensityQuregAmps", nb::overload_cast<Qureg, qindex, qindex, qindex, qindex>(&getDensityQuregAmps))
-        .def("getQuregAmp", &getQuregAmp)
-        .def("getDensityQuregAmp", &getDensityQuregAmp)
+        .def("getQuregAmps", checked(nb::overload_cast<Qureg, qindex, qindex>(&getQuregAmps)))
+        .def("getDensityQuregAmps",
+             checked(nb::overload_cast<Qureg, qindex, qindex, qindex, qindex>(&getDensityQuregAmps)))
+        .def("getQuregAmp", checked(&getQuregAmp))
+        .def("getDensityQuregAmp", checked(&getDensityQuregAmp))
 
         // Calculations
-        .def("calcExpecPauliStr", &calcExpecPauliStr)
-        .def("calcExpecPauliStrSum", &calcExpecPauliStrSum)
-        .def("calcExpecFullStateDiagMatr", &calcExpecFullStateDiagMatr)
-        .def("calcExpecFullStateDiagMatrPower", &calcExpecFullStateDiagMatrPower)
-        .def("calcProbOfBasisState", &calcProbOfBasisState)
-        .def("calcProbOfQubitOutcome", &calcProbOfQubitOutcome)
+        .def("calcExpecPauliStr", checked(&calcExpecPauliStr))
+        .def("calcExpecPauliStrSum", checked(&calcExpecPauliStrSum))
+        .def("calcExpecFullStateDiagMatr", checked(&calcExpecFullStateDiagMatr))
+        .def("calcExpecFullStateDiagMatrPower", checked(&calcExpecFullStateDiagMatrPower))
+        .def("calcProbOfBasisState", checked(&calcProbOfBasisState))
+        .def("calcProbOfQubitOutcome", checked(&calcProbOfQubitOutcome))
         .def("calcProbOfMultiQubitOutcome",
-             nb::overload_cast<Qureg, vector<int>, vector<int>>(&calcProbOfMultiQubitOutcome))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>>(&calcProbOfMultiQubitOutcome)))
         .def("calcProbsOfAllMultiQubitOutcomes",
-             nb::overload_cast<Qureg, vector<int>>(&calcProbsOfAllMultiQubitOutcomes))
-        .def("calcTotalProb", &calcTotalProb)
-        .def("calcPurity", &calcPurity)
-        .def("calcFidelity", &calcFidelity)
-        .def("calcDistance", &calcDistance)
-        .def("calcPartialTrace", nb::overload_cast<Qureg, vector<int>>(&calcPartialTrace))
-        .def("calcReducedDensityMatrix", nb::overload_cast<Qureg, vector<int>>(&calcReducedDensityMatrix))
-        .def("calcInnerProduct", &calcInnerProduct)
-        .def("calcExpecNonHermitianPauliStrSum", &calcExpecNonHermitianPauliStrSum)
-        .def("calcExpecNonHermitianFullStateDiagMatr", &calcExpecNonHermitianFullStateDiagMatr)
-        .def("calcExpecNonHermitianFullStateDiagMatrPower", &calcExpecNonHermitianFullStateDiagMatrPower)
+             checked(nb::overload_cast<Qureg, vector<int>>(&calcProbsOfAllMultiQubitOutcomes)))
+        .def("calcTotalProb", checked(&calcTotalProb))
+        .def("calcPurity", checked(&calcPurity))
+        .def("calcFidelity", checked(&calcFidelity))
+        .def("calcDistance", checked(&calcDistance))
+        .def("calcPartialTrace", checked(nb::overload_cast<Qureg, vector<int>>(&calcPartialTrace)))
+        .def("calcReducedDensityMatrix", checked(nb::overload_cast<Qureg, vector<int>>(&calcReducedDensityMatrix)))
+        .def("calcInnerProduct", checked(&calcInnerProduct))
+        .def("calcExpecNonHermitianPauliStrSum", checked(&calcExpecNonHermitianPauliStrSum))
+        .def("calcExpecNonHermitianFullStateDiagMatr", checked(&calcExpecNonHermitianFullStateDiagMatr))
+        .def("calcExpecNonHermitianFullStateDiagMatrPower", checked(&calcExpecNonHermitianFullStateDiagMatrPower))
 
         // Multiplication
-        .def("leftapplyCompMatr1", &leftapplyCompMatr1)
-        .def("rightapplyCompMatr1", &rightapplyCompMatr1)
-        .def("leftapplyCompMatr2", &leftapplyCompMatr2)
-        .def("rightapplyCompMatr2", &rightapplyCompMatr2)
-        .def("leftapplyCompMatr", nb::overload_cast<Qureg, vector<int>, CompMatr>(&leftapplyCompMatr))
-        .def("rightapplyCompMatr", nb::overload_cast<Qureg, vector<int>, CompMatr>(&rightapplyCompMatr))
-        .def("leftapplyDiagMatr1", &leftapplyDiagMatr1)
-        .def("rightapplyDiagMatr1", &rightapplyDiagMatr1)
-        .def("leftapplyDiagMatr2", &leftapplyDiagMatr2)
-        .def("rightapplyDiagMatr2", &rightapplyDiagMatr2)
-        .def("leftapplyDiagMatr", nb::overload_cast<Qureg, vector<int>, DiagMatr>(&leftapplyDiagMatr))
-        .def("rightapplyDiagMatr", nb::overload_cast<Qureg, vector<int>, DiagMatr>(&rightapplyDiagMatr))
-        .def("leftapplyDiagMatrPower", nb::overload_cast<Qureg, vector<int>, DiagMatr, qcomp>(&leftapplyDiagMatrPower))
+        .def("leftapplyCompMatr1", checked(&leftapplyCompMatr1))
+        .def("rightapplyCompMatr1", checked(&rightapplyCompMatr1))
+        .def("leftapplyCompMatr2", checked(&leftapplyCompMatr2))
+        .def("rightapplyCompMatr2", checked(&rightapplyCompMatr2))
+        .def("leftapplyCompMatr", checked(nb::overload_cast<Qureg, vector<int>, CompMatr>(&leftapplyCompMatr)))
+        .def("rightapplyCompMatr", checked(nb::overload_cast<Qureg, vector<int>, CompMatr>(&rightapplyCompMatr)))
+        .def("leftapplyDiagMatr1", checked(&leftapplyDiagMatr1))
+        .def("rightapplyDiagMatr1", checked(&rightapplyDiagMatr1))
+        .def("leftapplyDiagMatr2", checked(&leftapplyDiagMatr2))
+        .def("rightapplyDiagMatr2", checked(&rightapplyDiagMatr2))
+        .def("leftapplyDiagMatr", checked(nb::overload_cast<Qureg, vector<int>, DiagMatr>(&leftapplyDiagMatr)))
+        .def("rightapplyDiagMatr", checked(nb::overload_cast<Qureg, vector<int>, DiagMatr>(&rightapplyDiagMatr)))
+        .def("leftapplyDiagMatrPower",
+             checked(nb::overload_cast<Qureg, vector<int>, DiagMatr, qcomp>(&leftapplyDiagMatrPower)))
         .def("rightapplyDiagMatrPower",
-             nb::overload_cast<Qureg, vector<int>, DiagMatr, qcomp>(&rightapplyDiagMatrPower))
-        .def("leftapplyFullStateDiagMatr", &leftapplyFullStateDiagMatr)
-        .def("rightapplyFullStateDiagMatr", &rightapplyFullStateDiagMatr)
-        .def("leftapplyFullStateDiagMatrPower", &leftapplyFullStateDiagMatrPower)
-        .def("rightapplyFullStateDiagMatrPower", &rightapplyFullStateDiagMatrPower)
-        .def("leftapplySwap", &leftapplySwap)
-        .def("rightapplySwap", &rightapplySwap)
-        .def("leftapplyPauliX", &leftapplyPauliX)
-        .def("rightapplyPauliX", &rightapplyPauliX)
-        .def("leftapplyPauliY", &leftapplyPauliY)
-        .def("rightapplyPauliY", &rightapplyPauliY)
-        .def("leftapplyPauliZ", &leftapplyPauliZ)
-        .def("rightapplyPauliZ", &rightapplyPauliZ)
-        .def("leftapplyPauliStr", &leftapplyPauliStr)
-        .def("rightapplyPauliStr", &rightapplyPauliStr)
-        .def("leftapplyPauliStrSum", &leftapplyPauliStrSum)
-        .def("rightapplyPauliStrSum", &rightapplyPauliStrSum)
-        .def("leftapplyPauliGadget", &leftapplyPauliGadget)
-        .def("rightapplyPauliGadget", &rightapplyPauliGadget)
-        .def("leftapplyPhaseGadget", nb::overload_cast<Qureg, vector<int>, qreal>(&leftapplyPhaseGadget))
-        .def("rightapplyPhaseGadget", nb::overload_cast<Qureg, vector<int>, qreal>(&rightapplyPhaseGadget))
-        .def("leftapplyMultiQubitNot", nb::overload_cast<Qureg, vector<int>>(&leftapplyMultiQubitNot))
-        .def("rightapplyMultiQubitNot", nb::overload_cast<Qureg, vector<int>>(&rightapplyMultiQubitNot))
-        .def("leftapplyQubitProjector", &leftapplyQubitProjector)
-        .def("rightapplyQubitProjector", &rightapplyQubitProjector)
-        // .def("leftapplyMultiQubitProjector", &leftapplyMultiQubitProjector)
-        // .def("rightapplyMultiQubitProjector", &rightapplyMultiQubitProjector)
+             checked(nb::overload_cast<Qureg, vector<int>, DiagMatr, qcomp>(&rightapplyDiagMatrPower)))
+        .def("leftapplyFullStateDiagMatr", checked(&leftapplyFullStateDiagMatr))
+        .def("rightapplyFullStateDiagMatr", checked(&rightapplyFullStateDiagMatr))
+        .def("leftapplyFullStateDiagMatrPower", checked(&leftapplyFullStateDiagMatrPower))
+        .def("rightapplyFullStateDiagMatrPower", checked(&rightapplyFullStateDiagMatrPower))
+        .def("leftapplySwap", checked(&leftapplySwap))
+        .def("rightapplySwap", checked(&rightapplySwap))
+        .def("leftapplyPauliX", checked(&leftapplyPauliX))
+        .def("rightapplyPauliX", checked(&rightapplyPauliX))
+        .def("leftapplyPauliY", checked(&leftapplyPauliY))
+        .def("rightapplyPauliY", checked(&rightapplyPauliY))
+        .def("leftapplyPauliZ", checked(&leftapplyPauliZ))
+        .def("rightapplyPauliZ", checked(&rightapplyPauliZ))
+        .def("leftapplyPauliStr", checked(&leftapplyPauliStr))
+        .def("rightapplyPauliStr", checked(&rightapplyPauliStr))
+        .def("leftapplyPauliStrSum", checked(&leftapplyPauliStrSum))
+        .def("rightapplyPauliStrSum", checked(&rightapplyPauliStrSum))
+        .def("leftapplyPauliGadget", checked(&leftapplyPauliGadget))
+        .def("rightapplyPauliGadget", checked(&rightapplyPauliGadget))
+        .def("leftapplyPhaseGadget", checked(nb::overload_cast<Qureg, vector<int>, qreal>(&leftapplyPhaseGadget)))
+        .def("rightapplyPhaseGadget", checked(nb::overload_cast<Qureg, vector<int>, qreal>(&rightapplyPhaseGadget)))
+        .def("leftapplyMultiQubitNot", checked(nb::overload_cast<Qureg, vector<int>>(&leftapplyMultiQubitNot)))
+        .def("rightapplyMultiQubitNot", checked(nb::overload_cast<Qureg, vector<int>>(&rightapplyMultiQubitNot)))
+        .def("leftapplyQubitProjector", checked(&leftapplyQubitProjector))
+        .def("rightapplyQubitProjector", checked(&rightapplyQubitProjector))
+        // .def("leftapplyMultiQubitProjector", checked(&leftapplyMultiQubitProjector))
+        // .def("rightapplyMultiQubitProjector", checked(&rightapplyMultiQubitProjector))
 
         // Operations
-        .def("applyCompMatr1", &applyCompMatr1)
-        .def("applyControlledCompMatr1", &applyControlledCompMatr1)
+        .def("applyCompMatr1", checked(&applyCompMatr1))
+        .def("applyControlledCompMatr1", checked(&applyControlledCompMatr1))
         .def("applyMultiControlledCompMatr1",
-             nb::overload_cast<Qureg, vector<int>, int, CompMatr1>(&applyMultiControlledCompMatr1))
+             checked(nb::overload_cast<Qureg, vector<int>, int, CompMatr1>(&applyMultiControlledCompMatr1)))
         .def("applyMultiStateControlledCompMatr1",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int, CompMatr1>(&applyMultiStateControlledCompMatr1))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int, CompMatr1>(
+                 &applyMultiStateControlledCompMatr1)))
 
-        .def("applyCompMatr2", &applyCompMatr2)
-        .def("applyControlledCompMatr2", &applyControlledCompMatr2)
+        .def("applyCompMatr2", checked(&applyCompMatr2))
+        .def("applyControlledCompMatr2", checked(&applyControlledCompMatr2))
         .def("applyMultiControlledCompMatr2",
-             nb::overload_cast<Qureg, vector<int>, int, int, CompMatr2>(&applyMultiControlledCompMatr2))
+             checked(nb::overload_cast<Qureg, vector<int>, int, int, CompMatr2>(&applyMultiControlledCompMatr2)))
         .def("applyMultiStateControlledCompMatr2",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int, int, int, CompMatr2>(
-                 &applyMultiStateControlledCompMatr2))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int, int, int, CompMatr2>(
+                 &applyMultiStateControlledCompMatr2)))
 
-        .def("applyCompMatr", nb::overload_cast<Qureg, vector<int>, CompMatr>(&applyCompMatr))
-        .def("applyControlledCompMatr", nb::overload_cast<Qureg, int, vector<int>, CompMatr>(&applyControlledCompMatr))
+        .def("applyCompMatr", checked(nb::overload_cast<Qureg, vector<int>, CompMatr>(&applyCompMatr)))
+        .def("applyControlledCompMatr",
+             checked(nb::overload_cast<Qureg, int, vector<int>, CompMatr>(&applyControlledCompMatr)))
         .def("applyMultiControlledCompMatr",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, CompMatr>(&applyMultiControlledCompMatr))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, CompMatr>(&applyMultiControlledCompMatr)))
         .def("applyMultiStateControlledCompMatr",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, vector<int>, CompMatr>(
-                 &applyMultiStateControlledCompMatr))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, vector<int>, CompMatr>(
+                 &applyMultiStateControlledCompMatr)))
 
-        .def("applyDiagMatr1", &applyDiagMatr1)
-        .def("applyControlledDiagMatr1", &applyControlledDiagMatr1)
+        .def("applyDiagMatr1", checked(&applyDiagMatr1))
+        .def("applyControlledDiagMatr1", checked(&applyControlledDiagMatr1))
         .def("applyMultiControlledDiagMatr1",
-             nb::overload_cast<Qureg, vector<int>, int, DiagMatr1>(&applyMultiControlledDiagMatr1))
+             checked(nb::overload_cast<Qureg, vector<int>, int, DiagMatr1>(&applyMultiControlledDiagMatr1)))
         .def("applyMultiStateControlledDiagMatr1",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int, DiagMatr1>(&applyMultiStateControlledDiagMatr1))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int, DiagMatr1>(
+                 &applyMultiStateControlledDiagMatr1)))
 
-        .def("applyDiagMatr2", &applyDiagMatr2)
-        .def("applyControlledDiagMatr2", &applyControlledDiagMatr2)
+        .def("applyDiagMatr2", checked(&applyDiagMatr2))
+        .def("applyControlledDiagMatr2", checked(&applyControlledDiagMatr2))
 
         .def("applyMultiControlledDiagMatr2",
-             nb::overload_cast<Qureg, vector<int>, int, int, DiagMatr2>(&applyMultiControlledDiagMatr2))
+             checked(nb::overload_cast<Qureg, vector<int>, int, int, DiagMatr2>(&applyMultiControlledDiagMatr2)))
         .def("applyMultiStateControlledDiagMatr2",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int, int, DiagMatr2>(
-                 &applyMultiStateControlledDiagMatr2))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int, int, DiagMatr2>(
+                 &applyMultiStateControlledDiagMatr2)))
 
-        .def("applyDiagMatr", nb::overload_cast<Qureg, vector<int>, DiagMatr>(&applyDiagMatr))
-        .def("applyControlledDiagMatr", nb::overload_cast<Qureg, int, vector<int>, DiagMatr>(&applyControlledDiagMatr))
+        .def("applyDiagMatr", checked(nb::overload_cast<Qureg, vector<int>, DiagMatr>(&applyDiagMatr)))
+        .def("applyControlledDiagMatr",
+             checked(nb::overload_cast<Qureg, int, vector<int>, DiagMatr>(&applyControlledDiagMatr)))
         .def("applyMultiControlledDiagMatr",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, DiagMatr>(&applyMultiControlledDiagMatr))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, DiagMatr>(&applyMultiControlledDiagMatr)))
         .def("applyMultiStateControlledDiagMatr",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, vector<int>, DiagMatr>(
-                 &applyMultiStateControlledDiagMatr))
-        .def("applyDiagMatrPower", nb::overload_cast<Qureg, vector<int>, DiagMatr, qcomp>(&applyDiagMatrPower))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, vector<int>, DiagMatr>(
+                 &applyMultiStateControlledDiagMatr)))
+        .def("applyDiagMatrPower", checked(nb::overload_cast<Qureg, vector<int>, DiagMatr, qcomp>(&applyDiagMatrPower)))
         .def("applyControlledDiagMatrPower",
-             nb::overload_cast<Qureg, int, vector<int>, DiagMatr, qcomp>(&applyControlledDiagMatrPower))
+             checked(nb::overload_cast<Qureg, int, vector<int>, DiagMatr, qcomp>(&applyControlledDiagMatrPower)))
         .def("applyMultiControlledDiagMatrPower",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, DiagMatr, qcomp>(&applyMultiControlledDiagMatrPower))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, DiagMatr, qcomp>(
+                 &applyMultiControlledDiagMatrPower)))
         .def("applyMultiStateControlledDiagMatrPower",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, vector<int>, DiagMatr, qcomp>(
-                 &applyMultiStateControlledDiagMatrPower))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, vector<int>, DiagMatr, qcomp>(
+                 &applyMultiStateControlledDiagMatrPower)))
 
-        .def("applyFullStateDiagMatr", &applyFullStateDiagMatr)
-        .def("applyFullStateDiagMatrPower", &applyFullStateDiagMatrPower)
+        .def("applyFullStateDiagMatr", checked(&applyFullStateDiagMatr))
+        .def("applyFullStateDiagMatrPower", checked(&applyFullStateDiagMatrPower))
 
-        .def("applyS", &applyS)
-        .def("applyControlledS", &applyControlledS)
-        .def("applyMultiControlledS", nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledS))
+        .def("applyS", checked(&applyS))
+        .def("applyControlledS", checked(&applyControlledS))
+        .def("applyMultiControlledS", checked(nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledS)))
 
-        .def("applyT", &applyT)
-        .def("applyControlledT", &applyControlledT)
-        .def("applyMultiControlledT", nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledT))
+        .def("applyT", checked(&applyT))
+        .def("applyControlledT", checked(&applyControlledT))
+        .def("applyMultiControlledT", checked(nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledT)))
         .def("applyMultiStateControlledT",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int>(&applyMultiStateControlledT))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int>(&applyMultiStateControlledT)))
 
-        .def("applyHadamard", &applyHadamard)
-        .def("applyControlledHadamard", &applyControlledHadamard)
-        .def("applyMultiControlledHadamard", nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledHadamard))
+        .def("applyHadamard", checked(&applyHadamard))
+        .def("applyControlledHadamard", checked(&applyControlledHadamard))
+        .def("applyMultiControlledHadamard",
+             checked(nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledHadamard)))
         .def("applyMultiStateControlledHadamard",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int>(&applyMultiStateControlledHadamard))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int>(&applyMultiStateControlledHadamard)))
 
-        .def("applySwap", &applySwap)
-        .def("applyControlledSwap", &applyControlledSwap)
-        .def("applyMultiControlledSwap", nb::overload_cast<Qureg, vector<int>, int, int>(&applyMultiControlledSwap))
+        .def("applySwap", checked(&applySwap))
+        .def("applyControlledSwap", checked(&applyControlledSwap))
+        .def("applyMultiControlledSwap",
+             checked(nb::overload_cast<Qureg, vector<int>, int, int>(&applyMultiControlledSwap)))
         .def("applyMultiStateControlledSwap",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int, int>(&applyMultiStateControlledSwap))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int, int>(&applyMultiStateControlledSwap)))
 
-        .def("applySqrtSwap", &applySqrtSwap)
-        .def("applyControlledSqrtSwap", &applyControlledSqrtSwap)
+        .def("applySqrtSwap", checked(&applySqrtSwap))
+        .def("applyControlledSqrtSwap", checked(&applyControlledSqrtSwap))
         .def("applyMultiControlledSqrtSwap",
-             nb::overload_cast<Qureg, vector<int>, int, int>(&applyMultiControlledSqrtSwap))
-        // .def("applyMultiStateControlledSqrtSwap", nb::overload_cast<Qureg, vector<int>, vector<int>, int, int,
-        // int>(&applyMultiStateControlledSqrtSwap))
+             checked(nb::overload_cast<Qureg, vector<int>, int, int>(&applyMultiControlledSqrtSwap)))
+        // .def("applyMultiStateControlledSqrtSwap", checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int,
+        // int, int>(&applyMultiStateControlledSqrtSwap)))
 
-        .def("applyPauliX", &applyPauliX)
-        .def("applyPauliY", &applyPauliY)
-        .def("applyPauliZ", &applyPauliZ)
-        .def("applyControlledPauliX", &applyControlledPauliX)
-        .def("applyControlledPauliY", &applyControlledPauliY)
-        .def("applyControlledPauliZ", &applyControlledPauliZ)
+        .def("applyPauliX", checked(&applyPauliX))
+        .def("applyPauliY", checked(&applyPauliY))
+        .def("applyPauliZ", checked(&applyPauliZ))
+        .def("applyControlledPauliX", checked(&applyControlledPauliX))
+        .def("applyControlledPauliY", checked(&applyControlledPauliY))
+        .def("applyControlledPauliZ", checked(&applyControlledPauliZ))
 
-        .def("applyMultiControlledPauliX", nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledPauliX))
-        .def("applyMultiControlledPauliY", nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledPauliY))
-        .def("applyMultiControlledPauliZ", nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledPauliZ))
+        .def("applyMultiControlledPauliX",
+             checked(nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledPauliX)))
+        .def("applyMultiControlledPauliY",
+             checked(nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledPauliY)))
+        .def("applyMultiControlledPauliZ",
+             checked(nb::overload_cast<Qureg, vector<int>, int>(&applyMultiControlledPauliZ)))
         .def("applyMultiStateControlledPauliX",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int>(&applyMultiStateControlledPauliX))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int>(&applyMultiStateControlledPauliX)))
         .def("applyMultiStateControlledPauliY",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int>(&applyMultiStateControlledPauliY))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int>(&applyMultiStateControlledPauliY)))
         .def("applyMultiStateControlledPauliZ",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int>(&applyMultiStateControlledPauliZ))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int>(&applyMultiStateControlledPauliZ)))
 
-        .def("applyPauliStr", &applyPauliStr)
-        .def("applyControlledPauliStr", &applyControlledPauliStr)
+        .def("applyPauliStr", checked(&applyPauliStr))
+        .def("applyControlledPauliStr", checked(&applyControlledPauliStr))
         .def("applyMultiControlledPauliStr",
-             nb::overload_cast<Qureg, vector<int>, PauliStr>(&applyMultiControlledPauliStr))
+             checked(nb::overload_cast<Qureg, vector<int>, PauliStr>(&applyMultiControlledPauliStr)))
         .def("applyMultiStateControlledPauliStr",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, PauliStr>(&applyMultiStateControlledPauliStr))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, PauliStr>(&applyMultiStateControlledPauliStr)))
 
-        .def("applyRotateX", &applyRotateX)
-        .def("applyRotateY", &applyRotateY)
-        .def("applyRotateZ", &applyRotateZ)
-        .def("applyControlledRotateX", &applyControlledRotateX)
-        .def("applyControlledRotateY", &applyControlledRotateY)
-        .def("applyControlledRotateZ", &applyControlledRotateZ)
+        .def("applyRotateX", checked(&applyRotateX))
+        .def("applyRotateY", checked(&applyRotateY))
+        .def("applyRotateZ", checked(&applyRotateZ))
+        .def("applyControlledRotateX", checked(&applyControlledRotateX))
+        .def("applyControlledRotateY", checked(&applyControlledRotateY))
+        .def("applyControlledRotateZ", checked(&applyControlledRotateZ))
 
         .def("applyMultiControlledRotateX",
-             nb::overload_cast<Qureg, vector<int>, int, qreal>(&applyMultiControlledRotateX))
+             checked(nb::overload_cast<Qureg, vector<int>, int, qreal>(&applyMultiControlledRotateX)))
         .def("applyMultiControlledRotateY",
-             nb::overload_cast<Qureg, vector<int>, int, qreal>(&applyMultiControlledRotateY))
+             checked(nb::overload_cast<Qureg, vector<int>, int, qreal>(&applyMultiControlledRotateY)))
         .def("applyMultiControlledRotateZ",
-             nb::overload_cast<Qureg, vector<int>, int, qreal>(&applyMultiControlledRotateZ))
+             checked(nb::overload_cast<Qureg, vector<int>, int, qreal>(&applyMultiControlledRotateZ)))
         .def("applyMultiStateControlledRotateX",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int, qreal>(&applyMultiStateControlledRotateX))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int, qreal>(&applyMultiStateControlledRotateX)))
         .def("applyMultiStateControlledRotateY",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int, qreal>(&applyMultiStateControlledRotateY))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int, qreal>(&applyMultiStateControlledRotateY)))
         .def("applyMultiStateControlledRotateZ",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int, qreal>(&applyMultiStateControlledRotateZ))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int, qreal>(&applyMultiStateControlledRotateZ)))
 
-        .def("applyRotateAroundAxis", &applyRotateAroundAxis)
-        .def("applyControlledRotateAroundAxis", &applyControlledRotateAroundAxis)
+        .def("applyRotateAroundAxis", checked(&applyRotateAroundAxis))
+        .def("applyControlledRotateAroundAxis", checked(&applyControlledRotateAroundAxis))
         .def("applyMultiControlledRotateAroundAxis",
-             nb::overload_cast<Qureg, vector<int>, int, qreal, qreal, qreal, qreal>(
-                 &applyMultiControlledRotateAroundAxis))
+             checked(nb::overload_cast<Qureg, vector<int>, int, qreal, qreal, qreal, qreal>(
+                 &applyMultiControlledRotateAroundAxis)))
         .def("applyMultiStateControlledRotateAroundAxis",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, int, qreal, qreal, qreal, qreal>(
-                 &applyMultiStateControlledRotateAroundAxis))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, int, qreal, qreal, qreal, qreal>(
+                 &applyMultiStateControlledRotateAroundAxis)))
 
-        .def("applyPauliGadget", &applyPauliGadget)
-        .def("applyNonUnitaryPauliGadget", &applyNonUnitaryPauliGadget)
-        .def("applyControlledPauliGadget", &applyControlledPauliGadget)
+        .def("applyPauliGadget", checked(&applyPauliGadget))
+        .def("applyNonUnitaryPauliGadget", checked(&applyNonUnitaryPauliGadget))
+        .def("applyControlledPauliGadget", checked(&applyControlledPauliGadget))
 
         .def("applyMultiControlledPauliGadget",
-             nb::overload_cast<Qureg, vector<int>, PauliStr, qreal>(&applyMultiControlledPauliGadget))
+             checked(nb::overload_cast<Qureg, vector<int>, PauliStr, qreal>(&applyMultiControlledPauliGadget)))
         .def("applyMultiStateControlledPauliGadget",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, PauliStr, qreal>(&applyMultiStateControlledPauliGadget))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, PauliStr, qreal>(
+                 &applyMultiStateControlledPauliGadget)))
 
-        .def("applyPhaseGadget", nb::overload_cast<Qureg, vector<int>, qreal>(&applyPhaseGadget))
+        .def("applyPhaseGadget", checked(nb::overload_cast<Qureg, vector<int>, qreal>(&applyPhaseGadget)))
         .def("applyControlledPhaseGadget",
-             nb::overload_cast<Qureg, int, vector<int>, qreal>(&applyControlledPhaseGadget))
+             checked(nb::overload_cast<Qureg, int, vector<int>, qreal>(&applyControlledPhaseGadget)))
 
         .def("applyMultiControlledPhaseGadget",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, qreal>(&applyMultiControlledPhaseGadget))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, qreal>(&applyMultiControlledPhaseGadget)))
         .def("applyMultiStateControlledPhaseGadget",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, vector<int>, qreal>(
-                 &applyMultiStateControlledPhaseGadget))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, vector<int>, qreal>(
+                 &applyMultiStateControlledPhaseGadget)))
 
-        .def("applyPhaseFlip", &applyPhaseFlip)
-        .def("applyPhaseShift", &applyPhaseShift)
-        .def("applyTwoQubitPhaseFlip", &applyTwoQubitPhaseFlip)
-        .def("applyTwoQubitPhaseShift", &applyTwoQubitPhaseShift)
+        .def("applyPhaseFlip", checked(&applyPhaseFlip))
+        .def("applyPhaseShift", checked(&applyPhaseShift))
+        .def("applyTwoQubitPhaseFlip", checked(&applyTwoQubitPhaseFlip))
+        .def("applyTwoQubitPhaseShift", checked(&applyTwoQubitPhaseShift))
 
-        .def("applyMultiQubitPhaseFlip", nb::overload_cast<Qureg, vector<int>>(&applyMultiQubitPhaseFlip))
-        .def("applyMultiQubitPhaseShift", nb::overload_cast<Qureg, vector<int>, qreal>(&applyMultiQubitPhaseShift))
-        .def("applyMultiQubitNot", nb::overload_cast<Qureg, vector<int>>(&applyMultiQubitNot))
-        .def("applyControlledMultiQubitNot", nb::overload_cast<Qureg, int, vector<int>>(&applyControlledMultiQubitNot))
+        .def("applyMultiQubitPhaseFlip", checked(nb::overload_cast<Qureg, vector<int>>(&applyMultiQubitPhaseFlip)))
+        .def("applyMultiQubitPhaseShift",
+             checked(nb::overload_cast<Qureg, vector<int>, qreal>(&applyMultiQubitPhaseShift)))
+        .def("applyMultiQubitNot", checked(nb::overload_cast<Qureg, vector<int>>(&applyMultiQubitNot)))
+        .def("applyControlledMultiQubitNot",
+             checked(nb::overload_cast<Qureg, int, vector<int>>(&applyControlledMultiQubitNot)))
         .def("applyMultiControlledMultiQubitNot",
-             nb::overload_cast<Qureg, vector<int>, vector<int>>(&applyMultiControlledMultiQubitNot))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>>(&applyMultiControlledMultiQubitNot)))
         .def("applyMultiStateControlledMultiQubitNot",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, vector<int>>(&applyMultiStateControlledMultiQubitNot))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, vector<int>>(
+                 &applyMultiStateControlledMultiQubitNot)))
 
-        .def("applyQubitMeasurement", &applyQubitMeasurement)
-        .def("applyForcedQubitMeasurement", &applyForcedQubitMeasurement)
+        .def("applyQubitMeasurement", checked(&applyQubitMeasurement))
+        .def("applyForcedQubitMeasurement", checked(&applyForcedQubitMeasurement))
         // applyMultiQubitMeasurementAndGetProb
         .def("applyForcedMultiQubitMeasurement",
-             nb::overload_cast<Qureg, vector<int>, vector<int>>(&applyForcedMultiQubitMeasurement))
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>>(&applyForcedMultiQubitMeasurement)))
 
-        .def("applyQubitProjector", &applyQubitProjector)
-        .def("applyMultiQubitProjector", nb::overload_cast<Qureg, vector<int>, vector<int>>(&applyMultiQubitProjector))
+        .def("applyQubitProjector", checked(&applyQubitProjector))
+        .def("applyMultiQubitProjector",
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>>(&applyMultiQubitProjector)))
 
-        .def("applyQuantumFourierTransform", nb::overload_cast<Qureg, vector<int>>(&applyQuantumFourierTransform))
-        .def("applyFullQuantumFourierTransform", &applyFullQuantumFourierTransform)
+        .def("applyQuantumFourierTransform",
+             checked(nb::overload_cast<Qureg, vector<int>>(&applyQuantumFourierTransform)))
+        .def("applyFullQuantumFourierTransform", checked(&applyFullQuantumFourierTransform))
 
         // Decoherence
-        .def("mixDephasing", &mixDephasing)
-        .def("mixTwoQubitDephasing", &mixTwoQubitDephasing)
-        .def("mixDepolarising", &mixDepolarising)
-        .def("mixTwoQubitDepolarising", &mixTwoQubitDepolarising)
-        .def("mixDamping", &mixDamping)
-        .def("mixPaulis", &mixPaulis)
-        .def("mixQureg", &mixQureg)
-        .def("mixKrausMap", nb::overload_cast<Qureg, vector<int>, KrausMap>(&mixKrausMap))
-        .def("mixSuperOp", nb::overload_cast<Qureg, vector<int>, SuperOp>(&mixSuperOp))
+        .def("mixDephasing", checked(&mixDephasing))
+        .def("mixTwoQubitDephasing", checked(&mixTwoQubitDephasing))
+        .def("mixDepolarising", checked(&mixDepolarising))
+        .def("mixTwoQubitDepolarising", checked(&mixTwoQubitDepolarising))
+        .def("mixDamping", checked(&mixDamping))
+        .def("mixPaulis", checked(&mixPaulis))
+        .def("mixQureg", checked(&mixQureg))
+        .def("mixKrausMap", checked(nb::overload_cast<Qureg, vector<int>, KrausMap>(&mixKrausMap)))
+        .def("mixSuperOp", checked(nb::overload_cast<Qureg, vector<int>, SuperOp>(&mixSuperOp)))
 
         // Trotterisation
-        .def("applyTrotterizedPauliStrSumGadget", &applyTrotterizedPauliStrSumGadget)
-        .def("applyTrotterizedControlledPauliStrSumGadget", &applyTrotterizedControlledPauliStrSumGadget)
+        .def("applyTrotterizedPauliStrSumGadget", checked(&applyTrotterizedPauliStrSumGadget))
+        .def("applyTrotterizedControlledPauliStrSumGadget", checked(&applyTrotterizedControlledPauliStrSumGadget))
         .def("applyTrotterizedMultiControlledPauliStrSumGadget",
-             nb::overload_cast<Qureg, vector<int>, PauliStrSum, qreal, int, int>(
-                 &applyTrotterizedMultiControlledPauliStrSumGadget))
+             checked(nb::overload_cast<Qureg, vector<int>, PauliStrSum, qreal, int, int>(
+                 &applyTrotterizedMultiControlledPauliStrSumGadget)))
         .def("applyTrotterizedMultiStateControlledPauliStrSumGadget",
-             nb::overload_cast<Qureg, vector<int>, vector<int>, PauliStrSum, qreal, int, int>(
-                 &applyTrotterizedMultiStateControlledPauliStrSumGadget))
-        .def("applyTrotterizedNonUnitaryPauliStrSumGadget", &applyTrotterizedNonUnitaryPauliStrSumGadget)
-        .def("applyTrotterizedUnitaryTimeEvolution", &applyTrotterizedUnitaryTimeEvolution)
-        .def("applyTrotterizedImaginaryTimeEvolution", &applyTrotterizedImaginaryTimeEvolution)
-        .def("applyTrotterizedNoisyTimeEvolution", &applyTrotterizedNoisyTimeEvolution)
+             checked(nb::overload_cast<Qureg, vector<int>, vector<int>, PauliStrSum, qreal, int, int>(
+                 &applyTrotterizedMultiStateControlledPauliStrSumGadget)))
+        .def("applyTrotterizedNonUnitaryPauliStrSumGadget", checked(&applyTrotterizedNonUnitaryPauliStrSumGadget))
+        .def("applyTrotterizedUnitaryTimeEvolution", checked(&applyTrotterizedUnitaryTimeEvolution))
+        .def("applyTrotterizedImaginaryTimeEvolution", checked(&applyTrotterizedImaginaryTimeEvolution))
+        // .def("applyTrotterizedNoisyTimeEvolution", checked(&applyTrotterizedNoisyTimeEvolution))
 
         // Syncing
-        .def("syncQuregToGpu", &syncQuregToGpu)
-        .def("syncQuregFromGpu", &syncQuregFromGpu)
-        .def("syncSubQuregToGpu", &syncSubQuregToGpu)
-        .def("syncSubQuregFromGpu", &syncSubQuregFromGpu)
+        .def("syncQuregToGpu", checked(&syncQuregToGpu))
+        .def("syncQuregFromGpu", checked(&syncQuregFromGpu))
+        .def("syncSubQuregToGpu", checked(&syncSubQuregToGpu))
+        .def("syncSubQuregFromGpu", checked(&syncSubQuregFromGpu))
 
         // Reporters
-        .def("reportQuregParams", &reportQuregParams)
-        .def("report", &reportQureg);
+        .def("reportQuregParams", checked(&reportQuregParams))
+        .def("report", checked(&reportQureg));
 
     // KrausMap
-    nb::class_<KrausMap>(quest, "KrausMap")
-        .def(nb::new_(&createKrausMap))
-        .def(nb::new_(&createInlineKrausMap))
-        .def("destroy", &destroyKrausMap)
-        .def("set", nb::overload_cast<KrausMap, vector<vector<vector<qcomp>>>>(&setKrausMap))
-        .def("sync", &syncKrausMap)
-        .def("report", &reportKrausMap);
+    nb::class_<CheckedResource<KrausMap>>(quest, "KrausMap")
+        .def(nb::new_(checked(&createKrausMap)))
+        .def(nb::new_(checked(&createInlineKrausMap)))
+        .def("destroy", &CheckedResource<KrausMap>::destroy)
+        .def("set", checked(nb::overload_cast<KrausMap, vector<vector<vector<qcomp>>>>(&setKrausMap)))
+        .def("sync", checked(&syncKrausMap))
+        .def("report", checked(&reportKrausMap));
 
     // SuperOp
-    nb::class_<SuperOp>(quest, "SuperOp")
-        .def(nb::new_(&createSuperOp))
-        .def(nb::new_(&createInlineSuperOp))
-        .def("destroy", &destroySuperOp)
-        .def("set", nb::overload_cast<SuperOp, vector<vector<qcomp>>>(&setSuperOp))
-        .def("sync", &syncSuperOp)
-        .def("report", &reportSuperOp);
+    nb::class_<CheckedResource<SuperOp>>(quest, "SuperOp")
+        .def(nb::new_(checked(&createSuperOp)))
+        .def(nb::new_(checked(&createInlineSuperOp)))
+        .def("destroy", &CheckedResource<SuperOp>::destroy)
+        .def("set", checked(nb::overload_cast<SuperOp, vector<vector<qcomp>>>(&setSuperOp)))
+        .def("sync", checked(&syncSuperOp))
+        .def("report", checked(&reportSuperOp));
 
     // CompMatr1
     nb::class_<CompMatr1>(quest, "CompMatr1")
-        .def(nb::new_(nb::overload_cast<vector<vector<qcomp>>>(&getCompMatr1)))
-        .def("report", &reportCompMatr1);
+        .def(nb::new_(checked(nb::overload_cast<vector<vector<qcomp>>>(&getCompMatr1))))
+        .def("report", checked(&reportCompMatr1));
 
     // CompMatr2
     nb::class_<CompMatr2>(quest, "CompMatr2")
-        .def(nb::new_(nb::overload_cast<vector<vector<qcomp>>>(&getCompMatr2)))
-        .def("report", &reportCompMatr2);
+        .def(nb::new_(checked(nb::overload_cast<vector<vector<qcomp>>>(&getCompMatr2))))
+        .def("report", checked(&reportCompMatr2));
 
     // CompMatr
-    nb::class_<CompMatr>(quest, "CompMatr")
-        .def(nb::new_(&createCompMatr))
-        .def("destroy", &destroyCompMatr)
-        .def("set", nb::overload_cast<CompMatr, vector<vector<qcomp>>>(&setCompMatr))
-        .def("sync", &syncCompMatr)
-        .def("report", &reportCompMatr);
+    nb::class_<CheckedResource<CompMatr>>(quest, "CompMatr")
+        .def(nb::new_(checked(&createCompMatr)))
+        .def("destroy", &CheckedResource<CompMatr>::destroy)
+        .def("set", checked(nb::overload_cast<CompMatr, vector<vector<qcomp>>>(&setCompMatr)))
+        .def("sync", checked(&syncCompMatr))
+        .def("report", checked(&reportCompMatr));
 
     // DiagMatr1
     nb::class_<DiagMatr1>(quest, "DiagMatr1")
-        .def(nb::new_(nb::overload_cast<vector<qcomp>>(&getDiagMatr1)))
-        .def("report", &reportDiagMatr1);
+        .def(nb::new_(checked(nb::overload_cast<vector<qcomp>>(&getDiagMatr1))))
+        .def("report", checked(&reportDiagMatr1));
 
     // DiagMatr2
     nb::class_<DiagMatr2>(quest, "DiagMatr2")
-        .def(nb::new_(nb::overload_cast<vector<qcomp>>(&getDiagMatr2)))
-        .def("report", &reportDiagMatr2);
+        .def(nb::new_(checked(nb::overload_cast<vector<qcomp>>(&getDiagMatr2))))
+        .def("report", checked(&reportDiagMatr2));
 
     // DiagMatr
-    nb::class_<DiagMatr>(quest, "DiagMatr")
-        .def(nb::new_(&createDiagMatr))
-        .def("destroy", &destroyDiagMatr)
-        .def("set", nb::overload_cast<DiagMatr, vector<qcomp>>(&setDiagMatr))
-        .def("sync", &syncDiagMatr)
-        .def("report", &reportDiagMatr);
+    nb::class_<CheckedResource<DiagMatr>>(quest, "DiagMatr")
+        .def(nb::new_(checked(&createDiagMatr)))
+        .def("destroy", &CheckedResource<DiagMatr>::destroy)
+        .def("set", checked(nb::overload_cast<DiagMatr, vector<qcomp>>(&setDiagMatr)))
+        .def("sync", checked(&syncDiagMatr))
+        .def("report", checked(&reportDiagMatr));
 
     // FullStateDiagMatr
-    nb::class_<FullStateDiagMatr>(quest, "FullStateDiagMatr")
-        .def(nb::new_(&createFullStateDiagMatr))
-        .def("destroy", &destroyFullStateDiagMatr)
-        .def("set", nb::overload_cast<FullStateDiagMatr, qindex, vector<qcomp>>(&setFullStateDiagMatr))
-        .def("sync", &syncFullStateDiagMatr)
-        .def("report", &reportFullStateDiagMatr);
+    nb::class_<CheckedResource<FullStateDiagMatr>>(quest, "FullStateDiagMatr")
+        .def(nb::new_(checked(&createFullStateDiagMatr)))
+        .def("destroy", &CheckedResource<FullStateDiagMatr>::destroy)
+        .def("set", checked(nb::overload_cast<FullStateDiagMatr, qindex, vector<qcomp>>(&setFullStateDiagMatr)))
+        .def("sync", checked(&syncFullStateDiagMatr))
+        .def("report", checked(&reportFullStateDiagMatr));
 }
