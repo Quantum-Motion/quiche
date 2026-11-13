@@ -24,6 +24,7 @@
 #include <nanobind/stl/vector.h>
 
 #include <quest.h>
+#include <quest/src/core/validation.hpp> // validateconfig_setErrorHandler
 
 using std::string;
 using std::vector;
@@ -31,14 +32,43 @@ using std::vector;
 namespace nb = nanobind;
 
 namespace {
-void errorHandler(const char *errFunc, const char *errMsg) {
-    throw std::runtime_error(string(errFunc) + " - " + string(errMsg));
+
+class QuESTError : public std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
+void QuESTErrorHandler(const char *errFunc, const char *errMsg) {
+    throw QuESTError(string(errFunc) + " - " + string(errMsg));
 }
+
+// A failed QuEST initialisation leaves partial state behind, and retrying hits an
+// internal error that exits the process, so retries after a failure are rejected.
+bool envInitIncomplete = false;
+
+template <class Init>
+void attemptEnvInit(Init init) {
+    if (envInitIncomplete)
+        QuESTErrorHandler("QuESTEnv", "The QuEST environment cannot be initialised again in this process, "
+                                      "because a previous initialisation failed");
+
+    envInitIncomplete = true;
+    init();
+    envInitIncomplete = false;
+}
+
 } // namespace
 
 void init_quest_bindings(nb::module_ &m) {
 
     nb::module_ quest = m.def_submodule("quest_bindings");
+
+    nb::exception<QuESTError>(quest, "QuESTError", PyExc_RuntimeError);
+
+    // QuEST's public setInputErrorHandler() unnecessarily demands that the QuESTEnv is
+    // initialised before the error handler can be set. Instead use the internal setter
+    // directly (skipping the validate_envIsInit check) so errors outside an active
+    // QuESTEnv still throw instead of exiting the process.
+    validateconfig_setErrorHandler(QuESTErrorHandler);
 
     // // Debug
     // nb::module_ debug = m.def_submodule("debug");
@@ -63,13 +93,11 @@ void init_quest_bindings(nb::module_ &m) {
     // Env
     nb::class_<QuESTEnv>(quest, "QuESTEnv")
         .def(nb::new_([]() {
-            initQuESTEnv();
-            setInputErrorHandler(errorHandler);
+            attemptEnvInit([]() { initQuESTEnv(); });
             return getQuESTEnv();
         }))
         .def(nb::new_([](int distrib, int gpu, int multithread) {
-            initCustomQuESTEnv(distrib, gpu, multithread);
-            setInputErrorHandler(errorHandler);
+            attemptEnvInit([=]() { initCustomQuESTEnv(distrib, gpu, multithread); });
             return getQuESTEnv();
         }))
         .def_static("report", &reportQuESTEnv)

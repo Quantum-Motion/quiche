@@ -2,6 +2,9 @@ from collections.abc import Sequence
 from typing import overload
 
 
+class QuESTError(RuntimeError):
+    pass
+
 class QuESTEnv:
     @overload
     def __init__(self) -> None: ...

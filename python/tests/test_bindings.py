@@ -18,6 +18,9 @@
 
 from __future__ import annotations
 
+import re
+import subprocess
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -92,11 +95,60 @@ def test_quiche_quest_call(quest_env: QuESTEnv):  # noqa: ARG001
     pauli_sum.report()
 
 
-def test_quest_error_handler(quest_env: QuESTEnv):  # noqa: ARG001
-    """Test QuEST errors correctly raise a Python exception."""
-    from quiche.bindings.quest_bindings import Qureg
+IMPORTS = "from quiche.bindings.quest_bindings import QuESTEnv, QuESTError, Qureg\n"
 
-    qureg = Qureg(1)
+INIT_AFTER_FAILURE = """\
+try:
+    QuESTEnv(0, 1, 0)
+except QuESTError:
+    pass
+QuESTEnv()
+"""
 
-    with pytest.raises(RuntimeError, match="density matrix"):
-        qureg.initRandomMixedState(5)
+INIT_AFTER_FINALISE = """\
+with QuESTEnv():
+    pass
+QuESTEnv()
+"""
+
+ERROR_AFTER_INIT = """\
+with QuESTEnv():
+    Qureg(1).initRandomMixedState(5)
+"""
+
+
+@pytest.mark.parametrize(
+    ("code", "expected_error"),
+    [
+        pytest.param(
+            "Qureg(1)",
+            r"QuESTError.*not initialised",
+            id="not-init",
+        ),
+        pytest.param(
+            INIT_AFTER_FAILURE,
+            r"QuESTError.*previous initialisation failed",
+            id="init-after-failure",
+        ),
+        pytest.param(
+            INIT_AFTER_FINALISE,
+            r"QuESTError.*finalise",
+            id="init-after-finalise",
+        ),
+        pytest.param(
+            ERROR_AFTER_INIT,
+            r"QuESTError.*density matrix",
+            id="error-after-init",
+        ),
+    ],
+)
+def test_quest_error_handler(code: str, expected_error: str):
+    """Test QuEST errors raise rather than exit (in a subprocess)."""
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", IMPORTS + code],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert re.search(expected_error, result.stderr), f"{result.stdout}\n{result.stderr}"
