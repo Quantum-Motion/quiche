@@ -12,26 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Core data structures for quantum primitives, routines and errors."""
+"""Core data structures representing quantum primitives."""
 
-from .algorithms import Mapping, PhaseEstimation, Simulation
 from .electronic import (
     DFTHCHamiltonian,
     ElectronicHamiltonian,
     SecondQuantisedHamiltonian,
 )
-from .errors import Errors
 from .paulis import Pauli, PauliSum, PauliWord
 
 __all__ = [
     "DFTHCHamiltonian",
     "ElectronicHamiltonian",
-    "Errors",
-    "Mapping",
     "Pauli",
     "PauliSum",
     "PauliWord",
-    "PhaseEstimation",
     "SecondQuantisedHamiltonian",
-    "Simulation",
 ]

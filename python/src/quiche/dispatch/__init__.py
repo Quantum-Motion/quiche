@@ -14,6 +14,4 @@
 
 """Methods and structures for dispatching to the resource and simulation backends."""
 
-from .qpespec import QPESpec
-
-__all__ = ["QPESpec"]
+__all__ = []

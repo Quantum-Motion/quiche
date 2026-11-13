@@ -40,12 +40,12 @@ from quiche.io import hamlib
 from quiche.core import (
     ElectronicHamiltonian,
     Errors,
-    Mapping,
     PhaseEstimation,
     Simulation,
 )
-from quiche.chemistry import HartreeFockState
+from quiche.chemistry import HartreeFockState, Mapping
 from quiche.dispatch import QPESpec
+from quiche.dispatch.backends.qualtran import QualtranBackend
 from quiche.resources.logical import logical_gate_resources, logical_qubit_resources
 
 paulis = hamlib.parse(hamlib.read_dataset("H2.hdf5", "ham_JW-4"))
@@ -68,7 +68,7 @@ spec = QPESpec(
     ),
 )
 
-bloq = spec.get_composite_bloq()
+bloq = spec.generate(QualtranBackend())
 print(logical_qubit_resources(bloq), logical_gate_resources(bloq))
 ```
 

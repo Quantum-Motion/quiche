@@ -12,19 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Methods for determining phase estimation parameters from error budgets."""
+"""Backends for generating implementations of a QPESpec."""
 
-from math import ceil, log2
+from .protocol import QPESpecBackend
 
-from quiche.core.errors import Errors
-
-
-def get_textbook_qpe_ancillas(e: Errors) -> int:
-    """Get the number of ancillas required for Textbook QPE."""
-    # TODO(Annina): add the one-norm of the Hamiltonian.
-    return ceil(log2(1 / e.estimation)) + ceil(log2(1 / e.overlap)) + 4
-
-
-def get_kitaev_qpe_rounds(e: Errors) -> int:
-    """Get the number of rounds for Kitaev single-ancilla QPE."""
-    return get_textbook_qpe_ancillas(e)
+__all__ = ["QPESpecBackend"]

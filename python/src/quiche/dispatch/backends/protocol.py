@@ -12,8 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Methods to determine routine parameters according to error budgets."""
+"""Interface for objects defining an implementation of a QPESpec."""
 
-from . import estimation, simulation
+from typing import Protocol
 
-__all__ = ["estimation", "simulation"]
+from quiche.algorithms import (
+    EstimationAlgorithm,
+    SimulationAlgorithm,
+    StateprepAlgorithm,
+)
+
+
+class QPESpecBackend[T](Protocol):
+    """Backend capable of generating an implementation of a QPESpec."""
+
+    def generate(
+        self,
+        stateprep: StateprepAlgorithm,
+        estimation: EstimationAlgorithm,
+        simulation: SimulationAlgorithm,
+    ) -> T:
+        """Generate the backend implementation of the given QPESpec."""
