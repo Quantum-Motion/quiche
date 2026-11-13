@@ -28,6 +28,10 @@
 #include "quiche/qpe.hpp"
 #include "quiche/quest-patches.hpp"
 
+#include "wrapper.hpp"
+
+using bindings::resources::checked;
+
 namespace nb = nanobind;
 
 namespace {
@@ -50,64 +54,61 @@ void init_quiche_bindings(nb::module_ &m) {
     quiche.def("getHartreeFockStateParity", &mappings::getHartreeFockStateParity, nb::arg("num_electrons"),
                nb::arg("num_qubits"));
 
-    quiche.def("getPhaseTextbookTrotter", &qpe::getPhaseTextbookTrotter, nb::arg("qureg"), nb::arg("hamiltonian"),
-               nb::arg("ancillas"), nb::arg("order"), nb::arg("reps"), nb::arg("time"));
+    quiche.def("getPhaseTextbookTrotter", checked(&qpe::getPhaseTextbookTrotter), nb::arg("qureg"),
+               nb::arg("hamiltonian"), nb::arg("ancillas"), nb::arg("order"), nb::arg("reps"), nb::arg("time"));
 
-    quiche.def("getPhaseKitaevTrotter", &qpe::getPhaseKitaevTrotter, nb::arg("qureg"), nb::arg("hamiltonian"),
+    quiche.def("getPhaseKitaevTrotter", checked(&qpe::getPhaseKitaevTrotter), nb::arg("qureg"), nb::arg("hamiltonian"),
                nb::arg("ancilla_index"), nb::arg("order"), nb::arg("reps"), nb::arg("time"), nb::arg("num_bits"));
 
-    quiche.def(
-        "getPhaseTextbookQDRIFT",
-        [](Qureg qureg, PauliStrSum hamiltonian, std::vector<int> ancillas, int reps, double t,
-           std::optional<unsigned int> seed) {
-            auto rng = rngFromOptionalSeed(seed);
-            return qpe::getPhaseTextbookQDRIFT(qureg, hamiltonian, ancillas, reps, t, rng);
-        },
-        nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancillas"), nb::arg("reps"), nb::arg("time"),
-        nb::arg("seed") = nb::none());
+    quiche.def("getPhaseTextbookQDRIFT",
+               checked([](Qureg qureg, PauliStrSum hamiltonian, std::vector<int> ancillas, int reps, double t,
+                          std::optional<unsigned int> seed) {
+                   auto rng = rngFromOptionalSeed(seed);
+                   return qpe::getPhaseTextbookQDRIFT(qureg, hamiltonian, ancillas, reps, t, rng);
+               }),
+               nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancillas"), nb::arg("reps"), nb::arg("time"),
+               nb::arg("seed") = nb::none());
 
-    quiche.def(
-        "getPhaseKitaevQDRIFT",
-        [](Qureg qureg, PauliStrSum hamiltonian, int ancillaIndex, int reps, double t, int numBits,
-           std::optional<unsigned int> seed) {
-            auto rng = rngFromOptionalSeed(seed);
-            return qpe::getPhaseKitaevQDRIFT(qureg, hamiltonian, ancillaIndex, reps, t, numBits, rng);
-        },
-        nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancilla_index"), nb::arg("reps"), nb::arg("time"),
-        nb::arg("num_bits"), nb::arg("seed") = nb::none());
+    quiche.def("getPhaseKitaevQDRIFT",
+               checked([](Qureg qureg, PauliStrSum hamiltonian, int ancillaIndex, int reps, double t, int numBits,
+                          std::optional<unsigned int> seed) {
+                   auto rng = rngFromOptionalSeed(seed);
+                   return qpe::getPhaseKitaevQDRIFT(qureg, hamiltonian, ancillaIndex, reps, t, numBits, rng);
+               }),
+               nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancilla_index"), nb::arg("reps"), nb::arg("time"),
+               nb::arg("num_bits"), nb::arg("seed") = nb::none());
 
-    quiche.def("getPhaseTextbookQubitised", &qpe::getPhaseTextbookQubitised, nb::arg("qureg"), nb::arg("hamiltonian"),
-               nb::arg("qpe_ancillas"), nb::arg("qubitisation_ancillas"));
-
-    quiche.def("getPhaseNaiveTrotter", &qpe::getPhaseNaiveTrotter, nb::arg("qureg"), nb::arg("hamiltonian"),
-               nb::arg("ancilla_index"), nb::arg("order"), nb::arg("reps"), nb::arg("time"));
-
-    quiche.def(
-        "getPhaseNaiveQDRIFT",
-        [](Qureg qureg, PauliStrSum hamiltonian, int ancillaIndex, int reps, double t,
-           std::optional<unsigned int> seed) {
-            auto rng = rngFromOptionalSeed(seed);
-            return qpe::getPhaseNaiveQDRIFT(qureg, hamiltonian, ancillaIndex, reps, t, rng);
-        },
-        nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancilla_index"), nb::arg("reps"), nb::arg("time"),
-        nb::arg("seed") = nb::none());
-
-    quiche.def("getPhaseIterativeTrotter", &qpe::getPhaseIterativeTrotter, nb::arg("qureg"), nb::arg("hamiltonian"),
-               nb::arg("ancilla_index"), nb::arg("order"), nb::arg("reps"), nb::arg("time"), nb::arg("num_bits"));
-
-    quiche.def(
-        "getPhaseIterativeQDRIFT",
-        [](Qureg qureg, PauliStrSum hamiltonian, int ancillaIndex, int reps, double t, int numBits,
-           std::optional<unsigned int> seed) {
-            auto rng = rngFromOptionalSeed(seed);
-            return qpe::getPhaseIterativeQDRIFT(qureg, hamiltonian, ancillaIndex, reps, t, numBits, rng);
-        },
-        nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancilla_index"), nb::arg("reps"), nb::arg("time"),
-        nb::arg("num_bits"), nb::arg("seed") = nb::none());
-
-    quiche.def("getPhaseTextbookQubitisedOptimised", &qpe::getPhaseTextbookQubitisedOptimised, nb::arg("qureg"),
+    quiche.def("getPhaseTextbookQubitised", checked(&qpe::getPhaseTextbookQubitised), nb::arg("qureg"),
                nb::arg("hamiltonian"), nb::arg("qpe_ancillas"), nb::arg("qubitisation_ancillas"));
 
-    quiche.def("initClassicalState", nb::overload_cast<Qureg, std::vector<int>>(&initClassicalState), nb::arg("qureg"),
-               nb::arg("state"));
+    quiche.def("getPhaseNaiveTrotter", checked(&qpe::getPhaseNaiveTrotter), nb::arg("qureg"), nb::arg("hamiltonian"),
+               nb::arg("ancilla_index"), nb::arg("order"), nb::arg("reps"), nb::arg("time"));
+
+    quiche.def("getPhaseNaiveQDRIFT",
+               checked([](Qureg qureg, PauliStrSum hamiltonian, int ancillaIndex, int reps, double t,
+                          std::optional<unsigned int> seed) {
+                   auto rng = rngFromOptionalSeed(seed);
+                   return qpe::getPhaseNaiveQDRIFT(qureg, hamiltonian, ancillaIndex, reps, t, rng);
+               }),
+               nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancilla_index"), nb::arg("reps"), nb::arg("time"),
+               nb::arg("seed") = nb::none());
+
+    quiche.def("getPhaseIterativeTrotter", checked(&qpe::getPhaseIterativeTrotter), nb::arg("qureg"),
+               nb::arg("hamiltonian"), nb::arg("ancilla_index"), nb::arg("order"), nb::arg("reps"), nb::arg("time"),
+               nb::arg("num_bits"));
+
+    quiche.def("getPhaseIterativeQDRIFT",
+               checked([](Qureg qureg, PauliStrSum hamiltonian, int ancillaIndex, int reps, double t, int numBits,
+                          std::optional<unsigned int> seed) {
+                   auto rng = rngFromOptionalSeed(seed);
+                   return qpe::getPhaseIterativeQDRIFT(qureg, hamiltonian, ancillaIndex, reps, t, numBits, rng);
+               }),
+               nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("ancilla_index"), nb::arg("reps"), nb::arg("time"),
+               nb::arg("num_bits"), nb::arg("seed") = nb::none());
+
+    quiche.def("getPhaseTextbookQubitisedOptimised", checked(&qpe::getPhaseTextbookQubitisedOptimised),
+               nb::arg("qureg"), nb::arg("hamiltonian"), nb::arg("qpe_ancillas"), nb::arg("qubitisation_ancillas"));
+
+    quiche.def("initClassicalState", checked(nb::overload_cast<Qureg, std::vector<int>>(&initClassicalState)),
+               nb::arg("qureg"), nb::arg("state"));
 }
