@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   ruff:
-    name: Run ruff
+    name: ruff
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -40,7 +40,7 @@ jobs:
         run: uv run --no-sync ruff format --check --output-format=github
 
   numpydoc:
-    name: Run numpydoc
+    name: numpydoc
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
