@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
 from qualtran import Bloq, BloqBuilder, CompositeBloq
 from qualtran.bloqs.qubitization.qubitization_walk_operator import (
@@ -61,6 +61,8 @@ def _get_stateprep_bloq(spec: QPESpec) -> Bloq:
             occupation = spec.state_prep.occupation
             bitstring = get_qubit_state(occupation, mapping)
             state_prep_bloq = BitstringStatePrep(tuple(bitstring))
+        case _:
+            assert_never(spec.state_prep)
 
     return state_prep_bloq
 
@@ -112,6 +114,9 @@ def _get_simulation_bloq_factory(spec: QPESpec) -> Callable[[int], Bloq]:
                 num_qpe_ancillas=spec.num_qpe_ancillas,
             )
 
+        case _:
+            assert_never(spec.simulation)
+
     return simulation_bloq_factory
 
 
@@ -129,6 +134,9 @@ def _get_estimation_bloq(spec: QPESpec) -> Bloq:
         case PhaseEstimation.Iterative | PhaseEstimation.Kitaev | PhaseEstimation.Naive:
             msg = f"{spec.algorithm} QPE not available in Qualtran backend."
             raise NotImplementedError(msg)
+
+        case _:
+            assert_never(spec.algorithm)
 
     return estimation_bloq
 

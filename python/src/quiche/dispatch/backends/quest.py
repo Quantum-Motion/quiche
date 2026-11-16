@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
 from quiche.bindings.quiche_bindings import initClassicalState
 from quiche.chemistry import (
@@ -48,12 +48,13 @@ def _get_stateprep(spec: QPESpec) -> Callable:
     match spec.state_prep:
         case None:
             return lambda _qureg: None
-
         case HartreeFockState():
             occupation = spec.state_prep.occupation
             mapping = spec.hamiltonian.mapping
             bitstring = get_qubit_state(occupation, mapping)
             return partial(initClassicalState, state=bitstring)
+        case _:
+            assert_never(spec.state_prep)
 
 
 def _get_estimation(spec: QPESpec) -> Callable:

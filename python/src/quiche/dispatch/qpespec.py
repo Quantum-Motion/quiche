@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
 from pydantic.dataclasses import Field, dataclass
 
@@ -88,6 +88,9 @@ class QPESpec:
                 self.num_qpe_ancillas = 1
                 self.num_rounds = get_kitaev_qpe_rounds(self.error_budget)
 
+            case _:
+                assert_never(self.algorithm)
+
         match self.simulation:
             case Simulation.QDRIFT:
                 if self.seed is None:
@@ -111,6 +114,9 @@ class QPESpec:
                     self.hamiltonian.paulis,
                     self.error_budget,
                 )
+
+            case _:
+                assert_never(self.simulation)
 
         self.num_simulation_ancillas = self.num_index_ancillas + self.num_phase_ancillas
         self.num_qubits = (

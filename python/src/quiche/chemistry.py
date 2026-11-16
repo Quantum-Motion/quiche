@@ -17,7 +17,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 from math import ceil, log2
-from typing import Self
+from typing import Self, assert_never
 
 import numpy as np
 from numpy.typing import NDArray
@@ -169,6 +169,8 @@ def get_qubit_state(
             return get_bk_state(occupation)
         case Mapping.Parity:
             return get_parity_state(occupation)
+        case _:
+            assert_never(mapping)
 
 
 @dataclass(frozen=True)
