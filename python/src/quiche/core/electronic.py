@@ -213,9 +213,9 @@ class DFTHCHamiltonian(BaseModel):
 
     References
     ----------
-        .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
-        by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
-        Oct. 2025.
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+       by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
+       Oct. 2025.
 
     """
 
