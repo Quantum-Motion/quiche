@@ -225,7 +225,7 @@ class TestDFTHCHamiltonian:
     def test_sos_one_body(self, factors: dict):
         hamiltonian = DFTHCHamiltonian(**factors)
 
-        # Every W_rc entry is 4/3, so sum_rc W^(rc) W_rc = 16/3. With const / eta = 0.25,
+        # Every W_rc entry is 4/3, so sum_rc W^(rc) W_rc = 16/3. With const/eta = 0.25,
         # eta / 2 * B = 1 and beta_1 = 0.25, this leaves 0.5 I - 16/3.
         expected = 0.5 * np.eye(3) - 16 / 3 * np.ones((3, 3))
         np.testing.assert_allclose(hamiltonian.sos_one_body(), expected)
