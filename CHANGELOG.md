@@ -20,6 +20,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `from_sparse_string`, `from_dense_string` and `to_sparse_string` to `PauliWord` and `PauliSum`, and `to_dense_string` to `PauliSum`.
 - Added `to_matrix` to `Pauli`, `PauliWord` and `PauliSum`.
 - Added `Trotterisation.trotter_coeffs`, `Trotterisation.trotter_indices` and `Trotterisation.rotation_sequence`.
+- Added `bloqs.dfthc.encodings` to encode rotation angles as integers and pack them into binary words.
+- Added a `rotation_data` field to the DFTHC bloqs to load these angles into `RotationQROM`, set by `from_dfthc_hamiltonian`.
 - Added `quiche.chemistry.get_qubit_state` to map an occupation state to the qubit basis for a given `Mapping`.
 - Added `quiche.dispatch.backends` with `QualtranBackend` and `QuESTBackend`, used via the new `QPESpec.generate()` method.
 
@@ -44,6 +46,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Changed `Trotterisation`'s Suzuki-Trotter expansion to no longer merge adjacent rotations on the same term.
 - Changed `QDRIFT.sampled_indices` to return a NumPy array rather than a tuple.
 - Changed `QDRIFT` to sample term counts directly, speeding up the call graph for large `num_samples` (sampled terms will differ for a given seed from previous sampling).
+- Changed QuEST bindings' validation errors to raise `QuESTError` (a `RuntimeError` subclass).
 
 ### Deprecated
 
@@ -53,6 +56,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Fixed `QDRIFT` and `Trotterisation` call graphs undercounting rotations for repeated `PauliWord`s.
+- Fixed QuEST bindings exiting instead of raising on validation errors before the `QuESTEnv` is initialised.
+- Fixed QuEST bindings exiting instead of raising when re-initialising a `QuESTEnv` after a failed initialisation.
 
 ### Security
 

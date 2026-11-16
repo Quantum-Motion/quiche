@@ -182,6 +182,17 @@ class TestDFTHCHamiltonian:
             DFTHCHamiltonian(**factors)
 
     @pytest.mark.parametrize(
+        "name",
+        ["unit_vectors", "weight_vectors", "bliss_matrix", "factorised_one_body"],
+    )
+    @pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
+    def test_non_finite_factors(self, factors: dict, name: str, value: float):
+        factors[name][(0,) * factors[name].ndim] = value
+
+        with pytest.raises(ValueError, match="must be finite"):
+            DFTHCHamiltonian(**factors)
+
+    @pytest.mark.parametrize(
         ("name", "shape"),
         [
             ("unit_vectors", (2, 4, 5)),
