@@ -57,7 +57,7 @@ dev = [
     { include-group = "test" },
 ]
 lint = [
-    "ruff>=0.15",
+    "ruff>=0.16",
     "clang-format==23.1.*",
     "numpydoc>=1.11",
 ]
