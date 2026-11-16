@@ -48,8 +48,7 @@ bool envInitIncomplete = false;
 template <class Init>
 void attemptEnvInit(Init init) {
     if (envInitIncomplete)
-        QuESTErrorHandler("QuESTEnv", "The QuEST environment cannot be initialised again in this process, "
-                                      "because a previous initialisation failed");
+        QuESTErrorHandler("QuESTEnv", "The QuEST environment cannot be initialised again in this process.");
 
     envInitIncomplete = true;
     init();
@@ -93,7 +92,7 @@ void init_quest_bindings(nb::module_ &m) {
     // Env
     nb::class_<QuESTEnv>(quest, "QuESTEnv")
         .def(nb::new_([]() {
-            attemptEnvInit([]() { initQuESTEnv(); });
+            attemptEnvInit(initQuESTEnv);
             return getQuESTEnv();
         }))
         .def(nb::new_([](int distrib, int gpu, int multithread) {
