@@ -110,6 +110,7 @@ lint.ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "docs/conf.py" = ["INP001"] # not applicable
+"python/examples/*.py" = ["INP001"] # Example scripts are not a package
 "python/*.ipynb" = ["CPY001"] # Don't require copyright in notebooks
 "python/tests/*" =[
     "S101",   # asserts are used throughout testing
