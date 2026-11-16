@@ -169,7 +169,7 @@ class SecondQuantisedHamiltonian(BaseModel):
 
 
 class DFTHCHamiltonian(BaseModel):
-    """
+    r"""
     Class encompassing an electronic Hamiltonian in DFTHC factorised form.
 
     Parameters
@@ -188,10 +188,17 @@ class DFTHCHamiltonian(BaseModel):
     weight_vectors : NDArray[np.float64]
         Real array of shape ``(R, B, C)`` containing the weights that
         combine the unit vectors into the factors :math:`W_{rc}`.
+    identity_weights : NDArray[np.float64]
+        Real array of shape ``(R, C)`` containing the coefficient of the identity
+        inside each squared factor (:math:`W^{(rc)}` in eq. (23) of [Low2025]_), one
+        scalar per rank and copy. Only affects the sum-of-squares representation.
     bliss_matrix : NDArray[np.float64]
         Real array of shape ``(N, N)`` containing the BLISS symmetry shift
         matrix, which is removed from the factorised two body integrals on
         reconstruction.
+    bliss_constant : float
+        Coefficient of the identity in the one body BLISS shift, :math:`\beta_1` in
+        eq. (40) of [Low2025]_. Only affects the sum-of-squares representation.
     factorised_one_body : NDArray[np.float64]
         Real array of shape ``(N, N)`` containing the one body integrals in the
         factorised ("E-form") convention, which absorb a contribution from
@@ -204,6 +211,12 @@ class DFTHCHamiltonian(BaseModel):
         Number of electrons in the system. Must be non-negative and at most
         :math:`2N`.
 
+    References
+    ----------
+        .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+        by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
+        Oct. 2025.
+
     """
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
@@ -214,7 +227,9 @@ class DFTHCHamiltonian(BaseModel):
     num_copies: int
     unit_vectors: NDArray[np.float64]
     weight_vectors: NDArray[np.float64]
+    identity_weights: NDArray[np.float64]
     bliss_matrix: NDArray[np.float64]
+    bliss_constant: float
     factorised_one_body: NDArray[np.float64]
     const: float
     num_electrons: int
@@ -222,6 +237,7 @@ class DFTHCHamiltonian(BaseModel):
     @field_validator(
         "unit_vectors",
         "weight_vectors",
+        "identity_weights",
         "bliss_matrix",
         "factorised_one_body",
         mode="before",
@@ -260,6 +276,7 @@ class DFTHCHamiltonian(BaseModel):
         expected = {
             "unit_vectors": (self.num_ranks, self.num_bases, self.num_orbitals),
             "weight_vectors": (self.num_ranks, self.num_bases, self.num_copies),
+            "identity_weights": (self.num_ranks, self.num_copies),
             "bliss_matrix": (self.num_orbitals, self.num_orbitals),
             "factorised_one_body": (self.num_orbitals, self.num_orbitals),
         }
@@ -295,15 +312,29 @@ class DFTHCHamiltonian(BaseModel):
         return self
 
     def reconstruct(self) -> SecondQuantisedHamiltonian:
-        """Rebuild the integrals from the factors."""
-        u_normalised = self.unit_vectors / np.linalg.norm(
-            self.unit_vectors, axis=2, keepdims=True
-        )
+        r"""
+        Rebuild the one and two body integrals from the factors.
 
+        The approximated two body tensor is built from the factor matrices, and the
+        BLISS shift is removed from it:
+
+        .. math::
+
+            h^{(2)}_{pqts} = \sum_{rc} W_{rc}[p, q] \, W_{rc}[t, s]
+                - \frac{1}{2} \left( B_{pq} \delta_{ts} + \delta_{pq} B_{ts} \right).
+
+        The one body integrals are converted from the factorised ("E-form") convention
+        to the bare convention, :math:`h_{pq} = h^{(1)}_{pq} + \frac{1}{2} \sum_r
+        h^{(2)}_{prrq}`, and `const` is used as the core energy.
+
+        Returns
+        -------
+        SecondQuantisedHamiltonian
+            The reconstructed Hamiltonian, with the same number of electrons.
+
+        """
         # W_rc[p,q] = sum_b W[r,b,c] * u[r,b,p] * u[r,b,q]
-        w_rc = np.einsum(
-            "rbp,rbq,rbc->rcpq", u_normalised, u_normalised, self.weight_vectors
-        )
+        w_rc = self._factor_matrices()
 
         # g_approx[p,q,t,s] = sum_{r,c} W_rc[p,q] * W_rc[t,s]
         g_approx = np.einsum("rcpq,rcts->pqts", w_rc, w_rc)
@@ -323,4 +354,70 @@ class DFTHCHamiltonian(BaseModel):
             two_body=two_body,
             num_electrons=self.num_electrons,
             core_energy=self.const,
+        )
+
+    def sos_one_body(self) -> NDArray[np.float64]:
+        r"""
+        Get the one body matrix of the sum-of-squares representation.
+
+        This is :math:`h^{(1)'}` of eq. (26) in [Low2025]_, whose eigendecomposition
+        gives the :math:`D_1/Q_1` terms of the block encoding:
+
+        .. math::
+
+            h^{(1)'} = h^{(1)} + \frac{c}{\eta} I - \frac{\eta}{2} B + \beta_1 I
+                - \sum_{rc} \alpha_{rc} \sum_b w_b^{(rc)} u_b^{(r)} u_b^{(r)T},
+
+        where :math:`\alpha_{rc}` are the `identity_weights`. The :math:`(c / \eta) I`
+        term matches the factorisation code, which folds the constant into the one
+        body term while optimising.
+
+        Returns
+        -------
+        NDArray[np.float64]
+            Real symmetric array of shape ``(N, N)``.
+
+        """
+        u_normalised = self.unit_vectors / np.linalg.norm(
+            self.unit_vectors, axis=2, keepdims=True
+        )
+        w_rc = np.einsum(
+            "rbp,rbq,rbc->rcpq", u_normalised, u_normalised, self.weight_vectors
+        )
+
+        identity = np.eye(self.num_orbitals)
+        return (
+            self.factorised_one_body
+            + (self.const / self.num_electrons) * identity
+            - 0.5 * self.num_electrons * self.bliss_matrix
+            + self.bliss_constant * identity
+            - np.einsum("rc,rcpq->pq", self.identity_weights, w_rc)
+        )
+
+    def _factor_matrices(self) -> NDArray[np.float64]:
+        r"""
+        Combine the unit and weight vectors into the factor matrices :math:`W_{rc}`.
+
+        Each factor is the weighted sum of outer products of the unit vectors of its
+        rank, normalised along the orbital axis:
+
+        .. math::
+
+            W_{rc}[p, q] = \sum_{b} w_b^{(rc)} u_{b,p}^{(r)} u_{b,q}^{(r)},
+
+        so that the approximated two body tensor is
+        :math:`\sum_{rc} W_{rc}[p, q] \, W_{rc}[t, s]` (eq. (24) of [Low2025]_).
+
+        Returns
+        -------
+        NDArray[np.float64]
+            Real array of shape ``(R, C, N, N)``, where each ``(N, N)`` matrix is
+            symmetric.
+
+        """
+        u_normalised = self.unit_vectors / np.linalg.norm(
+            self.unit_vectors, axis=2, keepdims=True
+        )
+        return np.einsum(
+            "rbp,rbq,rbc->rcpq", u_normalised, u_normalised, self.weight_vectors
         )
