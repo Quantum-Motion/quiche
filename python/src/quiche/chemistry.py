@@ -41,6 +41,11 @@ def get_hf_state(num_spin_orbitals: int, num_electrons: int) -> NDArray[np.int_]
     ``NDArray[np.int_]``
         The HF state with the lowest ``num_electrons`` number of orbitals occupied.
 
+    Raises
+    ------
+    ValueError
+        If `num_electrons` is less than 0, `num_spin_orbitals` is less than 1 or
+        `num_electrons` is greater than `num_spin_orbitals`.
     """
     if num_electrons < 0:
         error_msg = "Number of electrons must be non-negative."
@@ -73,7 +78,6 @@ def get_jw_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int
     -------
     ``NDArray[np.int_]``
         The qubit basis state resulting from the fermion-to-qubit mapping.
-
     """
     return np.array(occupation, dtype=int)
 
@@ -91,7 +95,6 @@ def get_parity_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np
     -------
     ``NDArray[np.int_]``
         The qubit basis state resulting from the fermion-to-qubit mapping.
-
     """
     occupation = np.asarray(occupation, dtype=int)
     return np.cumsum(occupation) % 2
@@ -110,7 +113,6 @@ def _bk_transformation_matrix(size: int) -> NDArray[np.int_]:
     -------
     ``NDArray[np.int_]``
         Matrix transforming from occupation basis to qubit basis.
-
     """
     mat = np.array([[1]], dtype=int)
 
@@ -135,7 +137,6 @@ def get_bk_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int
     -------
     ``NDArray[np.int_]``
         The qubit basis state resulting from the fermion-to-qubit mapping.
-
     """
     occupation = np.asarray(occupation, dtype=int)
     mat = _bk_transformation_matrix(len(occupation))
@@ -195,10 +196,10 @@ class HartreeFockState:
 
     @property
     def num_electrons(self) -> int:
-        """Get number of electrons of Hartree-Fock state."""
+        """Number of electrons of Hartree-Fock state."""
         return sum(self.occupation)
 
     @property
     def num_spin_orbitals(self) -> int:
-        """Get number of spin orbitals of Hartree-Fock state."""
+        """Number of spin orbitals of Hartree-Fock state."""
         return len(self.occupation)
