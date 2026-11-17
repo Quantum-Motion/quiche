@@ -19,7 +19,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace bindings::resources {
+namespace bindings {
 
 class QuESTError : public std::runtime_error {
     using std::runtime_error::runtime_error;
@@ -29,4 +29,4 @@ inline void QuESTErrorHandler(const char *errFunc, const char *errMsg) {
     throw QuESTError(std::string(errFunc) + " - " + std::string(errMsg));
 }
 
-} // namespace bindings::resources
+} // namespace bindings

@@ -24,7 +24,7 @@
 
 #include "resources.hpp"
 
-namespace bindings::resources {
+namespace bindings {
 
 // Define unwrapping for non-resource type (move)
 template <class T, class = void>
@@ -87,4 +87,4 @@ auto checked(Ret (*fn)(Args...)) {
     return checkedImpl<Ret, Args...>(fn);
 }
 
-} // namespace bindings::resources
+} // namespace bindings

@@ -30,7 +30,7 @@
 
 #include "wrapper.hpp"
 
-using bindings::resources::checked;
+using bindings::checked;
 
 namespace nb = nanobind;
 

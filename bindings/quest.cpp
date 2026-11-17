@@ -32,10 +32,10 @@
 using std::string;
 using std::vector;
 
-using bindings::resources::checked;
-using bindings::resources::CheckedResource;
-using bindings::resources::QuESTError;
-using bindings::resources::QuESTErrorHandler;
+using bindings::checked;
+using bindings::CheckedResource;
+using bindings::QuESTError;
+using bindings::QuESTErrorHandler;
 
 namespace nb = nanobind;
 

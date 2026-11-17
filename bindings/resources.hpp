@@ -23,7 +23,7 @@
 
 #include "error.hpp"
 
-namespace bindings::resources {
+namespace bindings {
 
 template <class Q>
 inline constexpr auto destructor = nullptr;
@@ -77,4 +77,4 @@ class CheckedResource {
     }
 };
 
-} // namespace bindings::resources
+} // namespace bindings
