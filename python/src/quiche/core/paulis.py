@@ -170,7 +170,6 @@ class PauliWord(BaseModel):
         -------
         PauliWord
             The parsed PauliWord.
-
         """
         pairs = cls._split_dense_string(dense_string, big_endian=big_endian)
         validated = cls._validate_pairs(pairs)
@@ -199,7 +198,6 @@ class PauliWord(BaseModel):
         -------
         PauliWord
             The parsed PauliWord.
-
         """
         pairs = cls._split_sparse_string(sparse_string)
         validated = cls._validate_pairs(pairs)
@@ -247,7 +245,6 @@ class PauliWord(BaseModel):
         -------
         str
             The dense string representation of the PauliWord.
-
         """
         length = self._resolve_length(length)
         ops = ["I"] * length
@@ -402,7 +399,6 @@ class PauliSum(BaseModel):
         -------
         PauliSum
             The parsed PauliSum.
-
         """
         lines = cls._split_lines(dense_string)
         cls._validate_dense_strings([s for _, s in lines])
@@ -437,7 +433,6 @@ class PauliSum(BaseModel):
         -------
         PauliSum
             The parsed PauliSum.
-
         """
         lines = cls._split_lines(sparse_string)
         id_coeff, coeffs, strings = cls._split_identity(lines, lambda s: not s)
@@ -447,7 +442,7 @@ class PauliSum(BaseModel):
     @computed_field
     @cached_property
     def num_qubits(self) -> int:
-        """Get the number of qubits targeted by all the operators."""
+        """Number of qubits targeted by all the operators."""
         return max(word.greatest_qubit for word in self.words) + 1
 
     @computed_field
@@ -459,19 +454,19 @@ class PauliSum(BaseModel):
     @computed_field
     @cached_property
     def num_words(self) -> int:
-        """Get number of words in linear combination."""
+        """Number of words in linear combination."""
         return len(self.words)
 
     @computed_field
     @cached_property
     def num_words_with_identity(self) -> int:
-        """Get the number of words including the identity if non-zero."""
+        """Number of words including the identity if non-zero."""
         return self.num_words + (1 if self.has_identity else 0)
 
     @computed_field
     @cached_property
     def lam(self) -> float:
-        """Get the 1-norm of the operator."""
+        """1-norm of the operator."""
         return sum(map(abs, self.coefficients)) + abs(self.identity_coefficient)
 
     def to_sparse_string(self) -> str:
@@ -505,7 +500,6 @@ class PauliSum(BaseModel):
         -------
         str
             The dense string representation of the PauliSum.
-
         """
         length = self._resolve_length(length)
         lines = [f"{self.identity_coefficient:+} {'I' * length}"] + [
@@ -534,7 +528,12 @@ class PauliSum(BaseModel):
         """
         Get the QuEST representation of a PauliSum.
 
-        Will raise if called outside of a QuESTEnv.
+        Must be called within an active QuESTEnv.
+
+        Returns
+        -------
+        PauliStrSum
+            The QuEST equivalent representation of this sum of Pauli operators.
         """
         strings = [word.to_quest(self.num_qubits) for word in self.words]
         coefficients = list(self.coefficients)

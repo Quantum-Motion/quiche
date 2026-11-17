@@ -124,13 +124,13 @@ class SecondQuantisedHamiltonian(BaseModel):
     @computed_field
     @cached_property
     def num_spatial_orbitals(self) -> int:
-        """Get the number of spatial molecular orbitals."""
+        """Number of spatial molecular orbitals."""
         return self.one_body.shape[0]
 
     @computed_field
     @cached_property
     def num_spin_orbitals(self) -> int:
-        """Get the number of spin orbitals."""
+        """Number of spin orbitals."""
         return 2 * self.num_spatial_orbitals
 
     def __eq__(self, other: object) -> bool:
