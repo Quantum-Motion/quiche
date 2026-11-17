@@ -14,12 +14,11 @@
 
 """Objects to construct and lazily evaluate QuEST simulations."""
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable
 
 from quiche.bindings.quest_bindings import Qureg
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
+type QuESTOp = Callable[[Qureg], object]
 
 
 class SimulationRoutine:
