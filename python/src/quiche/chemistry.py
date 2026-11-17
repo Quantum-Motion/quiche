@@ -161,7 +161,6 @@ def get_qubit_state(
     -------
     ``NDArray[np.int_]``
         The qubit basis state resulting from the fermion-to-qubit mapping.
-
     """
     match mapping:
         case Mapping.JordanWigner:
