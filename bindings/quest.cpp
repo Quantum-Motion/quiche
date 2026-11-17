@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -26,6 +25,7 @@
 #include <quest.h>
 #include <quest/src/core/validation.hpp> // validateconfig_setErrorHandler
 
+#include "error.hpp"
 #include "resources.hpp"
 #include "wrapper.hpp"
 
@@ -34,18 +34,12 @@ using std::vector;
 
 using bindings::resources::checked;
 using bindings::resources::CheckedResource;
+using bindings::resources::QuESTError;
+using bindings::resources::QuESTErrorHandler;
 
 namespace nb = nanobind;
 
 namespace {
-
-class QuESTError : public std::runtime_error {
-    using std::runtime_error::runtime_error;
-};
-
-void QuESTErrorHandler(const char *errFunc, const char *errMsg) {
-    throw QuESTError(string(errFunc) + " - " + string(errMsg));
-}
 
 // A failed QuEST initialisation leaves partial state behind, and retrying hits an
 // internal error that exits the process, so retries after a failure are rejected.
@@ -98,12 +92,12 @@ void init_quest_bindings(nb::module_ &m) {
 
     // Env
     nb::class_<QuESTEnv>(quest, "QuESTEnv")
-        .def(nb::new_([]() {
-            attemptEnvInit([]() { initQuESTEnv(); });
+        .def(nb::new_([] {
+            attemptEnvInit([] { initQuESTEnv(); });
             return getQuESTEnv();
         }))
         .def(nb::new_([](int distrib, int gpu, int multithread) {
-            attemptEnvInit([=]() { initCustomQuESTEnv(distrib, gpu, multithread); });
+            attemptEnvInit([=] { initCustomQuESTEnv(distrib, gpu, multithread); });
             return getQuESTEnv();
         }))
         .def_static("report", checked(&reportQuESTEnv))

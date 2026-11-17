@@ -16,12 +16,11 @@
 
 #pragma once
 
-#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
-#include <quest.h>
+#include <nanobind/nanobind.h>
 
 #include "resources.hpp"
 
@@ -53,7 +52,7 @@ struct checked_arg<std::vector<T>, std::enable_if_t<is_quest_resource_v<T>>> {
         out.reserve(handles.size());
         for (auto *h : handles) {
             if (!h)
-                throw std::runtime_error("None where a QuEST resource was expected.");
+                throw nanobind::type_error("None where a QuEST resource was expected.");
             out.push_back(h->get());
         }
         return out;

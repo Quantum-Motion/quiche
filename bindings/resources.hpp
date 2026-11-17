@@ -17,10 +17,11 @@
 #pragma once
 
 #include <optional>
-#include <stdexcept>
 #include <utility>
 
 #include <quest.h>
+
+#include "error.hpp"
 
 namespace bindings::resources {
 
@@ -61,9 +62,9 @@ class CheckedResource {
 
     R get() const {
         if (!resource)
-            throw std::runtime_error("Attempted to access a QuEST resource that has already been destroyed.");
+            throw QuESTError("Attempted to access a QuEST resource that has already been destroyed.");
         if (!isQuESTEnvInit())
-            throw std::runtime_error("Attempted to access a QuEST resource after the QuEST environment was finalised.");
+            throw QuESTError("Attempted to access a QuEST resource after the QuEST environment was finalised.");
         return *resource;
     }
 
