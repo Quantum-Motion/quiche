@@ -59,6 +59,36 @@ def as_rotation_data(
     return tuple(tuple(index(word) for word in row) for row in value)
 
 
+def as_tail_data(
+    value: Iterable[tuple[SupportsIndex, SupportsIndex]] | None,
+) -> TailData | None:
+    """
+    Coerce tail words and G_1 bits to tuples of Python integers.
+
+    Used as the attrs converter for every ``tail_data`` field, so that lists and
+    NumPy arrays are accepted. Length and bit widths are validated by
+    ``InnerQROMTail``.
+
+    Parameters
+    ----------
+    value : Iterable[tuple[SupportsIndex, SupportsIndex]] | None
+        Iterable of ``(rotations, G_1)`` pairs, indexed ``[tail_index]``, or None.
+
+    Returns
+    -------
+    TailData | None
+        The pairs as a tuple of tuples of ``int``, or None if ``value`` is None.
+
+    Raises
+    ------
+    TypeError
+        If any entry is not an integer (e.g. a float).
+    """  # ruff: ignore[docstring-extraneous-exception]
+    if value is None:
+        return None
+    return tuple((index(word), index(g_1)) for word, g_1 in value)
+
+
 def givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
     """
     Compute the Givens rotation angles that encode each vector along the last axis.
