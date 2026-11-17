@@ -45,6 +45,7 @@ from quiche.resources.bloqs.dfthc.encodings import (
     pack_integers,
     quantise_angles,
     rotation_qrom_angles,
+    tail_qrom_angles,
 )
 from quiche.resources.bloqs.dfthc.qrom import InnerQROMTail, RotationQROM
 from quiche.resources.bloqs.dfthc.select import GivensLadder
@@ -465,6 +466,7 @@ class TestDFTHCBlockEncoding:
         log_block_size_outer=K_1,
         log_block_size_outer_adjoint=K_5,
         rotation_data=random_rotation_data(R, B, (N - 1) * B_ROT),
+        tail_data=random_tail_data(N, (N - 1) * B_ROT),
     )
 
     def test_decomposition(self):
@@ -488,10 +490,11 @@ class TestDFTHCBlockEncoding:
             log_block_size_outer_adjoint=K_5,
         )
 
-        # Apart from the rotation data, it is the bloq built from the parameters.
-        assert attrs.evolve(self.block_encoding, rotation_data=None) == attrs.evolve(
-            block_encoding_from_fh, rotation_data=None
-        )
+        # Apart from the data, it is the bloq built from the parameters.
+        assert attrs.evolve(
+            self.block_encoding, rotation_data=None, tail_data=None
+        ) == attrs.evolve(block_encoding_from_fh, rotation_data=None, tail_data=None)
+
         assert block_encoding_from_fh.rotation_data is not None
         # The angles the ladder reads from the words are those of the Hamiltonian.
         np.testing.assert_allclose(
@@ -502,6 +505,19 @@ class TestDFTHCBlockEncoding:
         )
         qrom = block_encoding_from_fh.inner.rotation_prep.qrom
         assert qrom.rotation_data == block_encoding_from_fh.rotation_data
+
+        # The tail words hold the eigenvector angles, paired with their G_1 bits.
+        words, g_1 = zip(*block_encoding_from_fh.tail_data, strict=True)
+        angles, negative = tail_qrom_angles(dummy_dfthc_hamiltonian)
+        np.testing.assert_allclose(
+            np.exp(1j * decode_rotation_data((words,))[0]),
+            np.exp(1j * angles),
+            rtol=0,
+            atol=2 * np.pi / 2**B_ROT,
+        )
+        np.testing.assert_array_equal(g_1, negative)
+        tail_qrom = block_encoding_from_fh.inner.inner_prep.tail_qrom
+        assert tail_qrom.tail_data == block_encoding_from_fh.tail_data
 
 
 class TestDFTHCWalkOperator:
@@ -521,6 +537,7 @@ class TestDFTHCWalkOperator:
         log_block_size_outer=K_1,
         log_block_size_outer_adjoint=K_5,
         rotation_data=random_rotation_data(R, B, (N - 1) * B_ROT),
+        tail_data=random_tail_data(N, (N - 1) * B_ROT),
     )
 
     def test_decomposition(self):
@@ -544,10 +561,11 @@ class TestDFTHCWalkOperator:
             log_block_size_outer_adjoint=K_5,
         )
 
-        # Apart from the rotation data, it is the bloq built from the parameters.
-        assert attrs.evolve(self.walk, rotation_data=None) == attrs.evolve(
-            walk_from_fh, rotation_data=None
-        )
+        # Apart from the data, it is the bloq built from the parameters.
+        assert attrs.evolve(
+            self.walk, rotation_data=None, tail_data=None
+        ) == attrs.evolve(walk_from_fh, rotation_data=None, tail_data=None)
+
         assert walk_from_fh.rotation_data is not None
         # The angles the ladder reads from the words are those of the Hamiltonian.
         np.testing.assert_allclose(
@@ -558,6 +576,19 @@ class TestDFTHCWalkOperator:
         )
         qrom = walk_from_fh.block_encoding.inner.rotation_prep.qrom
         assert qrom.rotation_data == walk_from_fh.rotation_data
+
+        # The tail words hold the eigenvector angles, paired with their G_1 bits.
+        words, g_1 = zip(*walk_from_fh.tail_data, strict=True)
+        angles, negative = tail_qrom_angles(dummy_dfthc_hamiltonian)
+        np.testing.assert_allclose(
+            np.exp(1j * decode_rotation_data((words,))[0]),
+            np.exp(1j * angles),
+            rtol=0,
+            atol=2 * np.pi / 2**B_ROT,
+        )
+        np.testing.assert_array_equal(g_1, negative)
+        tail_qrom = walk_from_fh.block_encoding.inner.inner_prep.tail_qrom
+        assert tail_qrom.tail_data == walk_from_fh.tail_data
 
 
 class TestQuantiseAngles:
