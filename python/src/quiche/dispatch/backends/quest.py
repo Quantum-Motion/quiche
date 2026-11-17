@@ -19,7 +19,14 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING, assert_never
 
-from quiche.bindings.quiche_bindings import initClassicalState
+from quiche.bindings.quiche_bindings import (
+    getPhaseKitaevQDRIFT,
+    getPhaseKitaevTrotter,
+    getPhaseTextbookQDRIFT,
+    getPhaseTextbookQubitised,
+    getPhaseTextbookTrotter,
+    initClassicalState,
+)
 from quiche.chemistry import (
     HartreeFockState,
     get_qubit_state,
@@ -28,22 +35,14 @@ from quiche.core import (
     PhaseEstimation,
     Simulation,
 )
-from quiche.simulation import SimulationRoutine
-from quiche.simulation.estimation import (
-    getPhaseKitaevQDRIFT,
-    getPhaseKitaevTrotter,
-    getPhaseTextbookQDRIFT,
-    getPhaseTextbookQubitised,
-    getPhaseTextbookTrotter,
-)
+from quiche.simulation import QuESTOp, SimulationRoutine
+from quiche.simulation.utils import _with_quest_hamiltonian
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from quiche import QPESpec
 
 
-def _get_stateprep(spec: QPESpec) -> Callable:
+def get_stateprep_op(spec: QPESpec) -> QuESTOp:
     """Pattern matching and construction for QuEST state preparation."""
     match spec.state_prep:
         case None:
@@ -57,7 +56,7 @@ def _get_stateprep(spec: QPESpec) -> Callable:
             assert_never(spec.state_prep)
 
 
-def _get_estimation(spec: QPESpec) -> Callable:
+def get_estimation_op(spec: QPESpec) -> QuESTOp:
     """Pattern matching and construction for QuEST phase estimation."""
     # Register layout: [data | qpe ancillas | index ancillas]
     qpe_ancillas_start = spec.num_data
@@ -71,7 +70,7 @@ def _get_estimation(spec: QPESpec) -> Callable:
 
     match spec.algorithm, spec.simulation:
         case PhaseEstimation.Kitaev, Simulation.QDRIFT:
-            return partial(
+            return _with_quest_hamiltonian(
                 getPhaseKitaevQDRIFT,
                 hamiltonian=spec.hamiltonian.paulis,
                 ancilla_index=qpe_ancillas[0],
@@ -82,7 +81,7 @@ def _get_estimation(spec: QPESpec) -> Callable:
             )
 
         case PhaseEstimation.Kitaev, Simulation.Trotter:
-            return partial(
+            return _with_quest_hamiltonian(
                 getPhaseKitaevTrotter,
                 hamiltonian=spec.hamiltonian.paulis,
                 ancilla_index=qpe_ancillas[0],
@@ -93,7 +92,7 @@ def _get_estimation(spec: QPESpec) -> Callable:
             )
 
         case PhaseEstimation.Textbook, Simulation.QDRIFT:
-            return partial(
+            return _with_quest_hamiltonian(
                 getPhaseTextbookQDRIFT,
                 hamiltonian=spec.hamiltonian.paulis,
                 ancillas=qpe_ancillas,
@@ -103,7 +102,7 @@ def _get_estimation(spec: QPESpec) -> Callable:
             )
 
         case PhaseEstimation.Textbook, Simulation.Qubitised:
-            return partial(
+            return _with_quest_hamiltonian(
                 getPhaseTextbookQubitised,
                 hamiltonian=spec.hamiltonian.paulis,
                 qpe_ancillas=qpe_ancillas,
@@ -111,7 +110,7 @@ def _get_estimation(spec: QPESpec) -> Callable:
             )
 
         case PhaseEstimation.Textbook, Simulation.Trotter:
-            return partial(
+            return _with_quest_hamiltonian(
                 getPhaseTextbookTrotter,
                 hamiltonian=spec.hamiltonian.paulis,
                 ancillas=qpe_ancillas,
@@ -134,6 +133,6 @@ class QuESTBackend:
     def generate(self, spec: QPESpec) -> SimulationRoutine:
         """Build the QuEST SimulationRoutine implementing the given QPESpec."""
         routine = SimulationRoutine()
-        routine.append(_get_stateprep(spec))
-        routine.append(_get_estimation(spec))
+        routine.append(get_stateprep_op(spec))
+        routine.append(get_estimation_op(spec))
         return routine

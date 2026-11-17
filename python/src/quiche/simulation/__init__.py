@@ -14,6 +14,6 @@
 
 """Logic for the QuEST simulation backend of QUICHE."""
 
-from .routine import SimulationRoutine
+from .routine import QuESTOp, SimulationRoutine
 
-__all__ = ["SimulationRoutine"]
+__all__ = ["QuESTOp", "SimulationRoutine"]
