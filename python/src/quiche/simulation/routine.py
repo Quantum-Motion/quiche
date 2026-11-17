@@ -15,35 +15,35 @@
 """Objects to construct and lazily evaluate QuEST simulations."""
 
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from quiche.bindings.quest_bindings import Qureg
+from quiche.simulation.layout import QuregLayout
 
 type QuESTOp = Callable[[Qureg], object]
 
 
-class SimulationRoutine:
-    """Sequence of callables acting on a Qureg for QuEST simulations."""
+@dataclass(frozen=True)
+class QuESTRoutine:
+    """Sequence of QuEST ops, along with the register layout they assume."""
 
-    def __init__(self) -> None:
-        """SimulationRoutine constructor."""
-        self.ops: list[Callable] = []
+    ops: tuple[QuESTOp, ...]
+    layout: QuregLayout
 
-    def evaluate(self, qureg: Qureg) -> list:
-        """Execute the simulation."""
-        return [op(qureg) for op in self.ops]
+    @property
+    def num_qubits(self) -> int:
+        """Number of qubits needed to run the routine."""
+        return self.layout.num_qubits
 
-    def append(self, other: object) -> None:
-        """Add another simulation function to the routine."""
-        if callable(other):
-            self.ops.append(other)
-        else:
-            msg = "Expected callable object, got non-callable."
-            raise TypeError(msg)
+    def run(self) -> object:
+        """Run on a clean Qureg and return the estimated phase."""
+        qureg = Qureg(self.num_qubits)
 
-    def extend(self, other: object) -> None:
-        """Add another simulation routine to this routine."""
-        if isinstance(other, SimulationRoutine):
-            self.ops.extend(other.ops)
-        else:
-            msg = f"Expected 'SimulationRoutine' object, got '{type(other)}'."
-            raise TypeError(msg)
+        result = None
+        try:
+            for op in self.ops:
+                result = op(qureg)
+        finally:
+            qureg.__del__()
+
+        return result
