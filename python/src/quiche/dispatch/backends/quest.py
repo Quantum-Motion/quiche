@@ -118,10 +118,10 @@ def get_estimation_op(spec: QPESpec, layout: QuregLayout) -> QuESTOp:
 
 
 class QuESTBackend:
-    """QuEST backend generating a SimulationRoutine for statevector simulation."""
+    """QuEST backend generating a statevector simulation."""
 
     def generate(self, spec: QPESpec) -> QuESTRoutine:
-        """Build the QuEST SimulationRoutine implementing the given QPESpec."""
+        """Build the QuEST routine implementing the given QPESpec."""
         layout = QuregLayout(
             num_data=spec.num_data,
             num_qpe=spec.num_qpe_ancillas,
