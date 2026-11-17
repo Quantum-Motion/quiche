@@ -366,6 +366,22 @@ class TestMajorana:
             self.majorana, generalizer=[ignore_split_join, ignore_alloc_free]
         )
 
+    @pytest.mark.parametrize(
+        ("g_1", "expected"),
+        [(0, [[0, 1], [0, 0]]), (1, [[0, 0], [1, 0]])],
+        ids=["d_1", "q_1"],
+    )
+    def test_g1_selects_d1_or_q1(self, g_1: int, expected: list[list[int]]):
+        # Registers are ordered G_0, G_1, non_identity, s, target, for output and input.
+        unitary = self.majorana.tensor_contract().reshape((2,) * 10)
+        # Fix G_0 = 1 for a D_1/Q_1 term and project s onto |+>, as the Hadamards
+        # around the Majorana operator do (Fig. 4 of [Low2025]).
+        block = unitary[1, g_1, 0, :, :, 1, g_1, 0, :, :]
+        plus = np.array([1, 1]) / np.sqrt(2)
+        operator = np.einsum("s,sajb,j->ab", plus, block, plus)
+        # (X + iY) / 2 = a for D_1 and (X - iY) / 2 = a^dagger for Q_1 (eq. (28)).
+        np.testing.assert_allclose(operator, expected, atol=1e-12)
+
 
 class TestGivensLadder:
     """Tests for the ladder of Givens rotations."""
