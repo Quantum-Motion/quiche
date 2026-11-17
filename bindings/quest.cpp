@@ -41,18 +41,18 @@ namespace nb = nanobind;
 
 namespace {
 
-// A failed QuEST initialisation leaves partial state behind, and retrying hits an
-// internal error that exits the process, so retries after a failure are rejected.
-bool envInitIncomplete = false;
+// Retrying after a failed QuEST initialisation can hit an internal error that exits the
+// process, so retries after a failure are rejected.
+bool envInitFailed = false;
 
 template <class Init>
 void attemptEnvInit(Init init) {
-    if (envInitIncomplete)
+    if (envInitFailed)
         QuESTErrorHandler("QuESTEnv", "The QuEST environment cannot be initialised again in this process.");
 
-    envInitIncomplete = true;
+    envInitFailed = true;
     init();
-    envInitIncomplete = false;
+    envInitFailed = false;
 }
 
 } // namespace
