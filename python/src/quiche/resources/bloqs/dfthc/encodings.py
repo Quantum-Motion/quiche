@@ -159,7 +159,6 @@ def tail_qrom_angles(
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
         by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
         Oct. 2025.
-
     """
     eigenvalues, eigenvectors = np.linalg.eigh(dfthc_hamiltonian.sos_one_body())
 
@@ -352,7 +351,6 @@ def encode_tail_data(
         ``(rotations, G_1)`` pairs, indexed ``[tail_index]``. Each rotation word is a
         Python ``int`` of ``(N - 1) * num_bits`` bits, with the first angle in the most
         significant bits.
-
     """
     integers = quantise_angles(radian_angles, num_bits, rng=rng)
     return tuple(

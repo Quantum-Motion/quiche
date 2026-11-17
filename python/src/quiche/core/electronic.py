@@ -216,7 +216,6 @@ class DFTHCHamiltonian(BaseModel):
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
        by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
        Oct. 2025.
-
     """
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
@@ -331,7 +330,6 @@ class DFTHCHamiltonian(BaseModel):
         -------
         SecondQuantisedHamiltonian
             The reconstructed Hamiltonian, with the same number of electrons.
-
         """
         w_rc = self._factor_matrices()
 
@@ -375,7 +373,6 @@ class DFTHCHamiltonian(BaseModel):
         -------
         NDArray[np.float64]
             Real symmetric array of shape ``(N, N)``.
-
         """
         w_rc = self._factor_matrices()
 
@@ -407,7 +404,6 @@ class DFTHCHamiltonian(BaseModel):
         NDArray[np.float64]
             Real array of shape ``(R, C, N, N)``, where each ``(N, N)`` matrix is
             symmetric.
-
         """
         u_normalised = self.unit_vectors / np.linalg.norm(
             self.unit_vectors, axis=2, keepdims=True
