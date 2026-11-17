@@ -319,6 +319,7 @@ def encode_rotation_data(
         tuple(pack_integers(angles, num_bits) for angles in row) for row in integers
     )
 
+
 def encode_tail_data(
     radian_angles: ArrayLike,
     negative: ArrayLike,

@@ -414,5 +414,8 @@ class DFTHCHamiltonian(BaseModel):
         )
         return np.einsum(
             # W_rc[p,q] = sum_b W[r,b,c] * u[r,b,p] * u[r,b,q]
-            "rbc,rbp,rbq->rcpq", self.weight_vectors, u_normalised, u_normalised
+            "rbc,rbp,rbq->rcpq",
+            self.weight_vectors,
+            u_normalised,
+            u_normalised,
         )
