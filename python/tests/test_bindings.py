@@ -99,7 +99,7 @@ IMPORTS = "from quiche.bindings.quest_bindings import QuESTEnv, QuESTError, Qure
 
 INIT_AFTER_FAILURE = """\
 try:
-    QuESTEnv(0, 1, 0)
+    QuESTEnv(0, 2, 0)
 except QuESTError:
     pass
 QuESTEnv()
@@ -127,7 +127,7 @@ with QuESTEnv():
         ),
         pytest.param(
             INIT_AFTER_FAILURE,
-            r"QuESTError.*previous initialisation failed",
+            r"QuESTError.*initialised again",
             id="init-after-failure",
         ),
         pytest.param(

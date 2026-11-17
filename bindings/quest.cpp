@@ -48,8 +48,7 @@ bool envInitIncomplete = false;
 template <class Init>
 void attemptEnvInit(Init init) {
     if (envInitIncomplete)
-        QuESTErrorHandler("QuESTEnv", "The QuEST environment cannot be initialised again in this process, "
-                                      "because a previous initialisation failed");
+        QuESTErrorHandler("QuESTEnv", "The QuEST environment cannot be initialised again in this process.");
 
     envInitIncomplete = true;
     init();

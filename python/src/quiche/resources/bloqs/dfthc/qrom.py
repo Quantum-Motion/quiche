@@ -84,7 +84,6 @@ class QROMAdjoint(Bloq):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     qrom: InnerQROMTail | InnerQROAM | RotationQROM
@@ -199,7 +198,6 @@ class InnerQROM(UnaryIterationGate):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     num_orbitals: int
@@ -378,7 +376,6 @@ class InnerQROMTail(UnaryIterationGate):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     num_orbitals: int
@@ -535,7 +532,6 @@ class InnerQROAM(Bloq):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     num_orbitals: int
@@ -644,7 +640,7 @@ class InnerQROAM(Bloq):
 
     @cached_property
     def qrom(self) -> InnerQROM:
-        """Get the QROM loading the alias sampling words."""
+        """QROM loading the alias sampling words."""
         return InnerQROM(
             num_orbitals=self.num_orbitals,
             num_ranks=self.num_ranks,
@@ -657,7 +653,7 @@ class InnerQROAM(Bloq):
 
     @cached_property
     def swap(self) -> SwapWithZero:
-        """Get the swap bringing the addressed alias word to the front."""
+        """Swap bringing the addressed alias word to the front."""
         return SwapWithZero(
             (self.log_block_size,),
             self.qrom.alias_word_size,
@@ -666,7 +662,7 @@ class InnerQROAM(Bloq):
 
     @cached_property
     def index_partition(self) -> Partition:
-        """Get the partition of the index into high (block) and low (offset) bits."""
+        """Partition of the index into high (block) and low (offset) bits."""
         high_dtype = BQUInt(self.qrom.num_bits_blocks, self.qrom.num_blocks)
         low_dtype = BQUInt(self.log_block_size, self.block_size)
 
@@ -679,14 +675,14 @@ class InnerQROAM(Bloq):
 
     @cached_property
     def qrom_targets_partition(self) -> Partition:
-        """Get the partition of one register into the QROM's target registers."""
+        """Partition of one register into the QROM's target registers."""
         registers = self.qrom.target_registers
         num_bits = sum(reg.total_bits() for reg in registers)
         return Partition(num_bits, registers)
 
     @cached_property
     def alias_word_partition(self) -> Partition:
-        """Get the partition of a word into the individual alias sampling registers."""
+        """Partition of a word into the individual alias sampling registers."""
         return Partition(self.qrom.alias_word_size, self.alias_registers)
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
@@ -783,7 +779,6 @@ class RotationQROM(UnaryIterationGate):
     ----------
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
        Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
-
     """
 
     num_orbitals: int
