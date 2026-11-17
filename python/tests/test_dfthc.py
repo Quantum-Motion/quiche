@@ -65,6 +65,8 @@ RESOLUTION = 4 * np.pi / 2**N_SMALL  # The angle of the least significant bit.
 @pytest.fixture
 def dummy_dfthc_hamiltonian() -> DFTHCHamiltonian:
     """Return a dummy DFTHCHamiltonian for use in tests."""
+    # A symmetric one body term with eigenvalues of both signs.
+    one_body = np.random.default_rng(1).normal(size=(N, N))
     return DFTHCHamiltonian(
         num_orbitals=N,
         num_ranks=R,
@@ -74,9 +76,9 @@ def dummy_dfthc_hamiltonian() -> DFTHCHamiltonian:
         weight_vectors=np.ones((R, B, C)),
         identity_weights=np.zeros((R, C)),
         bliss_matrix=np.zeros((N, N)),
-        bliss_constant=0.0,
-        factorised_one_body=np.eye(N),
+        factorised_one_body=one_body + one_body.T,
         const=0.0,
+        bliss_constant=0.0,
         num_electrons=N,
     )
 
