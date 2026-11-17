@@ -43,9 +43,13 @@ from qualtran.symbolics import bit_length
 from quiche.core.electronic import DFTHCHamiltonian
 from quiche.resources.bloqs.dfthc.encodings import (
     RotationData,
+    TailData,
     as_rotation_data,
+    as_tail_data,
     encode_rotation_data,
+    encode_tail_data,
     rotation_qrom_angles,
+    tail_qrom_angles,
 )
 from quiche.resources.bloqs.dfthc.prep import (
     InnerPrepareDFTHC,
@@ -92,6 +96,11 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
         ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
         If None (default), placeholder data is used, which is sufficient for
         Toffoli resource estimation.
+    tail_data : tuple[tuple[int, int], ...] | None, optional
+        ``(rotations, G_1)`` pairs loaded by the tail QROM for the :math:`D_1/Q_1`
+        terms, indexed ``[outer_index - RC]``, with each rotation word
+        :math:`(N - 1) b_{rot}` bits wide. If None (default), placeholder data is
+        used, which is sufficient for Toffoli resource estimation.
 
     Registers
     ---------
@@ -148,6 +157,9 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
 
     rotation_data: RotationData | None = attrs.field(
         default=None, repr=False, converter=as_rotation_data
+    )
+    tail_data: TailData | None = attrs.field(
+        default=None, repr=False, converter=as_tail_data
     )
 
     def __attrs_post_init__(self) -> None:
@@ -259,6 +271,7 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
             num_bits_amp_rotations=self.num_bits_amp_rotations,
             log_block_size=self.log_block_size_inner,
             log_block_size_adjoint=self.log_block_size_inner_adjoint,
+            tail_data=self.tail_data,
         )
 
     @property
@@ -361,11 +374,18 @@ class DFTHCBlockEncoding(BlockEncoding):
 
     num_controls : int, optional
         Number of control qubits (default = 0).
+
     rotation_data : tuple[tuple[int, ...], ...] | None, optional
         Packed Givens rotation words loaded by the rotation QROM, indexed
         ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
         If None (default), placeholder data is used, which is sufficient for
         Toffoli resource estimation. :meth:`from_dfthc_hamiltonian` always sets it.
+    tail_data : tuple[tuple[int, int], ...] | None, optional
+        ``(rotations, G_1)`` pairs loaded by the tail QROM for the :math:`D_1/Q_1`
+        terms, indexed ``[outer_index - RC]``, with each rotation word
+        :math:`(N - 1) b_{rot}` bits wide. If None (default), placeholder data is
+        used, which is sufficient for Toffoli resource estimation.
+        :meth:`from_dfthc_hamiltonian` always sets it.
 
     Registers
     ---------
@@ -434,6 +454,9 @@ class DFTHCBlockEncoding(BlockEncoding):
 
     rotation_data: RotationData | None = attrs.field(
         default=None, repr=False, converter=as_rotation_data
+    )
+    tail_data: TailData | None = attrs.field(
+        default=None, repr=False, converter=as_tail_data
     )
 
     def __attrs_post_init__(self) -> None:
@@ -505,8 +528,9 @@ class DFTHCBlockEncoding(BlockEncoding):
         Notes
         -----
         The Givens rotation words computed from `hamiltonian` are always loaded
-        into the rotation QROM. To use placeholder data instead, call the
-        constructor directly.
+        into the rotation QROM, and those of the one body eigenvectors with their
+        :math:`G_1` bits into the tail QROM. To use placeholder data instead, call
+        the constructor directly.
 
         References
         ----------
@@ -530,6 +554,9 @@ class DFTHCBlockEncoding(BlockEncoding):
             num_controls=num_controls,
             rotation_data=encode_rotation_data(
                 rotation_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
+            ),
+            tail_data=encode_tail_data(
+                *tail_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
             ),
         )
 
@@ -656,6 +683,7 @@ class DFTHCBlockEncoding(BlockEncoding):
             log_block_size_inner=self.log_block_size_inner,
             log_block_size_inner_adjoint=self.log_block_size_inner_adjoint,
             rotation_data=self.rotation_data,
+            tail_data=self.tail_data,
         )
 
     @property
@@ -754,11 +782,18 @@ class DFTHCWalkOperator(Bloq):
 
     num_controls : int, optional
         Number of control qubits (default = 0).
+
     rotation_data : tuple[tuple[int, ...], ...] | None, optional
         Packed Givens rotation words loaded by the rotation QROM, indexed
         ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
         If None (default), placeholder data is used, which is sufficient for
         Toffoli resource estimation. :meth:`from_dfthc_hamiltonian` always sets it.
+    tail_data : tuple[tuple[int, int], ...] | None, optional
+        ``(rotations, G_1)`` pairs loaded by the tail QROM for the :math:`D_1/Q_1`
+        terms, indexed ``[outer_index - RC]``, with each rotation word
+        :math:`(N - 1) b_{rot}` bits wide. If None (default), placeholder data is
+        used, which is sufficient for Toffoli resource estimation.
+        :meth:`from_dfthc_hamiltonian` always sets it.
 
     Registers
     ---------
@@ -808,6 +843,9 @@ class DFTHCWalkOperator(Bloq):
 
     rotation_data: RotationData | None = attrs.field(
         default=None, repr=False, converter=as_rotation_data
+    )
+    tail_data: TailData | None = attrs.field(
+        default=None, repr=False, converter=as_tail_data
     )
 
     @classmethod
@@ -871,8 +909,9 @@ class DFTHCWalkOperator(Bloq):
         Notes
         -----
         The Givens rotation words computed from `hamiltonian` are always loaded
-        into the rotation QROM. To use placeholder data instead, call the
-        constructor directly.
+        into the rotation QROM, and those of the one body eigenvectors with their
+        :math:`G_1` bits into the tail QROM. To use placeholder data instead, call
+        the constructor directly.
 
         References
         ----------
@@ -896,6 +935,9 @@ class DFTHCWalkOperator(Bloq):
             num_controls=num_controls,
             rotation_data=encode_rotation_data(
                 rotation_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
+            ),
+            tail_data=encode_tail_data(
+                *tail_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
             ),
         )
 
@@ -932,6 +974,7 @@ class DFTHCWalkOperator(Bloq):
             log_block_size_outer_adjoint=self.log_block_size_outer_adjoint,
             num_controls=0,
             rotation_data=self.rotation_data,
+            tail_data=self.tail_data,
         )
 
     @property
