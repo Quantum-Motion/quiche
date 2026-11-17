@@ -333,7 +333,6 @@ class DFTHCHamiltonian(BaseModel):
             The reconstructed Hamiltonian, with the same number of electrons.
 
         """
-        # W_rc[p,q] = sum_b W[r,b,c] * u[r,b,p] * u[r,b,q]
         w_rc = self._factor_matrices()
 
         # g_approx[p,q,t,s] = sum_{r,c} W_rc[p,q] * W_rc[t,s]
@@ -378,12 +377,7 @@ class DFTHCHamiltonian(BaseModel):
             Real symmetric array of shape ``(N, N)``.
 
         """
-        u_normalised = self.unit_vectors / np.linalg.norm(
-            self.unit_vectors, axis=2, keepdims=True
-        )
-        w_rc = np.einsum(
-            "rbp,rbq,rbc->rcpq", u_normalised, u_normalised, self.weight_vectors
-        )
+        w_rc = self._factor_matrices()
 
         identity = np.eye(self.num_orbitals)
         return (
@@ -419,5 +413,6 @@ class DFTHCHamiltonian(BaseModel):
             self.unit_vectors, axis=2, keepdims=True
         )
         return np.einsum(
-            "rbp,rbq,rbc->rcpq", u_normalised, u_normalised, self.weight_vectors
+            # W_rc[p,q] = sum_b W[r,b,c] * u[r,b,p] * u[r,b,q]
+            "rbc,rbp,rbq->rcpq", self.weight_vectors, u_normalised, u_normalised
         )
