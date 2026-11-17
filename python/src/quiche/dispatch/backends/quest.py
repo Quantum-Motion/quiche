@@ -35,7 +35,7 @@ from quiche.core import (
     PhaseEstimation,
     Simulation,
 )
-from quiche.simulation import QuESTOp, SimulationRoutine
+from quiche.simulation import QuESTOp, QuESTRoutine, QuregLayout
 from quiche.simulation.utils import _with_quest_hamiltonian
 
 if TYPE_CHECKING:
@@ -56,67 +56,57 @@ def get_stateprep_op(spec: QPESpec) -> QuESTOp:
             assert_never(spec.state_prep)
 
 
-def get_estimation_op(spec: QPESpec) -> QuESTOp:
+def get_estimation_op(spec: QPESpec, layout: QuregLayout) -> QuESTOp:
     """Pattern matching and construction for QuEST phase estimation."""
-    # Register layout: [data | qpe ancillas | index ancillas]
-    qpe_ancillas_start = spec.num_data
-
-    # Simulation doesn't use rotation ancillas, so only index ancillas are included
-    index_ancillas_start = spec.num_data + spec.num_qpe_ancillas
-    index_ancillas_end = index_ancillas_start + spec.num_index_ancillas
-
-    qpe_ancillas = list(range(qpe_ancillas_start, index_ancillas_start))
-    index_ancillas = list(range(index_ancillas_start, index_ancillas_end))
-
     match spec.algorithm, spec.simulation:
         case PhaseEstimation.Kitaev, Simulation.QDRIFT:
             return _with_quest_hamiltonian(
                 getPhaseKitaevQDRIFT,
                 hamiltonian=spec.hamiltonian.paulis,
-                ancilla_index=qpe_ancillas[0],
                 reps=spec.reps,
                 time=spec.time,
                 num_bits=spec.num_rounds,
                 seed=spec.seed,
+                ancilla_index=layout.qpe[0],
             )
 
         case PhaseEstimation.Kitaev, Simulation.Trotter:
             return _with_quest_hamiltonian(
                 getPhaseKitaevTrotter,
                 hamiltonian=spec.hamiltonian.paulis,
-                ancilla_index=qpe_ancillas[0],
                 order=spec.order,
                 reps=spec.reps,
                 time=spec.time,
                 num_bits=spec.num_rounds,
+                ancilla_index=layout.qpe[0],
             )
 
         case PhaseEstimation.Textbook, Simulation.QDRIFT:
             return _with_quest_hamiltonian(
                 getPhaseTextbookQDRIFT,
                 hamiltonian=spec.hamiltonian.paulis,
-                ancillas=qpe_ancillas,
                 reps=spec.reps,
                 time=spec.time,
                 seed=spec.seed,
+                ancillas=layout.qpe,
             )
 
         case PhaseEstimation.Textbook, Simulation.Qubitised:
             return _with_quest_hamiltonian(
                 getPhaseTextbookQubitised,
                 hamiltonian=spec.hamiltonian.paulis,
-                qpe_ancillas=qpe_ancillas,
-                qubitisation_ancillas=index_ancillas,
+                qpe_ancillas=layout.qpe,
+                qubitisation_ancillas=layout.index,
             )
 
         case PhaseEstimation.Textbook, Simulation.Trotter:
             return _with_quest_hamiltonian(
                 getPhaseTextbookTrotter,
                 hamiltonian=spec.hamiltonian.paulis,
-                ancillas=qpe_ancillas,
                 order=spec.order,
                 reps=spec.reps,
                 time=spec.time,
+                ancillas=layout.qpe,
             )
 
         case algorithm, simulation:
@@ -130,9 +120,15 @@ def get_estimation_op(spec: QPESpec) -> QuESTOp:
 class QuESTBackend:
     """QuEST backend generating a SimulationRoutine for statevector simulation."""
 
-    def generate(self, spec: QPESpec) -> SimulationRoutine:
+    def generate(self, spec: QPESpec) -> QuESTRoutine:
         """Build the QuEST SimulationRoutine implementing the given QPESpec."""
-        routine = SimulationRoutine()
-        routine.append(get_stateprep_op(spec))
-        routine.append(get_estimation_op(spec))
-        return routine
+        layout = QuregLayout(
+            num_data=spec.num_data,
+            num_qpe=spec.num_qpe_ancillas,
+            num_index=spec.num_index_ancillas,
+        )
+
+        return QuESTRoutine(
+            ops=(get_stateprep_op(spec), get_estimation_op(spec, layout)),
+            layout=layout,
+        )
