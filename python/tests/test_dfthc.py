@@ -46,7 +46,7 @@ from quiche.resources.bloqs.dfthc.encodings import (
     quantise_angles,
     rotation_qrom_angles,
 )
-from quiche.resources.bloqs.dfthc.qrom import RotationQROM
+from quiche.resources.bloqs.dfthc.qrom import InnerQROMTail, RotationQROM
 from quiche.resources.bloqs.dfthc.select import GivensLadder
 
 # FeMoco-54 parameters, from G. H. Low et al., "Fast Quantum Simulation of Electronic
@@ -57,7 +57,7 @@ B_ROT = B_K1 = B_K2 = 15
 K_1 = K_4 = 2
 K_2 = K_5 = 4
 S = 7
-N_SMALL, R_SMALL, B_SMALL, B_ROT_SMALL = 4, 3, 2, 6
+N_SMALL, R_SMALL, B_SMALL, C_SMALL, B_ROT_SMALL = 4, 3, 2, 2, 6
 
 RESOLUTION = 4 * np.pi / 2**N_SMALL  # The angle of the least significant bit.
 
@@ -91,6 +91,16 @@ def random_rotation_data(
     return tuple(
         tuple(rng.getrandbits(num_bits) for _ in range(num_bases))
         for _ in range(num_ranks)
+    )
+
+
+def random_tail_data(
+    num_orbitals: int, num_bits: int, seed: int = 0
+) -> tuple[tuple[int, int], ...]:
+    """Get random ``(rotations, G_1)`` pairs, with words of ``num_bits`` bits."""
+    rng = random.Random(seed)  # noqa: S311 (not used for cryptography)
+    return tuple(
+        (rng.getrandbits(num_bits), rng.getrandbits(1)) for _ in range(num_orbitals)
     )
 
 
@@ -255,6 +265,89 @@ class TestRotationQROM:
         # zeros with a controlled XorK rather than the `(CNOT(), 0)` placeholder.
         assert_equivalent_bloq_counts(
             attrs.evolve(self.qrom, rotation_data=None),
+            generalizer=[ignore_split_join, ignore_alloc_free],
+        )
+
+
+class TestInnerQROMTail:
+    """Tests for the QROM that loads the D_1/Q_1 data."""
+
+    qrom = InnerQROMTail(
+        num_orbitals=N_SMALL,
+        num_ranks=R_SMALL,
+        num_copies=C_SMALL,
+        num_bits_phase_grad=B_ROT_SMALL,
+        num_controls=1,
+        tail_data=random_tail_data(N_SMALL, (N_SMALL - 1) * B_ROT_SMALL),
+    )
+
+    def test_decomposition(self):
+        assert_valid_bloq_decomposition(self.qrom)
+
+    def test_bloq_counts(self):
+        assert_equivalent_bloq_counts(
+            self.qrom, generalizer=[ignore_split_join, ignore_alloc_free]
+        )
+
+    def test_loads_tail_data(self):
+        data = tuple((1000 * (j + 1), j % 2) for j in range(N_SMALL))
+        qrom = InnerQROMTail(
+            num_orbitals=N_SMALL,
+            num_ranks=R_SMALL,
+            num_copies=C_SMALL,
+            num_bits_phase_grad=B_ROT_SMALL,
+            num_controls=1,
+            tail_data=data,
+        )
+        cbloq = qrom.decompose_bloq()
+        names = [reg.name for reg in qrom.signature.rights()]
+
+        def lookup(**registers: int) -> dict[str, ClassicalValT]:
+            return dict(zip(names, cbloq.call_classically(**registers), strict=True))
+
+        num_rc = R_SMALL * C_SMALL
+        for outer_index in range(num_rc + N_SMALL):
+            loaded = lookup(
+                ctrl=1, outer_index=outer_index, rotations=0, G_0=0, G_1=0, rank=0
+            )
+            # The SF terms are loaded by `InnerQROM`, so nothing is written for them.
+            word, g_1 = data[outer_index - num_rc] if outer_index >= num_rc else (0, 0)
+            assert loaded["rotations"] == word
+            assert loaded["G_0"] == (outer_index >= num_rc)
+            assert loaded["G_1"] == g_1
+            assert loaded["rank"] == 0
+
+            idle = lookup(
+                ctrl=0, outer_index=outer_index, rotations=0, G_0=0, G_1=0, rank=0
+            )
+            assert idle["rotations"] == 0
+            assert idle["G_0"] == 0
+
+    @pytest.mark.parametrize(
+        ("data", "error_msg"),
+        [
+            (((0, 0),) * (N_SMALL - 1), "must have"),
+            (((2 ** ((N_SMALL - 1) * B_ROT_SMALL), 0),) * N_SMALL, "must fit in"),
+            (((-1, 0),) * N_SMALL, "must fit in"),
+            (((0, 2),) * N_SMALL, "must be 0 or 1"),
+        ],
+        ids=["too_few_entries", "word_too_wide", "negative_word", "g_1_not_a_bit"],
+    )
+    def test_invalid_tail_data(self, data: tuple, error_msg: str):
+        with pytest.raises(ValueError, match=error_msg):
+            InnerQROMTail(
+                num_orbitals=N_SMALL,
+                num_ranks=R_SMALL,
+                num_copies=C_SMALL,
+                num_bits_phase_grad=B_ROT_SMALL,
+                tail_data=data,
+            )
+
+    def test_bloq_counts_without_data(self):
+        # Without data the call graph must still match the decomposition, which
+        # flips G_0 and loads zeros with controlled XorKs.
+        assert_equivalent_bloq_counts(
+            attrs.evolve(self.qrom, tail_data=None),
             generalizer=[ignore_split_join, ignore_alloc_free],
         )
 
