@@ -114,9 +114,9 @@ lint.explicit-preview-rules = true          # only the preview rules named below
 lint.extend-select = [
     "D213",                      # ensure summary on line after the opening quotes
     "D417",                      # undocumented parameter
-    "DOC102",                    # documented parameter not in signature
     "D420",                      # incorrect section order
     "D421",                      # noun phrases for properties
+    "DOC102",                    # documented parameter not in signature
     "DOC201", "DOC202",          # missing / extraneous Returns
     "DOC402", "DOC403",          # missing / extraneous Yields
     "DOC501", "DOC502",          # missing / extraneous Raises
