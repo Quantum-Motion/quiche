@@ -538,6 +538,7 @@ class DFTHCBlockEncoding(BlockEncoding):
            by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4,
            p. 041016, Oct. 2025.
         """
+        tail_angles, tail_negative = tail_qrom_angles(hamiltonian)
         return cls(
             num_orbitals=hamiltonian.num_orbitals,
             num_ranks=hamiltonian.num_ranks,
@@ -556,7 +557,7 @@ class DFTHCBlockEncoding(BlockEncoding):
                 rotation_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
             ),
             tail_data=encode_tail_data(
-                *tail_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
+                tail_angles, tail_negative, num_bits_phase_grad, rng=rng
             ),
         )
 
@@ -919,6 +920,7 @@ class DFTHCWalkOperator(Bloq):
            by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4,
            p. 041016, Oct. 2025.
         """
+        tail_angles, tail_negative = tail_qrom_angles(hamiltonian)
         return cls(
             num_orbitals=hamiltonian.num_orbitals,
             num_ranks=hamiltonian.num_ranks,
@@ -937,7 +939,7 @@ class DFTHCWalkOperator(Bloq):
                 rotation_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
             ),
             tail_data=encode_tail_data(
-                *tail_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
+                tail_angles, tail_negative, num_bits_phase_grad, rng=rng
             ),
         )
 
