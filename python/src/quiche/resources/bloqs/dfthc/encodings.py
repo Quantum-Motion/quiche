@@ -27,7 +27,7 @@ type RotationData = tuple[tuple[int, ...], ...]
 """Packed rotation words loaded by ``RotationQROM``, indexed ``[rank][inner_index]``."""
 
 type TailData = tuple[tuple[int, int], ...]
-"""``(rotations, G_1)`` loaded by ``InnerQROMTail``, indexed ``[outer_index - RC]``."""
+"""``(rotations, G_1)`` pairs for ``InnerQROMTail``, indexed ``[outer_index - RC]``."""
 
 
 def as_rotation_data(
@@ -72,7 +72,8 @@ def as_tail_data(
     Parameters
     ----------
     value : Iterable[tuple[SupportsIndex, SupportsIndex]] | None
-        Iterable of ``(rotations, G_1)`` pairs, indexed ``[tail_index]``, or None.
+        Iterable of ``(rotations, G_1)`` pairs, indexed ``[outer_index - RC]``,
+        or None.
 
     Returns
     -------
@@ -182,7 +183,7 @@ def tail_qrom_angles(
     radian_angles : NDArray[np.float64]
         An array of rotation (Givens) angles in radians of shape ``(N, N-1)``.
     negative : NDArray[np.bool_]
-        The `G_1`bit of each term, of shape ``(N,)``.
+        The `G_1` bit of each term, of shape ``(N,)``.
 
     References
     ----------
@@ -360,7 +361,7 @@ def encode_tail_data(
     Encode the Givens rotation angles and `G_1` bits as words loaded by the tail QROM.
 
     Quantises and packs the angles of each :math:`D_1/Q_1` term as
-    :func:`encode_rotation_data` does, and pairs each word with its `G_1`bit,
+    :func:`encode_rotation_data` does, and pairs each word with its `G_1` bit,
     as expected by ``InnerQROMTail``.
 
     Parameters
@@ -368,7 +369,7 @@ def encode_tail_data(
     radian_angles : ArrayLike
         An array-like object of shape ``(N, N-1)`` containing radian angles, as floats.
     negative : ArrayLike
-        An array-like object of shape ``(N,)`` containing the `G_1`bits.
+        An array-like object of shape ``(N,)`` containing the `G_1` bits.
     num_bits : int
         Number of bits used to encode each angle.
     rng : np.random.Generator, optional
@@ -378,9 +379,9 @@ def encode_tail_data(
     Returns
     -------
     tuple[tuple[int, int], ...]
-        ``(rotations, G_1)`` pairs, indexed ``[tail_index]``. Each rotation word is a
-        Python ``int`` of ``(N - 1) * num_bits`` bits, with the first angle in the most
-        significant bits.
+        ``(rotations, G_1)`` pairs, indexed ``[outer_index - RC]``. Each rotation word
+        is a Python ``int`` of ``(N - 1) * num_bits`` bits, with the first angle in
+        the most significant bits.
     """
     integers = quantise_angles(radian_angles, num_bits, rng=rng)
     return tuple(

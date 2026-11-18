@@ -24,7 +24,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added a `rotation_data` field to the DFTHC bloqs to load these angles into `RotationQROM`, set by `from_dfthc_hamiltonian`.
 - Added `identity_weights` and `bliss_constant` fields to `DFTHCHamiltonian`, read by `quiche.io.dfthc_db.read`, and `sos_one_body` to build the one body matrix of its sum-of-squares representation.
 - Added `tail_qrom_angles` and `encode_tail_data` to `bloqs.dfthc.encodings` to encode the one body eigenvectors and their `G_1` bits as tail QROM data.
-- Added a `tail_data` field to the DFTHC bloqs to load these angles into `InnerQROMTail`, set by `from_dfthc_hamiltonian`.
+- Added a `tail_data` field to the DFTHC bloqs to load this data into `InnerQROMTail`, set by `from_dfthc_hamiltonian`.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
