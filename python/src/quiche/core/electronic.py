@@ -190,7 +190,7 @@ class DFTHCHamiltonian(BaseModel):
         combine the unit vectors into the factors :math:`W_{rc}`.
     identity_weights : NDArray[np.float64]
         Real array of shape ``(R, C)`` containing the coefficient of the identity
-        inside each squared factor (:math:`W^{(rc)}` in eq. (23) of [Low2025]_), one
+        inside each squared factor (:math:`\alpha_{(rc)}` in eq. (23) of [Low2025]_), one
         scalar per rank and copy. Only affects the sum-of-squares representation.
     bliss_matrix : NDArray[np.float64]
         Real array of shape ``(N, N)`` containing the BLISS symmetry shift
