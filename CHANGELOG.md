@@ -22,6 +22,9 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `Trotterisation.trotter_coeffs`, `Trotterisation.trotter_indices` and `Trotterisation.rotation_sequence`.
 - Added `bloqs.dfthc.encodings` to encode rotation angles as integers and pack them into binary words.
 - Added a `rotation_data` field to the DFTHC bloqs to load these angles into `RotationQROM`, set by `from_dfthc_hamiltonian`.
+- Added new `DFTHCHamiltonian` fields (`identity_weights`, `bliss_constant`) and method `sos_one_body`.
+- Added `tail_qrom_angles`, `encode_tail_data` to encode the QROM tail data.
+- Added a `tail_data` field to the DFTHC bloqs to load these angles into `InnerQROMTail`, set by `from_dfthc_hamiltonian`.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
