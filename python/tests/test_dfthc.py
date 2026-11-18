@@ -371,16 +371,18 @@ class TestMajorana:
         [(0, [[0, 1], [0, 0]]), (1, [[0, 0], [1, 0]])],
         ids=["d_1", "q_1"],
     )
-    def test_g1_selects_d1_or_q1(self, g_1: int, expected: list[list[int]]):
-        # Registers are ordered G_0, G_1, non_identity, s, target, for output and input.
-        unitary = self.majorana.tensor_contract().reshape((2,) * 10)
-        # Fix G_0 = 1 for a D_1/Q_1 term and project s onto |+>, as the Hadamards
-        # around the Majorana operator do (Fig. 4 of [Low2025]).
-        block = unitary[1, g_1, 0, :, :, 1, g_1, 0, :, :]
-        plus = np.array([1, 1]) / np.sqrt(2)
-        operator = np.einsum("s,sajb,j->ab", plus, block, plus)
-        # (X + iY) / 2 = a for D_1 and (X - iY) / 2 = a^dagger for Q_1 (eq. (28)).
-        np.testing.assert_allclose(operator, expected, atol=1e-12)
+    def test_g_1_selects_d_1_or_q_1(self, g_1: int, expected: list[list[int]]):
+        # Fix the controls G_0 = 1 (a D_1/Q_1 term), G_1, non_identity = 0 and s in
+        # |+>, as the Hadamards around the Majorana operator do (Fig. 4).
+        basis = np.eye(2)
+        plus = np.ones(2) / np.sqrt(2)
+        controls = np.kron(np.kron(np.kron(basis[1], basis[g_1]), basis[0]), plus)
+        # Embed the target qubit after the controls, and keep only its operator.
+        embed = np.kron(controls[:, None], np.eye(2))
+        target_operator = embed.T @ self.majorana.tensor_contract() @ embed
+
+        # D_1 applies a = (X + iY) / 2 and Q_1 applies a^dagger = (X - iY) / 2.
+        np.testing.assert_allclose(target_operator, expected, atol=1e-12)
 
 
 class TestGivensLadder:
