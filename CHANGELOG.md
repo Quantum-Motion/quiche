@@ -24,6 +24,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added a `rotation_data` field to the DFTHC bloqs to load these angles into `RotationQROM`, set by `from_dfthc_hamiltonian`.
 - Added `quiche.chemistry.get_qubit_state` to map an occupation state to the qubit basis for a given `Mapping`.
 - Added `QPESpecBackend` protocol usable via the `QPESpec.generate()` method (along with `QualtranBackend` and `QuESTBackend` implementations for existing backends).
+- Added `QuregLayout` class describing qubit registers used by a QuEST routine.
+- Added `QuESTRoutine` class for specifying and executing QuEST circuits.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
@@ -56,6 +58,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Removed
 - Removed `Trotterisation.get_coeffs_indices()` (use `trotter_coeffs` and `trotter_indices` instead).
+- Removed `SimulationRoutine` (use `QuESTRoutine` instead for building and executing QuEST circuits).
+- Removed the `quiche.simulation.estimation` and `quiche.simulation.state_prep` modules.
 
 ### Fixed
 - Fixed `QDRIFT` and `Trotterisation` call graphs undercounting rotations for repeated `PauliWord`s.
