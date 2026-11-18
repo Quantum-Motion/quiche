@@ -22,6 +22,7 @@ from numpy.typing import NDArray
 from pydantic import (
     BaseModel,
     ConfigDict,
+    PositiveInt,
     computed_field,
     field_validator,
     model_validator,
@@ -208,8 +209,8 @@ class DFTHCHamiltonian(BaseModel):
         Constant energy offset, used as the core energy of the reconstructed
         Hamiltonian.
     num_electrons : int
-        Number of electrons in the system. Must be non-negative and at most
-        :math:`2N`.
+        Number of electrons in the system. Must be positive (to allow SOS construction)
+        and at most :math:`2N`.
 
     References
     ----------
@@ -231,7 +232,7 @@ class DFTHCHamiltonian(BaseModel):
     bliss_constant: float
     factorised_one_body: NDArray[np.float64]
     const: float
-    num_electrons: int
+    num_electrons: PositiveInt
 
     @field_validator(
         "unit_vectors",
