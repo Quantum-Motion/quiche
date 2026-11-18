@@ -94,10 +94,9 @@ spec = QPESpec(
 [`CompositeBloq`](https://qualtran.readthedocs.io/en/latest/reference/qualtran/CompositeBloq.html) which can be costed:
 
 ```python
-from quiche.dispatch.backends.qualtran import QualtranBackend
 from quiche.resources.logical import logical_gate_resources, logical_qubit_resources
 
-bloq = spec.generate(QualtranBackend())
+bloq = spec.to_qualtran()
 
 print("Qubit count:", logical_qubit_resources(bloq))
 print("Logical resources:", logical_gate_resources(bloq))
@@ -138,7 +137,6 @@ Similarly, {py:class}`~quiche.dispatch.backends.quest.QuESTBackend` generates a
 from math import pi
 
 from quiche.bindings.quest_bindings import QuESTEnv, Qureg
-from quiche.dispatch.backends.quest import QuESTBackend
 
 spec = QPESpec(
     hamiltonian=ham,
@@ -148,7 +146,7 @@ spec = QPESpec(
     error_budget=error,
 )
 
-routine = spec.generate(QuESTBackend())
+routine = spec.to_quest()
 
 with QuESTEnv():
     qureg = Qureg(spec.num_qubits)

@@ -23,7 +23,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `bloqs.dfthc.encodings` to encode rotation angles as integers and pack them into binary words.
 - Added a `rotation_data` field to the DFTHC bloqs to load these angles into `RotationQROM`, set by `from_dfthc_hamiltonian`.
 - Added `quiche.chemistry.get_qubit_state` to map an occupation state to the qubit basis for a given `Mapping`.
-- Added `quiche.dispatch.backends` with `QualtranBackend` and `QuESTBackend`, used via the new `QPESpec.generate()` method.
+- Added `QPESpecBackend` protocol usable via the `QPESpec.generate()` method (along with `QualtranBackend` and `QuESTBackend` implementations for existing backends).
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
@@ -47,12 +47,12 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Changed `QDRIFT.sampled_indices` to return a NumPy array rather than a tuple.
 - Changed `QDRIFT` to sample term counts directly, speeding up the call graph for large `num_samples` (sampled terms will differ for a given seed from previous sampling).
 - Changed QuEST bindings' validation errors to raise `QuESTError` (a `RuntimeError` subclass).
+- Renamed `QPESpec.get_composite_bloq()` to `QPESpec.to_qualtran()`.
 
 ### Deprecated
 
 ### Removed
 - Removed `Trotterisation.get_coeffs_indices()` (use `trotter_coeffs` and `trotter_indices` instead).
-- Removed `QPESpec.get_composite_bloq()` and `QPESpec.to_quest()`. Use `QPESpec.generate(QualtranBackend())` and `QPESpec.generate(QuESTBackend())` instead.
 
 ### Fixed
 - Fixed `QDRIFT` and `Trotterisation` call graphs undercounting rotations for repeated `PauliWord`s.

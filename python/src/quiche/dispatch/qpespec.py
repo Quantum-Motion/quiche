@@ -40,7 +40,10 @@ from quiche.dispatch.budget.simulation import (
 )
 
 if TYPE_CHECKING:
+    from qualtran import CompositeBloq
+
     from quiche.dispatch.backends import QPESpecBackend
+    from quiche.simulation import SimulationRoutine
 
 
 # TODO(Vasco): refactor the algorithm -> parameter calculation out of here
@@ -126,3 +129,43 @@ class QPESpec:
     def generate[T](self, backend: QPESpecBackend[T]) -> T:
         """Generate the implementation of this QPESpec for the given backend."""
         return backend.generate(self)
+
+    def to_qualtran(self) -> CompositeBloq:
+        """
+        Generate the Qualtran (resource-estimation backend) implementation of this spec.
+
+        This is equivalent to calling ``spec.generate(quiche.QualtranBackend())``.
+
+        Returns
+        -------
+        CompositeBloq
+            A Qualtran representation of the QPE algorithm.
+
+        Raises
+        ------
+        NotImplementedError
+            If the specified algorithm is unsupported by the Qualtran backend.
+        """  # ruff: ignore[docstring-extraneous-exception]
+        from quiche.dispatch.backends.qualtran import QualtranBackend  # ruff: ignore[import-outside-top-level]
+
+        return self.generate(QualtranBackend())
+
+    def to_quest(self) -> SimulationRoutine:
+        """
+        Generate the QuEST (statevector simulation backend) implementation of this spec.
+
+        This is equivalent to calling ``spec.generate(quiche.QuESTBackend())``.
+
+        Returns
+        -------
+        SimulationRoutine
+            A QuEST representation of the QPE algorithm.
+
+        Raises
+        ------
+        NotImplementedError
+            If the specified algorithm is unsupported by the QuEST backend.
+        """  # ruff: ignore[docstring-extraneous-exception]
+        from quiche.dispatch.backends.quest import QuESTBackend  # ruff: ignore[import-outside-top-level]
+
+        return self.generate(QuESTBackend())
