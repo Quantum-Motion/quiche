@@ -27,7 +27,7 @@ type RotationData = tuple[tuple[int, ...], ...]
 """Packed rotation words loaded by ``RotationQROM``, indexed ``[rank][inner_index]``."""
 
 type TailData = tuple[tuple[int, int], ...]
-"""``(rotations, G_1)`` pairs loaded by ``InnerQROMTail``, indexed ``[tail_index]``."""
+"""``(rotations, G_1)`` loaded by ``InnerQROMTail``, indexed ``[outer_index - RC]``."""
 
 
 def as_rotation_data(
