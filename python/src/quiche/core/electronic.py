@@ -299,10 +299,6 @@ class DFTHCHamiltonian(BaseModel):
     @model_validator(mode="after")
     def check_electrons(self) -> Self:
         """Validate the electron count fits in the given orbital space."""
-        if self.num_electrons < 0:
-            error_msg = "The number of electrons must be non-negative."
-            raise ValueError(error_msg)
-
         if self.num_electrons > 2 * self.num_orbitals:
             error_msg = (
                 "The number of electrons must not exceed the number of spin orbitals."

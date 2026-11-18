@@ -165,7 +165,7 @@ class TestDFTHCHamiltonian:
     @pytest.mark.parametrize(
         ("num_electrons", "error_msg"),
         [
-            (-1, "number of electrons must be non-negative"),
+            (0, "greater than 0"),
             (7, "number of electrons must not exceed the number of spin orbitals"),
         ],
     )
