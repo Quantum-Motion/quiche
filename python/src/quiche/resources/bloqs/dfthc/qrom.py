@@ -361,7 +361,7 @@ class InnerQROMTail(UnaryIterationGate):
     tail_data : tuple[tuple[int, int], ...] | None, optional
         ``(rotations, G_1)`` pairs loaded for the :math:`D_1/Q_1` terms, indexed
         ``[outer_index - RC]``, with each rotation word :math:`(N - 1) b_{rot}` bits
-        wide and :math:`G_1 = 1` for the :math:`Q_1` terms. If None (default),
+        wide and `G_1` = 1 for the :math:`Q_1` terms. If None (default),
         placeholder data is used, which is sufficient for Toffoli resource estimation.
 
     Registers

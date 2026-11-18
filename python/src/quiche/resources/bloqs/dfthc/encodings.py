@@ -63,7 +63,7 @@ def as_tail_data(
     value: Iterable[tuple[SupportsIndex, SupportsIndex]] | None,
 ) -> TailData | None:
     """
-    Coerce tail words and G_1 bits to tuples of Python integers.
+    Coerce tail words and `G_1` bits to tuples of Python integers.
 
     Used as the attrs converter for every ``tail_data`` field, so that lists and
     NumPy arrays are accepted. Length and bit widths are validated by
@@ -163,12 +163,12 @@ def tail_qrom_angles(
     dfthc_hamiltonian: DFTHCHamiltonian,
 ) -> tuple[NDArray[np.float64], NDArray[np.bool_]]:
     """
-    Compute the Givens rotation angles and G_1 bits loaded by ``InnerQROMTail``.
+    Compute the Givens rotation angles and `G_1` bits loaded by ``InnerQROMTail``.
 
     Applies :func:`givens_angles` to the eigenvectors of the sum-of-squares one body
     matrix (eq. (26) of [Low2025]_). Non-negative eigenvalues give the :math:`D_1`
     terms and negative ones the :math:`Q_1` terms, which are flagged by
-    :math:`G_1 = 1` ([Low2025]_, appendix B). As in eq. (B4), the :math:`D_1` terms
+    `G_1` = 1 ([Low2025]_, appendix B). As in eq. (B4), the :math:`D_1` terms
     come first.
 
     Parameters
@@ -182,7 +182,7 @@ def tail_qrom_angles(
     radian_angles : NDArray[np.float64]
         An array of rotation (Givens) angles in radians of shape ``(N, N-1)``.
     negative : NDArray[np.bool_]
-        The :math:`G_1` bit of each term, of shape ``(N,)``.
+        The `G_1`bit of each term, of shape ``(N,)``.
 
     References
     ----------
@@ -357,10 +357,10 @@ def encode_tail_data(
     rng: np.random.Generator | None = None,
 ) -> TailData:
     """
-    Encode the Givens rotation angles and G_1 bits as the words loaded by the tail QROM.
+    Encode the Givens rotation angles and `G_1` bits as the words loaded by the tail QROM.
 
     Quantises and packs the angles of each :math:`D_1/Q_1` term as
-    :func:`encode_rotation_data` does, and pairs each word with its :math:`G_1` bit,
+    :func:`encode_rotation_data` does, and pairs each word with its `G_1`bit,
     as expected by ``InnerQROMTail``.
 
     Parameters
@@ -368,7 +368,7 @@ def encode_tail_data(
     radian_angles : ArrayLike
         An array-like object of shape ``(N, N-1)`` containing radian angles, as floats.
     negative : ArrayLike
-        An array-like object of shape ``(N,)`` containing the :math:`G_1` bits.
+        An array-like object of shape ``(N,)`` containing the `G_1`bits.
     num_bits : int
         Number of bits used to encode each angle.
     rng : np.random.Generator, optional

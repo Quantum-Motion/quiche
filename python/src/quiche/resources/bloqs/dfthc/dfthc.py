@@ -529,7 +529,7 @@ class DFTHCBlockEncoding(BlockEncoding):
         -----
         The Givens rotation words computed from `hamiltonian` are always loaded
         into the rotation QROM, and those of the one body eigenvectors with their
-        :math:`G_1` bits into the tail QROM. To use placeholder data instead, call
+        `G_1`bits into the tail QROM. To use placeholder data instead, call
         the constructor directly.
 
         References
@@ -911,7 +911,7 @@ class DFTHCWalkOperator(Bloq):
         -----
         The Givens rotation words computed from `hamiltonian` are always loaded
         into the rotation QROM, and those of the one body eigenvectors with their
-        :math:`G_1` bits into the tail QROM. To use placeholder data instead, call
+        `G_1`bits into the tail QROM. To use placeholder data instead, call
         the constructor directly.
 
         References
