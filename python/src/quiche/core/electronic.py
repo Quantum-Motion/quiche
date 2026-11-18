@@ -190,8 +190,8 @@ class DFTHCHamiltonian(BaseModel):
         combine the unit vectors into the factors :math:`W_{rc}`.
     identity_weights : NDArray[np.float64]
         Real array of shape ``(R, C)`` containing the coefficient of the identity
-        inside each squared factor (:math:`\alpha_{(rc)}` in eq. (23) of [Low2025]_), one
-        scalar per rank and copy. Only affects the sum-of-squares representation.
+        inside each squared factor (:math:`\alpha_{(rc)}` in eq. (23) of [Low2025]_),
+        one scalar per rank and copy. Only affects the sum-of-squares representation.
     bliss_matrix : NDArray[np.float64]
         Real array of shape ``(N, N)`` containing the BLISS symmetry shift
         matrix, which is removed from the factorised two body integrals on
@@ -365,9 +365,11 @@ class DFTHCHamiltonian(BaseModel):
             h^{(1)'} = h^{(1)} + \frac{c}{\eta} I - \frac{\eta}{2} B + \beta_1 I
                 - \sum_{rc} \alpha_{rc} \sum_b w_b^{(rc)} u_b^{(r)} u_b^{(r)T},
 
-        where :math:`\alpha_{rc}` are the `identity_weights`. The :math:`(c / \eta) I`
-        term matches the factorisation code, which folds the constant into the one
-        body term while optimising.
+        where :math:`\alpha_{rc}` are the `identity_weights`,
+        h^{(1)} is factorised_one_body, c is const, η is num_electrons,
+        B is bliss_matrix, \beta_1 is bliss_constant. The :math:`(c / \eta) I` term
+        matches the factorisation code, which folds the constant into the one body
+        term while optimising.
 
         Returns
         -------
@@ -408,8 +410,8 @@ class DFTHCHamiltonian(BaseModel):
         u_normalised = self.unit_vectors / np.linalg.norm(
             self.unit_vectors, axis=2, keepdims=True
         )
+        # W_rc[p,q] = sum_b w[r,b,c] * u[r,b,p] * u[r,b,q]
         return np.einsum(
-            # W_rc[p,q] = sum_b W[r,b,c] * u[r,b,p] * u[r,b,q]
             "rbc,rbp,rbq->rcpq",
             self.weight_vectors,
             u_normalised,

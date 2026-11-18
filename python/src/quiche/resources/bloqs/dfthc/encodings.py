@@ -357,7 +357,7 @@ def encode_tail_data(
     rng: np.random.Generator | None = None,
 ) -> TailData:
     """
-    Encode the Givens rotation angles and `G_1` bits as the words loaded by the tail QROM.
+    Encode the Givens rotation angles and `G_1` bits as words loaded by the tail QROM.
 
     Quantises and packs the angles of each :math:`D_1/Q_1` term as
     :func:`encode_rotation_data` does, and pairs each word with its `G_1`bit,
