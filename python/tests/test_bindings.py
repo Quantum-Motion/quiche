@@ -87,8 +87,6 @@ def test_quiche_quest_call(quest_env: QuESTEnv):  # noqa: ARG001
     pauli_sum.report()
 
 
-IMPORTS = "from quiche.bindings.quest_bindings import QuESTEnv, QuESTError, Qureg\n"
-
 INIT_AFTER_FAILURE = """\
 try:
     QuESTEnv(0, 2, 0)
@@ -136,8 +134,9 @@ with QuESTEnv():
 )
 def test_quest_error_handler(code: str, expected_error: str):
     """Test QuEST errors raise rather than exit (in a subprocess)."""
+    imports = "from quiche.bindings.quest_bindings import QuESTEnv, QuESTError, Qureg\n"
     result = subprocess.run(  # noqa: S603
-        [sys.executable, "-c", IMPORTS + code],
+        [sys.executable, "-c", imports + code],
         capture_output=True,
         text=True,
         check=False,
@@ -197,3 +196,51 @@ def test_destroyed_resource_in_list(quest_env: QuESTEnv):  # noqa: ARG001
 
     with pytest.raises(QuESTError, match="already been destroyed"):
         qureg.setQuregToWeightedSum([1], [other])
+
+
+RESOURCE_AFTER_EXIT = """\
+from quiche.bindings.quest_bindings import (
+    CompMatr,
+    DiagMatr,
+    FullStateDiagMatr,
+    KrausMap,
+    PauliStrSum,
+    QuESTEnv,
+    Qureg,
+    SuperOp,
+)
+
+with QuESTEnv():
+    resource = {create}
+resource.report()
+"""
+
+
+@pytest.mark.parametrize(
+    "create",
+    [
+        pytest.param("Qureg(1)", id="qureg"),
+        pytest.param('PauliStrSum("1 X")', id="pauli-str-sum"),
+        pytest.param("KrausMap(1, 1)", id="kraus-map"),
+        pytest.param("SuperOp(1)", id="super-op"),
+        pytest.param("CompMatr(1)", id="comp-matr"),
+        pytest.param("DiagMatr(1)", id="diag-matr"),
+        pytest.param("FullStateDiagMatr(1)", id="full-state-diag-matr"),
+    ],
+)
+def test_env_exit_destroys_live_resources(create: str):
+    """
+    Test resources alive at QuESTEnv exit are destroyed (in a subprocess).
+
+    Relies on resource liveness being checked before the environment.
+    """
+    expected_error = r"QuESTError.*already been destroyed"
+    code = RESOURCE_AFTER_EXIT.format(create=create)
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert re.search(expected_error, result.stderr), f"{result.stdout}\n{result.stderr}"
