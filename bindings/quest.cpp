@@ -37,6 +37,7 @@ using bindings::checked;
 using bindings::CheckedResource;
 using bindings::QuESTError;
 using bindings::QuESTErrorHandler;
+using bindings::ResourceRegistry;
 
 namespace nb = nanobind;
 
@@ -103,6 +104,7 @@ void init_quest_bindings(nb::module_ &m) {
         .def("__enter__", [](QuESTEnv &self) { return self; })
         .def("__exit__",
              [](QuESTEnv, nb::args) {
+                 ResourceRegistry::destroyAll();
                  finalizeQuESTEnv();
                  return false;
              })

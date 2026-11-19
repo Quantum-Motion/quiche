@@ -17,6 +17,7 @@
 #pragma once
 
 #include <optional>
+#include <unordered_set>
 #include <utility>
 
 #include <quest.h>
@@ -45,14 +46,51 @@ inline constexpr auto destructor<FullStateDiagMatr> = &destroyFullStateDiagMatr;
 template <class Q>
 inline constexpr bool is_quest_resource_v = destructor<Q> != nullptr;
 
+class TrackedResource;
+
+class ResourceRegistry {
+  public:
+    ResourceRegistry() = delete;
+
+    static void destroyAll();
+
+  private:
+    friend class TrackedResource;
+
+    inline static std::unordered_set<TrackedResource *> live;
+
+    static void track(TrackedResource *r) { live.insert(r); }
+    static void untrack(TrackedResource *r) noexcept { live.erase(r); }
+};
+
+class TrackedResource {
+  public:
+    TrackedResource(const TrackedResource &) = delete;
+    TrackedResource(TrackedResource &&) = delete;
+    TrackedResource &operator=(const TrackedResource &) = delete;
+    TrackedResource &operator=(TrackedResource &&) = delete;
+
+    virtual void destroy() = 0;
+
+  protected:
+    TrackedResource() { ResourceRegistry::track(this); }
+    ~TrackedResource() { ResourceRegistry::untrack(this); }
+};
+
+inline void ResourceRegistry::destroyAll() {
+    // Unordered iteration is fine: resources are independent of each other.
+    for (auto *r : live) // NOLINT(bugprone-nondeterministic-pointer-iteration-order)
+        r->destroy();
+}
+
 template <class R>
-class CheckedResource {
+class CheckedResource final : public TrackedResource {
     std::optional<R> resource;
 
   public:
-    explicit CheckedResource(R r) noexcept : resource(r) {}
+    explicit CheckedResource(R r) : resource(r) {}
 
-    CheckedResource(CheckedResource &&other) noexcept : resource(std::exchange(other.resource, std::nullopt)) {}
+    CheckedResource(CheckedResource &&other) : resource(std::exchange(other.resource, std::nullopt)) {}
 
     CheckedResource(const CheckedResource &) = delete;
     CheckedResource &operator=(const CheckedResource &) = delete;
@@ -68,7 +106,7 @@ class CheckedResource {
         return *resource;
     }
 
-    void destroy() {
+    void destroy() override {
         if (!resource)
             return;
         R r = *std::exchange(resource, std::nullopt);
