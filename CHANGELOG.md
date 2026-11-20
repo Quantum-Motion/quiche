@@ -50,6 +50,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Updated QuEST bindings to raise `QuESTError` when attempting to use a destroyed QuEST resource, or after the `QuESTEnv` has been finalised.
 - Replaced `__del__` with `destroy()` on `PauliStrSum`, `Qureg`, `KrausMap`, `SuperOp`, `CompMatr`, `DiagMatr` and `FullStateDiagMatr`.
 - Renamed `QPESpec.get_composite_bloq()` to `QPESpec.to_qualtran()`.
+- Updated `QuESTEnv` to destroy all live QuEST resources when its context exits.
 
 ### Deprecated
 
