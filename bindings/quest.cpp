@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -43,10 +44,9 @@ namespace {
 
 // Retrying after a failed QuEST initialisation can hit an internal error that exits the
 // process, so retries after a failure are rejected.
-bool envInitFailed = false;
+void attemptEnvInit(const std::function<void()> &init) {
+    static bool envInitFailed = false;
 
-template <class Init>
-void attemptEnvInit(Init init) {
     if (envInitFailed)
         QuESTErrorHandler("QuESTEnv", "The QuEST environment cannot be initialised again in this process.");
 
