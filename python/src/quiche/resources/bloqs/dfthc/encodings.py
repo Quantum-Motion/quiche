@@ -193,10 +193,11 @@ def tail_qrom_angles(
     """
     eigenvalues, eigenvectors = np.linalg.eigh(dfthc_hamiltonian.sos_one_body())
 
-    # `np.eigh` sorts in ascending order, so reversing puts the D_1 terms first (eq. (B4)).
+    # `np.eigh` sorts in ascending order, so reversing puts the D_1 terms
+    # first (eq. (B4)).
     eigenvalues = eigenvalues[::-1]
 
-    # Reverse eigenvectors to match. Transpose because `givens_angles` takes 
+    # Reverse eigenvectors to match. Transpose because `givens_angles` takes
     # one vector per row.
     eigenvectors = eigenvectors[:, ::-1].T
 
