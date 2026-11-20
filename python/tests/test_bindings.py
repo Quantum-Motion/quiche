@@ -152,3 +152,56 @@ def test_quest_error_handler(code: str, expected_error: str):
     )
 
     assert re.search(expected_error, result.stderr), f"{result.stdout}\n{result.stderr}"
+
+
+def test_resource_use_after_destroy(quest_env: QuESTEnv):  # noqa: ARG001
+    """Test using a destroyed resource raises."""
+    from quiche.bindings.quest_bindings import QuESTError, Qureg
+
+    qureg = Qureg(1)
+    qureg.destroy()
+    qureg.destroy()  # a second destroy should be a no-op
+
+    with pytest.raises(QuESTError, match="already been destroyed"):
+        qureg.initZeroState()
+
+
+def test_destroyed_resource_as_argument(quest_env: QuESTEnv):  # noqa: ARG001
+    """Test a destroyed resource raises when passed as an argument."""
+    from quiche.bindings.quest_bindings import QuESTError, Qureg
+    from quiche.bindings.quiche_bindings import initClassicalState
+
+    qureg = Qureg(1)
+
+    other = Qureg(1)
+    other.destroy()
+
+    with pytest.raises(QuESTError, match="already been destroyed"):
+        qureg.calcFidelity(other)
+
+    with pytest.raises(QuESTError, match="already been destroyed"):
+        initClassicalState(other, [0])
+
+
+def test_none_in_resource_list(quest_env: QuESTEnv):  # noqa: ARG001
+    """Test None inside a list of resources raises TypeError."""
+    from quiche.bindings.quest_bindings import Qureg
+
+    qureg = Qureg(1)
+    other = Qureg(1)
+
+    with pytest.raises(TypeError, match="None where a QuEST resource"):
+        qureg.setQuregToWeightedSum([1, 0], [other, None])  # ty: ignore[invalid-argument-type]
+
+
+def test_destroyed_resource_in_list(quest_env: QuESTEnv):  # noqa: ARG001
+    """Test a destroyed resource inside a list raises when passed as an argument."""
+    from quiche.bindings.quest_bindings import QuESTError, Qureg
+
+    qureg = Qureg(1)
+    other = Qureg(1)
+
+    other.destroy()
+
+    with pytest.raises(QuESTError, match="already been destroyed"):
+        qureg.setQuregToWeightedSum([1], [other])
