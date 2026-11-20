@@ -132,8 +132,8 @@ def _get_estimation_bloq(spec: QPESpec) -> Bloq:
             )
 
         case PhaseEstimation.Iterative | PhaseEstimation.Kitaev | PhaseEstimation.Naive:
-            msg = f"{spec.algorithm} QPE not available in Qualtran backend."
-            raise NotImplementedError(msg)
+            error_msg = f"{spec.algorithm.name} QPE not available in Qualtran backend."
+            raise NotImplementedError(error_msg)
 
         case _:
             assert_never(spec.algorithm)

@@ -121,8 +121,11 @@ def _get_estimation(spec: QPESpec) -> Callable:
             )
 
         case algorithm, simulation:
-            msg = f"{algorithm} QPE with {simulation} not available in QuEST backend."
-            raise NotImplementedError(msg)
+            error_msg = (
+                f"{algorithm.name} QPE with {simulation.name} not available in QuEST"
+                " backend."
+            )
+            raise NotImplementedError(error_msg)
 
 
 class QuESTBackend:
