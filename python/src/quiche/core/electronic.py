@@ -188,7 +188,7 @@ class DFTHCHamiltonian(BaseModel):
         normalised on reconstruction, so must be non-zero.
     weight_vectors : NDArray[np.float64]
         Real array of shape ``(R, B, C)`` containing the weights that
-        combine the unit vectors into the factors :math:`W_{rc}`.
+        combine the unit vectors into the factors :math:`M_{rc}`.
     identity_weights : NDArray[np.float64]
         Real array of shape ``(R, C)`` containing the coefficient of the identity
         inside each squared factor, :math:`\alpha_{rc}` (:math:`W^{(rc)}` in eq. (23)
@@ -317,7 +317,7 @@ class DFTHCHamiltonian(BaseModel):
 
         .. math::
 
-            h^{(2)}_{pqts} = \sum_{rc} W_{rc}[p, q] \, W_{rc}[t, s]
+            h^{(2)}_{pqts} = \sum_{rc} M_{rc}[p, q] \, M_{rc}[t, s]
                 - \frac{1}{2} \left( B_{pq} \delta_{ts} + \delta_{pq} B_{ts} \right).
 
         The one body integrals are converted from the factorised ("E-form") convention
@@ -387,17 +387,17 @@ class DFTHCHamiltonian(BaseModel):
 
     def _factor_matrices(self) -> NDArray[np.float64]:
         r"""
-        Combine the unit and weight vectors into the factor matrices :math:`W_{rc}`.
+        Combine the unit and weight vectors into the factor matrices :math:`M_{rc}`.
 
         Each factor is the weighted sum of outer products of the unit vectors of its
         rank, normalised along the orbital axis:
 
         .. math::
 
-            W_{rc}[p, q] = \sum_{b} w_b^{(rc)} u_{b,p}^{(r)} u_{b,q}^{(r)},
+            M_{rc}[p, q] = \sum_{b} w_b^{(rc)} u_{b,p}^{(r)} u_{b,q}^{(r)},
 
         so that the approximated two body tensor is
-        :math:`\sum_{rc} W_{rc}[p, q] \, W_{rc}[t, s]` (eq. (24) of [Low2025]_).
+        :math:`\sum_{rc} M_{rc}[p, q] \, M_{rc}[t, s]` (eq. (24) of [Low2025]_).
 
         Returns
         -------
@@ -408,7 +408,7 @@ class DFTHCHamiltonian(BaseModel):
         u_normalised = self.unit_vectors / np.linalg.norm(
             self.unit_vectors, axis=2, keepdims=True
         )
-        # W_rc[p,q] = sum_b w[r,b,c] * u[r,b,p] * u[r,b,q]
+        # M_rc[p,q] = sum_b w[r,b,c] * u[r,b,p] * u[r,b,q]
         return np.einsum(
             "rbc,rbp,rbq->rcpq",
             self.weight_vectors,
