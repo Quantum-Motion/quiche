@@ -90,13 +90,13 @@ spec = QPESpec(
 
 ## 4. Estimate resources
 
-`.get_composite_bloq()` compiles the algorithm into a Qualtran
+{py:class}`~quiche.dispatch.backends.qualtran.QualtranBackend` compiles the algorithm into a Qualtran
 [`CompositeBloq`](https://qualtran.readthedocs.io/en/latest/reference/qualtran/CompositeBloq.html) which can be costed:
 
 ```python
 from quiche.resources.logical import logical_gate_resources, logical_qubit_resources
 
-bloq = spec.get_composite_bloq()
+bloq = spec.to_qualtran()
 
 print("Qubit count:", logical_qubit_resources(bloq))
 print("Logical resources:", logical_gate_resources(bloq))
@@ -130,8 +130,8 @@ show_bloq(bloq.flatten_once())
 
 ## 5. Simulate
 
-Similarly, a QPE specification can be used to generate a
-{py:class}`~quiche.simulation.routine.SimulationRoutine` and executed by QuEST.
+Similarly, {py:class}`~quiche.dispatch.backends.quest.QuESTBackend` generates a
+{py:class}`~quiche.simulation.routine.SimulationRoutine` from a QPE specification, for QuEST to execute.
 
 ```python
 from math import pi

@@ -14,9 +14,16 @@
 
 """Common pytest fixtures and setup for test suite."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 
 from quiche.core import Errors, PauliSum, PauliWord
+
+if TYPE_CHECKING:
+    from quiche.bindings.quest_bindings import QuESTEnv
 
 
 @pytest.fixture(scope="session")
@@ -72,3 +79,11 @@ def budget() -> Errors:
         state_prep=tot_error / 3,
         overlap=1,
     )
+
+
+@pytest.fixture(scope="session")
+def quest_env() -> QuESTEnv:
+    """Initialise a QuESTEnv to reuse for QuEST tests."""
+    from quiche.bindings.quest_bindings import QuESTEnv  # ruff: ignore[import-outside-top-level]
+
+    return QuESTEnv()
