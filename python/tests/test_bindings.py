@@ -191,4 +191,17 @@ def test_none_in_resource_list(quest_env: QuESTEnv):  # noqa: ARG001
     other = Qureg(1)
 
     with pytest.raises(TypeError, match="None where a QuEST resource"):
-        qureg.setQuregToWeightedSum([1, 0], [other, None])
+        qureg.setQuregToWeightedSum([1, 0], [other, None])  # ty: ignore[invalid-argument-type]
+
+
+def test_destroyed_resource_in_list(quest_env: QuESTEnv):  # noqa: ARG001
+    """Test a destroyed resource inside a list raises when passed as an argument."""
+    from quiche.bindings.quest_bindings import QuESTError, Qureg
+
+    qureg = Qureg(1)
+    other = Qureg(1)
+
+    other.destroy()
+
+    with pytest.raises(QuESTError, match="already been destroyed"):
+        qureg.setQuregToWeightedSum([1], [other])
