@@ -312,34 +312,44 @@ class DFTHCHamiltonian(BaseModel):
         r"""
         Rebuild the one and two body integrals from the factors.
 
-        The approximated two body tensor is built from the factor matrices, and the
-        BLISS shift is removed from it:
+        The two body integrals are rebuilt from the factor matrices
+        :math:`M_{rc}[p, q] = \sum_b w_b^{(rc)} u_{b,p}^{(r)} u_{b,q}^{(r)}`
+        (eq. (24) of [Low2025]_), with the BLISS shift (eq. (40)) removed:
 
         .. math::
 
             h^{(2)}_{pqts} = \sum_{rc} M_{rc}[p, q] \, M_{rc}[t, s]
-                - \frac{1}{2} \left( B_{pq} \delta_{ts} + \delta_{pq} B_{ts} \right).
+                - \frac{1}{2} \left( B_{pq} \delta_{ts} + \delta_{pq} B_{ts} \right),
 
-        The one body integrals are converted from the factorised ("E-form") convention
-        to the bare convention, :math:`h_{pq} = h^{(1)}_{pq} + \frac{1}{2} \sum_r
-        h^{(2)}_{prrq}`, and `const` is used as the core energy.
+        where :math:`B` is `bliss_matrix`. The one body integrals
+        :math:`h^{(1)}` (`factorised_one_body`) are converted from the factorised
+        ("E-form") convention to the bare convention,
+
+        .. math::
+
+            h_{pq} = h^{(1)}_{pq} + \frac{1}{2} \sum_m h^{(2)}_{pmmq},
+
+        and `const` is used as the core energy.
 
         Returns
         -------
         SecondQuantisedHamiltonian
             The reconstructed Hamiltonian, with the same number of electrons.
         """
-        w_rc = self._factor_matrices()
+        factor_matrices = self._factor_matrices()
 
-        # g_approx[p,q,t,s] = sum_{r,c} W_rc[p,q] * W_rc[t,s]
-        g_approx = np.einsum("rcpq,rcts->pqts", w_rc, w_rc)
+        # approximate_two_body[p,q,t,s] = sum_{r,c} W_rc[p,q] * M_rc[t,s]
+        approximate_two_body = np.einsum(
+            "rcpq,rcts->pqts", factor_matrices, factor_matrices
+        )
 
-        # Remove the BLISS symmetry shift: g = g_approx - 1/2 (B x I + I x B)
+        # Remove the BLISS symmetry shift:
+        # g = approximate_two_body - 1/2 (B x I + I x B)
         identity = np.eye(self.num_orbitals)
         shift = np.einsum("pq,rs->pqrs", self.bliss_matrix, identity) + np.einsum(
             "pq,rs->pqrs", identity, self.bliss_matrix
         )
-        two_body = g_approx - 0.5 * shift
+        two_body = approximate_two_body - 0.5 * shift
 
         # E-form -> bare one-body integrals = factorised_one_body + 1/2 sum_r (pr|rq)
         one_body = self.factorised_one_body + 0.5 * np.einsum("prrq->pq", two_body)
@@ -355,26 +365,39 @@ class DFTHCHamiltonian(BaseModel):
         r"""
         Get the one body matrix of the sum-of-squares representation.
 
-        This is :math:`h^{(1)'}` of eq. (26) in [Low2025]_, whose eigendecomposition
-        gives the :math:`D_1/Q_1` terms of the block encoding:
+        This is :math:`h^{(1)'}` in eq. (26) of [Low2025]_. Its eigendecomposition
+        gives the :math:`D_1/Q_1` terms of the block encoding.
 
-        .. math::
+        1. Fold the constant into the one body term (as done in the factorisation code):
 
-            h^{(1)'} = h^{(1)} + \frac{c}{\eta} I - \frac{\eta}{2} B + \beta_1 I
-                - \sum_{rc} \alpha_{rc} \sum_b w_b^{(rc)} u_b^{(r)} u_b^{(r)T},
+           .. math::
 
-        where :math:`h^{(1)}` is `factorised_one_body`, :math:`c` is `const`,
+               \tilde{h}^{(1)} = h^{(1)} + \frac{c}{\eta} I.
+
+        2. Apply the one body part of the BLISS shift (eq. (40)):
+
+           .. math::
+
+               h^{(1)}_S = \tilde{h}^{(1)} - \frac{\eta}{2} B + \beta_1 I.
+
+        3. Remove the one body contribution of the identity weights inside the
+           squares (eq. (34)):
+
+           .. math::
+
+               h^{(1)'} = h^{(1)}_S - \sum_{rc} \alpha_{rc} M_{rc}.
+
+        Here :math:`h^{(1)}` is `factorised_one_body`, :math:`c` is `const`,
         :math:`\eta` is `num_electrons`, :math:`B` is `bliss_matrix`,
-        :math:`\beta_1` is `bliss_constant` and :math:`\alpha_{rc}` are the
-        `identity_weights`. The :math:`(c / \eta) I` term matches the factorisation
-        code, which folds the constant into the one body term while optimising.
+        :math:`\beta_1` is `bliss_constant`, :math:`\alpha_{rc}` are the
+        `identity_weights` and :math:`M_{rc}` are the factor matrices (eq. (24)).
 
         Returns
         -------
         NDArray[np.float64]
             Real symmetric array of shape ``(N, N)``.
         """
-        w_rc = self._factor_matrices()
+        factor_matrices = self._factor_matrices()
 
         identity = np.eye(self.num_orbitals)
         return (
@@ -382,7 +405,7 @@ class DFTHCHamiltonian(BaseModel):
             + (self.const / self.num_electrons) * identity
             - 0.5 * self.num_electrons * self.bliss_matrix
             + self.bliss_constant * identity
-            - np.einsum("rc,rcpq->pq", self.identity_weights, w_rc)
+            - np.einsum("rc,rcpq->pq", self.identity_weights, factor_matrices)
         )
 
     def _factor_matrices(self) -> NDArray[np.float64]:
