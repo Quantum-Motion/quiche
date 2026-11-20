@@ -29,14 +29,6 @@ if TYPE_CHECKING:
     from quiche.bindings.quest_bindings import QuESTEnv
 
 
-@pytest.fixture(scope="session")
-def quest_env() -> QuESTEnv:
-    """Initialise a QuESTEnv to reuse for QuEST tests."""
-    from quiche.bindings.quest_bindings import QuESTEnv
-
-    return QuESTEnv()
-
-
 def test_bindings_import():
     """Test that the bindings module and submodules import cleanly."""
     import quiche.bindings
