@@ -47,6 +47,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Changed `QDRIFT.sampled_indices` to return a NumPy array rather than a tuple.
 - Changed `QDRIFT` to sample term counts directly, speeding up the call graph for large `num_samples` (sampled terms will differ for a given seed from previous sampling).
 - Changed QuEST bindings' validation errors to raise `QuESTError` (a `RuntimeError` subclass).
+- Updated QuEST bindings to raise `QuESTError` when attempting to use a destroyed QuEST resource, or after the `QuESTEnv` has been finalised.
+- Replaced `__del__` with `destroy()` on `PauliStrSum`, `Qureg`, `KrausMap`, `SuperOp`, `CompMatr`, `DiagMatr` and `FullStateDiagMatr`.
 - Renamed `QPESpec.get_composite_bloq()` to `QPESpec.to_qualtran()`.
 
 ### Deprecated
