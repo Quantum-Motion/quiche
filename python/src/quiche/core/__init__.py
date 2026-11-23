@@ -14,7 +14,6 @@
 
 """Core data structures for quantum primitives, routines and errors."""
 
-from .algorithms import PhaseEstimation, Simulation
 from .electronic import (
     DFTHCHamiltonian,
     ElectronicHamiltonian,
@@ -28,7 +27,5 @@ __all__ = [
     "Pauli",
     "PauliSum",
     "PauliWord",
-    "PhaseEstimation",
     "SecondQuantisedHamiltonian",
-    "Simulation",
 ]

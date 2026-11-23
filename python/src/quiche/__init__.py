@@ -25,12 +25,10 @@ __all__ = [
     "Pauli",
     "PauliSum",
     "PauliWord",
-    "PhaseEstimation",
     "QPESpec",
     "QuESTBackend",
     "QualtranBackend",
     "SecondQuantisedHamiltonian",
-    "Simulation",
     "bindings",
     "chemistry",
     "core",
@@ -48,12 +46,10 @@ _REEXPORTS = {
     "Pauli": ".core.paulis",
     "PauliSum": ".core.paulis",
     "PauliWord": ".core.paulis",
-    "PhaseEstimation": ".core.algorithms",
     "QPESpec": ".dispatch.qpespec",
     "QuESTBackend": ".dispatch.backends.quest",
     "QualtranBackend": ".dispatch.backends.qualtran",
     "SecondQuantisedHamiltonian": ".core.electronic",
-    "Simulation": ".core.algorithms",
 }
 
 if TYPE_CHECKING:
@@ -67,7 +63,6 @@ if TYPE_CHECKING:
         simulation,
     )
     from .chemistry import HartreeFockState, Mapping
-    from .core.algorithms import PhaseEstimation, Simulation
     from .core.electronic import (
         DFTHCHamiltonian,
         ElectronicHamiltonian,
