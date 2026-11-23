@@ -20,13 +20,13 @@ from numpy.typing import NDArray
 
 from quiche.chemistry import (
     HartreeFockState,
+    Mapping,
     get_bk_state,
     get_hf_state,
     get_jw_state,
     get_parity_state,
     get_qubit_state,
 )
-from quiche.core.algorithms import Mapping
 
 
 @pytest.mark.parametrize(

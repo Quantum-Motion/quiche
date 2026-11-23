@@ -25,9 +25,9 @@ from openfermion.transforms import (
     parity_code,
 )
 
+from quiche.chemistry import Mapping
 from quiche.core import (
     ElectronicHamiltonian,
-    Mapping,
     Pauli,
     PauliSum,
     PauliWord,

@@ -29,7 +29,8 @@ from pydantic import (
 )
 from pydantic.dataclasses import dataclass
 
-from .algorithms import Mapping
+from quiche.chemistry import Mapping
+
 from .paulis import PauliSum
 
 
