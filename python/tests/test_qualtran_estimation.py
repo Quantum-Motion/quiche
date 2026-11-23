@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for estimation module."""
+"""Tests for the Qualtran implementation of phase estimation algorithms."""
 
 from math import ceil, log2, pi
 
