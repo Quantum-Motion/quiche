@@ -24,7 +24,9 @@ from quiche.chemistry import (
     get_hf_state,
     get_jw_state,
     get_parity_state,
+    get_qubit_state,
 )
+from quiche.core.algorithms import Mapping
 
 
 @pytest.mark.parametrize(
@@ -106,6 +108,29 @@ def test_get_bk_state(occupation: NDArray[np.int_], expected: NDArray[np.int_]):
     """Validate Bravyi-Kitaev basis state mapping."""
     actual = get_bk_state(occupation)
     np.testing.assert_array_equal(actual, expected)
+
+
+@pytest.mark.parametrize(
+    ("mapping", "expected"),
+    [
+        (Mapping.BravyiKitaev, np.array([1, 1, 1])),
+        (Mapping.JordanWigner, np.array([1, 0, 1])),
+        (Mapping.Parity, np.array([1, 1, 0])),
+    ],
+)
+def test_get_qubit_state(
+    mapping: Mapping,
+    expected: NDArray[np.int_],
+):
+    """Validate the generic fermion to qubit basis state mapping."""
+    actual = get_qubit_state(np.array([1, 0, 1]), mapping)
+    np.testing.assert_array_equal(actual, expected)
+
+
+def test_get_qubit_state_invalid():
+    """Validate invalid inputs for the generic fermion to qubit basis state mapping."""
+    with pytest.raises(AssertionError):
+        get_qubit_state([0, 1, 0], "not_a_mapping")  # ty: ignore[invalid-argument-type]
 
 
 class TestHartreeFockState:
