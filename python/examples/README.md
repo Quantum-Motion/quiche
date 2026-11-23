@@ -14,6 +14,7 @@ order.
 | [03_fermion_to_qubit.ipynb](03_fermion_to_qubit.ipynb) | Fermion-to-qubit mappings | The Jordan–Wigner, Bravyi–Kitaev and Parity mappings in `quiche.chemistry`, Hartree–Fock states, and mapping a second-quantised Hamiltonian to a qubit Hamiltonian with `to_qubit_hamiltonian`. |
 | [04_resource_estimation.ipynb](04_resource_estimation.ipynb) | Resource estimation | The full `QPESpec` → Qualtran pipeline. Compares Trotterisation, QDRIFT and qubitisation on logical metrics (qubits, Toffoli and T counts) and physical surface code metrics, as the system size and the error budget change. |
 | [05_simulation.ipynb](05_simulation.ipynb) | QuEST simulation | Runs the same `QPESpec` calculations as state-vector simulations in QuEST. Compares textbook and Kitaev QPE with each simulation method on H<sub>2</sub> for energy error, number of simulated qubits, memory and runtime. |
+| [06_dfthc.ipynb](06_dfthc.ipynb) | DFTHC resource estimation | The DFTHC block encoding with spectral amplification of [Low et al. (2025)](https://doi.org/10.1103/pb2g-j9cw) for FeMoco-54: building a `DFTHCWalkOperator` from a `DFTHCHamiltonian`, the Toffoli cost of each subroutine, tuning the QROAM block sizes, and the total Toffoli count and surface code cost of phase estimation. |
 
 ## Supporting files
 
@@ -47,4 +48,5 @@ The repository doesn't ship any data files. The notebooks get their data as foll
    jupyter lab
    ```
 
-Notebook 05 runs full state-vector simulations and takes a few minutes.
+Notebook 05 runs full state-vector simulations and takes a few minutes. Notebook 06 takes
+about two minutes, mostly for the QROAM block size scan.
