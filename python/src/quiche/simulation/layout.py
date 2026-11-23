@@ -14,16 +14,17 @@
 
 """Layout of named qubit registers for QuEST simulations."""
 
-from dataclasses import dataclass
+from pydantic import NonNegativeInt, PositiveInt
+from pydantic.dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class QuregLayout:
     """Contiguous set of qubit registers QuEST simulations of QPE calculations."""
 
-    num_data: int
-    num_qpe: int
-    num_index: int = 0
+    num_data: PositiveInt
+    num_qpe: PositiveInt
+    num_index: NonNegativeInt = 0
 
     @property
     def data(self) -> range:
