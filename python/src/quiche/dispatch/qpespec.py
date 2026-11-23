@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from qualtran import CompositeBloq
 
     from quiche.dispatch.backends import QPESpecBackend
-    from quiche.simulation import SimulationRoutine
+    from quiche.simulation import QuESTRoutine
 
 
 # TODO(Vasco): refactor the algorithm -> parameter calculation out of here
@@ -150,7 +150,7 @@ class QPESpec:
 
         return self.generate(QualtranBackend())
 
-    def to_quest(self) -> SimulationRoutine:
+    def to_quest(self) -> QuESTRoutine:
         """
         Generate the QuEST (statevector simulation backend) implementation of this spec.
 
@@ -158,7 +158,7 @@ class QPESpec:
 
         Returns
         -------
-        SimulationRoutine
+        QuESTRoutine
             A QuEST representation of the QPE algorithm.
 
         Raises
