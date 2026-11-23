@@ -44,6 +44,6 @@ class QuESTRoutine:
             for op in self.ops:
                 result = op(qureg)
         finally:
-            qureg.__del__()
+            qureg.destroy()
 
         return result
