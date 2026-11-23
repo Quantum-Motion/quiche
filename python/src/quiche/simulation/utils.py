@@ -35,7 +35,7 @@ def _with_quest_hamiltonian(
         try:
             result = binding(qureg, quest_sum, **kwargs)
         finally:
-            quest_sum.__del__()
+            quest_sum.destroy()
 
         return result
 
