@@ -62,7 +62,11 @@ lint = [
     "numpydoc>=1.11",
 ]
 docs = [
+    "jupytext>=1.19.6",
+    "matplotlib>=3.11.2",
+    "myst-nb>=1.4.0",
     "myst-parser>=5.1",
+    "pandas>=3.0.5",
     "shibuya>=2026.7.12",
     "sphinx>=8.2",
     "sphinx-copybutton>=0.5",
@@ -152,6 +156,9 @@ override_GL06 = ['(?m)^\s*Registers\n\s*-+$']  # disable GL06 for docstrings wit
 
 [tool.pytest]
 testpaths = ["python/tests"]
+
+[tool.jupytext]
+notebook_metadata_filter="-all"
 
 [tool.cibuildwheel]
 # Transitive dependency on llvmlite, which doesn't publish wheels for musl.
