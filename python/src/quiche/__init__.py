@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 __all__ = [
     "DFTHCHamiltonian",
     "ElectronicHamiltonian",
-    "Errors",
     "HartreeFockState",
     "Mapping",
     "Pauli",
@@ -44,7 +43,6 @@ __all__ = [
 _REEXPORTS = {
     "DFTHCHamiltonian": ".core.electronic",
     "ElectronicHamiltonian": ".core.electronic",
-    "Errors": ".core.errors",
     "HartreeFockState": ".chemistry",
     "Mapping": ".chemistry",
     "Pauli": ".core.paulis",
@@ -75,7 +73,6 @@ if TYPE_CHECKING:
         ElectronicHamiltonian,
         SecondQuantisedHamiltonian,
     )
-    from .core.errors import Errors
     from .core.paulis import Pauli, PauliSum, PauliWord
     from .dispatch import QPESpec
     from .dispatch.backends.qualtran import QualtranBackend

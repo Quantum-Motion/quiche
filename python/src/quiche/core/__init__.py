@@ -20,13 +20,11 @@ from .electronic import (
     ElectronicHamiltonian,
     SecondQuantisedHamiltonian,
 )
-from .errors import Errors
 from .paulis import Pauli, PauliSum, PauliWord
 
 __all__ = [
     "DFTHCHamiltonian",
     "ElectronicHamiltonian",
-    "Errors",
     "Pauli",
     "PauliSum",
     "PauliWord",
