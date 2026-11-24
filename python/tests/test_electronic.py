@@ -36,7 +36,9 @@ def factors() -> dict:
         "num_copies": copies,
         "unit_vectors": np.ones((ranks, bases, norb)),
         "weight_vectors": np.ones((ranks, bases, copies)),
+        "identity_weights": np.ones((ranks, copies)),
         "bliss_matrix": np.ones((norb, norb)),
+        "bliss_constant": 0.25,
         "factorised_one_body": np.ones((norb, norb)),
         "const": 0.5,
         "num_electrons": 2,
@@ -163,7 +165,7 @@ class TestDFTHCHamiltonian:
     @pytest.mark.parametrize(
         ("num_electrons", "error_msg"),
         [
-            (-1, "number of electrons must be non-negative"),
+            (0, "greater than 0"),
             (7, "number of electrons must not exceed the number of spin orbitals"),
         ],
     )
@@ -183,7 +185,13 @@ class TestDFTHCHamiltonian:
 
     @pytest.mark.parametrize(
         "name",
-        ["unit_vectors", "weight_vectors", "bliss_matrix", "factorised_one_body"],
+        [
+            "unit_vectors",
+            "weight_vectors",
+            "identity_weights",
+            "bliss_matrix",
+            "factorised_one_body",
+        ],
     )
     @pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
     def test_non_finite_factors(self, factors: dict, name: str, value: float):
@@ -197,6 +205,7 @@ class TestDFTHCHamiltonian:
         [
             ("unit_vectors", (2, 4, 5)),
             ("weight_vectors", (2, 5, 2)),
+            ("identity_weights", (2, 3)),
             ("bliss_matrix", (3, 4)),
             ("factorised_one_body", (2, 2)),
         ],
@@ -212,6 +221,15 @@ class TestDFTHCHamiltonian:
 
         with pytest.raises(ValueError, match="contains a zero vector"):
             DFTHCHamiltonian(**factors)
+
+    def test_sos_one_body(self, factors: dict):
+        hamiltonian = DFTHCHamiltonian(**factors)
+
+        # Every W_rc entry is 4/3, so sum_rc \alpha_(rc) W_rc = 16/3.
+        # With const/eta = 0.25, eta / 2 * B = 1 and beta_1 = 0.25,
+        # this leaves 0.5 I - 16/3.
+        expected = 0.5 * np.eye(3) - 16 / 3 * np.ones((3, 3))
+        np.testing.assert_allclose(hamiltonian.sos_one_body(), expected)
 
     def test_reconstruct(
         self,
