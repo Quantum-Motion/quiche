@@ -24,6 +24,9 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added a `rotation_data` field to the DFTHC bloqs to load these angles into `RotationQROM`, set by `from_dfthc_hamiltonian`.
 - Added `quiche.chemistry.get_qubit_state` to map an occupation state to the qubit basis for a given `Mapping`.
 - Added `QPESpecBackend` protocol usable via the `QPESpec.generate()` method (along with `QualtranBackend` and `QuESTBackend` implementations for existing backends).
+- Added `identity_weights` and `bliss_constant` fields to `DFTHCHamiltonian`, read by `quiche.io.dfthc_db.read`, and `sos_one_body` to build the one body matrix of its sum-of-squares representation. Also tightened validation of `num_electrons` to greater than zero.
+- Added `tail_qrom_angles` and `encode_tail_data` to `bloqs.dfthc.encodings` to encode the one body eigenvectors and their `G_1` bits as tail QROM data.
+- Added a `tail_data` field to the DFTHC bloqs to load this data into `InnerQROMTail`, set by `from_dfthc_hamiltonian`.
 - Added `QuregLayout` class describing qubit registers used by a QuEST routine.
 - Added `QuESTRoutine` class for specifying and executing QuEST circuits.
 

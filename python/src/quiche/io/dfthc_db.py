@@ -49,8 +49,9 @@ def read(path: str | Path, job_id: int) -> DFTHCHamiltonian:
         The electronic Hamiltonian in double-factorised tensor hypercontraction (DFTHC)
         form, containing the number of orbitals, number of electrons, number of ranks,
         number of bases, number of copies, together with the unit vectors,
-        weight vectors, BLISS matrix, one-body term and constant
-        shift. The unit and weight vectors are returned in RBC order (see [Low2025]_).
+        weight vectors, identity weights, BLISS matrix, BLISS constant, one-body term
+        and constant shift. The unit and weight vectors are returned in
+        RBC order (see [Low2025]_).
 
     Raises
     ------
@@ -92,6 +93,8 @@ def read(path: str | Path, job_id: int) -> DFTHCHamiltonian:
     # as used in [Low2025]_.
     unit_vectors = np.asarray(arrays["R_vpm"], dtype=np.float64).transpose(0, 2, 1)
     weight_vectors = np.asarray(arrays["F_vlm"], dtype=np.float64).transpose(0, 2, 1)
+    # The identity weights are stored as VL, which is already RC.
+    identity_weights = np.asarray(arrays["alpha_vl"], dtype=np.float64)
 
     return DFTHCHamiltonian(
         num_orbitals=results["num_orb"],
@@ -100,7 +103,9 @@ def read(path: str | Path, job_id: int) -> DFTHCHamiltonian:
         num_copies=copies,
         unit_vectors=unit_vectors,
         weight_vectors=weight_vectors,
+        identity_weights=identity_weights,
         bliss_matrix=np.asarray(arrays["B_bliss"], dtype=np.float64),
+        bliss_constant=float(arrays["beta_bliss"]),
         factorised_one_body=np.asarray(arrays["h1_exact"], dtype=np.float64),
         const=float(arrays["const"]),
         num_electrons=results["num_elec"],
