@@ -130,14 +130,17 @@ lint.pydoclint.ignore-one-line-docstrings = true
 
 [tool.ruff.lint.per-file-ignores]
 "docs/conf.py" = ["INP001"] # not applicable
-"python/examples/*.py" = ["INP001"] # Example scripts are not a package
-"python/*.ipynb" = ["CPY001"] # Don't require copyright in notebooks
 "python/tests/*" =[
     "S101",   # asserts are used throughout testing
     "D101",   # decide not to require test class documentation
     "D102",   # decide not to require test method documentation
     "ANN201", # Adding "-> None" is overkill in tests
     "SLF001"  # Tests may access private members
+]
+"python/examples/*.py" = [
+    "INP001", # Example scripts are not a package
+    "D100",   # The first markdown cell is the module description
+    "E402",   # Imports are introduced in the cell that first needs them
 ]
 
 [tool.numpydoc_validation]
