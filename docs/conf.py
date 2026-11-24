@@ -31,15 +31,22 @@ version = ".".join(release.split(".")[:2])
 # -- General configuration ---------------------------------------------------
 
 extensions = [
+    "myst_nb",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
     "sphinx_copybutton",
     "sphinx_design",
-    "myst_parser",
 ]
 
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = [
+    "_build",
+    ".DS_Store",
+    "conf.py",
+    "tutorials/random_hamiltonian.py",
+    "tutorials/README.md",
+]
+
 add_module_names = False
 python_use_unqualified_type_names = True
 toc_object_entries_show_parents = "hide"
@@ -64,6 +71,12 @@ napoleon_custom_sections = [("Registers", "params_style")]
 
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "alert"]
 myst_heading_anchors = 3
+
+# -- MyST-NB -------------------------------------------------------------------
+
+nb_custom_formats = {".py": ["jupytext.reads", {"fmt": "py:percent"}]}
+nb_execution_mode = "cache"
+nb_execution_timeout = 600  # TODO(Vasco): update tutorials to be smaller
 
 # -- Intersphinx -------------------------------------------------------------
 

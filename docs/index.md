@@ -22,17 +22,25 @@ How to install QUICHE, including the C++ simulator bindings.
 :::
 
 :::{grid-item-card} {octicon}`rocket` Quickstart
-:link: quickstart
+:link: tutorials/quickstart
 :link-type: doc
 
 Go from a Hamiltonian to a resource estimate and a simulated phase in a few lines.
+:::
+
+:::{grid-item-card} {octicon}`book` Tutorials
+:link: tutorials
+:link-type: doc
+
+Step-by-step walkthroughs of each stage of the pipeline, from loading data to resource
+estimation and simulation.
 :::
 
 :::{grid-item-card} {octicon}`code` API reference
 :link: api/index
 :link-type: doc
 
-Every public module, class and function in the `quiche` package.
+Every public module, class and function in the package.
 :::
 ::::
 
@@ -40,12 +48,6 @@ Every public module, class and function in the `quiche` package.
 ```{include} ../README.md
 :start-after: <!-- readme-features-start -->
 :end-before: <!-- readme-features-end -->
-```
-
-## Usage
-```{include} ../README.md
-:start-after: <!-- readme-usage-start -->
-:end-before: <!-- readme-usage-end -->
 ```
 
 ## Funding
@@ -59,7 +61,8 @@ Every public module, class and function in the `quiche` package.
 :caption: User guide
 
 installation
-quickstart
+tutorials/quickstart
+tutorials
 ```
 
 ```{toctree}
