@@ -338,18 +338,18 @@ class DFTHCHamiltonian(BaseModel):
         """
         factor_matrices = self._factor_matrices()
 
-        # approximate_two_body[p,q,t,s] = sum_{r,c} W_rc[p,q] * M_rc[t,s]
-        approximate_two_body = np.einsum(
+        # shifted_two_body[p,q,t,s] = sum_{r,c} M_rc[p,q] * M_rc[t,s]
+        shifted_two_body = np.einsum(
             "rcpq,rcts->pqts", factor_matrices, factor_matrices
         )
 
         # Remove the BLISS symmetry shift:
-        # g = approximate_two_body - 1/2 (B x I + I x B)
+        # two_body = shifted_two_body - 1/2 (B x I + I x B)
         identity = np.eye(self.num_orbitals)
         shift = np.einsum("pq,rs->pqrs", self.bliss_matrix, identity) + np.einsum(
             "pq,rs->pqrs", identity, self.bliss_matrix
         )
-        two_body = approximate_two_body - 0.5 * shift
+        two_body = shifted_two_body - 0.5 * shift
 
         # E-form -> bare one-body integrals = factorised_one_body + 1/2 sum_r (pr|rq)
         one_body = self.factorised_one_body + 0.5 * np.einsum("prrq->pq", two_body)
