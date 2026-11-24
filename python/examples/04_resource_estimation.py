@@ -259,7 +259,11 @@ def plot_metrics(
 
 # %%
 errors = Errors(
-    estimation=1e-2, simulation=1e-3, rotations=1e-3, state_prep=1e-3, overlap=0.9
+    estimation=1e-2,
+    simulation=1e-3,
+    rotations=1e-3,
+    state_prep=1e-3,
+    overlap=0.9,
 )
 
 rng = np.random.default_rng(SEED)
@@ -326,7 +330,11 @@ ham = sq_ham.to_qubit_hamiltonian(mapping=MAPPING)
 rows = []
 for eps in np.logspace(-1, -6, 11):
     errors = Errors(
-        estimation=1e-2, simulation=eps, rotations=1e-3, state_prep=eps, overlap=0.9
+        estimation=1e-2,
+        simulation=eps,
+        rotations=1e-3,
+        state_prep=eps,
+        overlap=0.9,
     )
     for simulation in SIMULATIONS:
         rows.append({"epsilon": eps, **estimate_resources(ham, simulation, errors)})

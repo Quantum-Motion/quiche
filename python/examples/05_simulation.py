@@ -134,7 +134,8 @@ FCIDUMP = """
 sq_ham = fcidump.parse(FCIDUMP)
 h2 = sq_ham.to_qubit_hamiltonian(mapping=MAPPING)
 h2_hf = HartreeFockState.closed_shell(
-    num_electrons=sq_ham.num_electrons, num_spin_orbitals=h2.paulis.num_qubits
+    num_electrons=sq_ham.num_electrons,
+    num_spin_orbitals=h2.paulis.num_qubits,
 )
 
 print("Number of qubits:", h2.paulis.num_qubits)
@@ -156,6 +157,7 @@ def exact_spectrum(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Eigenvalues in the HF electron-number sector and their overlaps with HF."""
     n = ham.paulis.num_qubits
+
     # to_matrix() puts qubit 0 in the most significant bit.
     bits = get_jw_state(hf.occupation)
     hf_index = sum(int(b) << (n - 1 - i) for i, b in enumerate(bits))
@@ -358,7 +360,11 @@ plt.show()
 
 # %%
 errors = Errors(
-    estimation=1 / 2, simulation=1e-2, rotations=1e-3, state_prep=1e-3, overlap=0.9
+    estimation=1 / 2,
+    simulation=1e-2,
+    rotations=1e-3,
+    state_prep=1e-3,
+    overlap=0.9,
 )
 
 rng = np.random.default_rng(SEED)

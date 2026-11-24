@@ -62,16 +62,12 @@ print("PauliWord:", pword)
 # sparse strings.
 #
 # - **Dense string**: Each character in the string should correspond to the (possibly
-# identity) Pauli acting on the corresponding qubit, e.g.:
-#
-# <center>XIZY</center>
+# identity) Pauli acting on the corresponding qubit, e.g.: `XIZY`
 #
 # Note that at least one Pauli must be non-identity in the dense string.
 #
 # - **Sparse string**: Each Pauli is written as `P(q)` for a (non-identity) Pauli `P`
-# acting on (zero-indexed) qubit `q`, separated by spaces, e.g.:
-#
-# <center>X(0) Z(2)</center>
+# acting on (zero-indexed) qubit `q`, separated by spaces, e.g.: `X(0) Z(2)`
 #
 # Note that each qubit index may appear at most once. Untargeted qubits are implicitly
 # treated as identities and must not be explicitly written.
@@ -143,22 +139,22 @@ print("PauliSum:", psum)
 
 # %%
 # Convert to and from dense string formats (PauliSum).
-str_dense = """
-            +10.0 III
-            +5.0 XIZ
-            -2.0 ZYI
-            """
+str_dense = """\
++10.0 III
++5.0 XIZ
+-2.0 ZYI
+"""
 
 psum = PauliSum.from_dense_string(str_dense, big_endian=True)
 print("PauliSum:", psum)
 
 # %%
 # Convert to and from sparse string formats (PauliSum).
-str_sparse = """
-            +10.0
-            +5.0 X(0) Z(2)
-            -2.0 Z(0) Y(1)
-            """
+str_sparse = """\
++10.0
++5.0 X(0) Z(2)
+-2.0 Z(0) Y(1)
+"""
 
 psum = PauliSum.from_sparse_string(str_sparse)
 print("PauliSum:", psum)

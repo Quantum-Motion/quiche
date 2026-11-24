@@ -20,7 +20,8 @@ from quiche.core import SecondQuantisedHamiltonian
 
 
 def generate_random_one_body_integrals(
-    n_orb: int, rng: np.random.Generator | None = None
+    n_orb: int,
+    rng: np.random.Generator | None = None,
 ) -> np.ndarray:
     """
     Generate random one-body integrals for real-valued spatial orbitals.
@@ -56,7 +57,8 @@ def generate_random_one_body_integrals(
 
 
 def generate_random_two_body_integrals(
-    n_orb: int, rng: np.random.Generator | None = None
+    n_orb: int,
+    rng: np.random.Generator | None = None,
 ) -> np.ndarray:
     """
     Generate random two-body integrals for real-valued spatial orbitals.
@@ -109,7 +111,9 @@ def generate_random_two_body_integrals(
 
 
 def generate_random_sq_hamiltonian(
-    n_orb: int, n_elec: int, rng: np.random.Generator | None = None
+    n_orb: int,
+    n_elec: int,
+    rng: np.random.Generator | None = None,
 ) -> SecondQuantisedHamiltonian:
     """
     Generate a random second-quantised Hamiltonian for real-valued spatial orbitals.

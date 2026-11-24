@@ -88,7 +88,8 @@ print("Parity state:", parity_state)
 # %%
 # Define the HF state from the HartreeFockState class.
 hf_state = HartreeFockState.closed_shell(
-    num_electrons=num_electrons, num_spin_orbitals=num_spin_orbitals
+    num_electrons=num_electrons,
+    num_spin_orbitals=num_spin_orbitals,
 )
 print("HF state:", hf_state)
 
@@ -122,16 +123,16 @@ from quiche.core import Mapping, SecondQuantisedHamiltonian
 
 # %%
 # Define the chemical system.
-n_orb = 1
 rng = np.random.default_rng(seed=1234)
-one_body = generate_random_one_body_integrals(n_orb, rng)
-two_body = generate_random_two_body_integrals(n_orb, rng)
-core_energy = rng.random()
+n_orb = 1
 n_elec = 2
 
 # Define the second-quantised electronic Hamiltonian.
 sq_ham = SecondQuantisedHamiltonian(
-    one_body=one_body, two_body=two_body, num_electrons=n_elec, core_energy=core_energy
+    one_body=generate_random_one_body_integrals(n_orb, rng),
+    two_body=generate_random_two_body_integrals(n_orb, rng),
+    core_energy=rng.random(),
+    num_electrons=n_elec,
 )
 
 # %%
@@ -140,9 +141,12 @@ ham_bk = sq_ham.to_qubit_hamiltonian(mapping=Mapping.BravyiKitaev)
 ham_jw = sq_ham.to_qubit_hamiltonian(mapping=Mapping.JordanWigner)
 ham_p = sq_ham.to_qubit_hamiltonian(mapping=Mapping.Parity)
 
-print("Bravyi-Kitaev:", ham_bk.num_electrons, ham_bk.mapping, ham_bk.paulis)
-print("Jordan-Wigner:", ham_jw.num_electrons, ham_jw.mapping, ham_jw.paulis)
-print("Parity:", ham_p.num_electrons, ham_p.mapping, ham_p.paulis)
+print("Bravyi-Kitaev:")
+print(ham_bk.paulis)
+print("Jordan-Wigner:")
+print(ham_jw.paulis)
+print("Parity:")
+print(ham_p.paulis)
 
 # %% [markdown]
 # You can see that different fermion-to-qubit mappings result in different qubit
