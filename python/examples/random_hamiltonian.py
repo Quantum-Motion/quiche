@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Random second-quantised Hamiltonians for the example notebooks."""
+"""Random second-quantised Hamiltonians for the tutorials."""
 
 import numpy as np
 
