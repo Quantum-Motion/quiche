@@ -219,7 +219,7 @@ def run_qpe(
 
     phase = results[-1]
     runtime = time.perf_counter() - start
-    qureg.__del__()  # clean up the Qureg
+    qureg.destroy()  # clean up the Qureg
 
     if simulation == Simulation.Qubitised:
         energy = cos(2 * pi * phase) * ham.paulis.lam

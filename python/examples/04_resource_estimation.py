@@ -119,7 +119,7 @@ STYLE = {
 # ## 4.3. Metrics
 #
 # For each calculation, we build the full QPE circuit as a Qualtran bloq with
-# `QPESpec.get_composite_bloq()` and compute the following metrics.
+# `QPESpec.to_qualtran()` and compute the following metrics.
 #
 # **Logical metrics** (fault-tolerant gate counts, independent of the hardware):
 #
@@ -198,7 +198,7 @@ def estimate_resources(
         error_budget=errors,
         seed=SEED,
     )
-    bloq = spec.get_composite_bloq()
+    bloq = spec.to_qualtran()
 
     # Logical resource estimates, with the rotations synthesised into T gates.
     gates = logical_gate_resources(bloq)

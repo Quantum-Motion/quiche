@@ -68,7 +68,7 @@ spec = QPESpec(
     ),
 )
 
-bloq = spec.get_composite_bloq()
+bloq = spec.to_qualtran()
 print(logical_qubit_resources(bloq), logical_gate_resources(bloq))
 ```
 
