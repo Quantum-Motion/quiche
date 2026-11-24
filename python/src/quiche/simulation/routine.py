@@ -20,14 +20,14 @@ from dataclasses import dataclass
 from quiche.bindings.quest_bindings import Qureg
 from quiche.simulation.layout import QuregLayout
 
-type QuESTOp = Callable[[Qureg], object]
+type QuregOp = Callable[[Qureg], float | None]
 
 
 @dataclass(frozen=True)
 class QuESTRoutine:
     """Sequence of QuEST ops, along with the register layout they assume."""
 
-    ops: tuple[QuESTOp, ...]
+    ops: tuple[QuregOp, ...]
     layout: QuregLayout
 
     @property
@@ -35,7 +35,7 @@ class QuESTRoutine:
         """Number of qubits needed to run the routine."""
         return self.layout.num_qubits
 
-    def run(self) -> object:
+    def run(self) -> float | None:
         """Run on a clean Qureg and return the estimated phase."""
         qureg = Qureg(self.num_qubits)
 

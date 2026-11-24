@@ -35,14 +35,14 @@ from quiche.core import (
     PhaseEstimation,
     Simulation,
 )
-from quiche.simulation import QuESTOp, QuESTRoutine, QuregLayout
+from quiche.simulation import QuESTRoutine, QuregLayout, QuregOp
 from quiche.simulation.utils import _with_quest_hamiltonian
 
 if TYPE_CHECKING:
     from quiche import QPESpec
 
 
-def get_stateprep_op(spec: QPESpec) -> QuESTOp:
+def get_stateprep_op(spec: QPESpec) -> QuregOp:
     """Pattern matching and construction for QuEST state preparation."""
     match spec.state_prep:
         case None:
@@ -56,7 +56,7 @@ def get_stateprep_op(spec: QPESpec) -> QuESTOp:
             assert_never(spec.state_prep)
 
 
-def get_estimation_op(spec: QPESpec, layout: QuregLayout) -> QuESTOp:
+def get_estimation_op(spec: QPESpec, layout: QuregLayout) -> QuregOp:
     """Pattern matching and construction for QuEST phase estimation."""
     match spec.algorithm, spec.simulation:
         case PhaseEstimation.Kitaev, Simulation.QDRIFT:

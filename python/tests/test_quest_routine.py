@@ -65,14 +65,16 @@ class TestQuESTRoutine:
         assert routine.run() == pytest.approx(1.0)
 
     def test_cleanup(self, quest_env: QuESTEnv):  # ruff: ignore[unused-method-argument]
+        captured = []
         routine = QuESTRoutine(
-            ops=(lambda qureg: qureg,),
+            ops=(captured.append,),
             layout=QuregLayout(num_data=1, num_qpe=1),
         )
 
-        captured_qureg = routine.run()
+        routine.run()
+        captured_qureg = captured[0]
         with pytest.raises(QuESTError, match="already been destroyed"):
-            captured_qureg.applyPauliX(0)  # ty: ignore[missing-attribute]
+            captured_qureg.applyPauliX(0)
 
     def test_cleanup_on_failure(self, quest_env: QuESTEnv):  # ruff: ignore[unused-method-argument]
         captured = []

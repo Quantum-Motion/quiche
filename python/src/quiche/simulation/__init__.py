@@ -15,6 +15,6 @@
 """Logic for the QuEST simulation backend of QUICHE."""
 
 from .layout import QuregLayout
-from .routine import QuESTOp, QuESTRoutine
+from .routine import QuESTRoutine, QuregOp
 
-__all__ = ["QuESTOp", "QuESTRoutine", "QuregLayout"]
+__all__ = ["QuESTRoutine", "QuregLayout", "QuregOp"]
