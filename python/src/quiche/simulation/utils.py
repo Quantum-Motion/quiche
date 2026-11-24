@@ -15,21 +15,24 @@
 """Helpers for building QuEST simulation operations."""
 
 from collections.abc import Callable
+from typing import Concatenate
 
-from quiche.bindings.quest_bindings import Qureg
+from quiche.bindings.quest_bindings import PauliStrSum, Qureg
 from quiche.core import PauliSum
 
-from .routine import QuESTOp
+from .routine import QuregOp
+
+type QuESTBinding = Callable[Concatenate[Qureg, PauliStrSum, ...], float | None]
 
 
 def _with_quest_hamiltonian(
-    binding: Callable[..., float],
+    binding: QuESTBinding,
     hamiltonian: PauliSum,
     **kwargs: object,
-) -> QuESTOp:
+) -> QuregOp:
     """Defer PauliSum to PauliStrSum conversion until run inside a QuESTEnv."""
 
-    def op(qureg: Qureg) -> float:
+    def op(qureg: Qureg) -> float | None:
         quest_sum = hamiltonian.to_quest()
 
         try:
