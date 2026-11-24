@@ -96,3 +96,5 @@ html_theme_options = {
     "show_ai_links": False,
 }
 html_baseurl = "https://quantum-motion.github.io/quiche/"
+html_static_path = ["_static"]
+html_css_files = ["custom.css"]
