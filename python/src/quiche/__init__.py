@@ -29,6 +29,7 @@ __all__ = [
     "QuESTBackend",
     "QualtranBackend",
     "SecondQuantisedHamiltonian",
+    "algorithms",
     "bindings",
     "chemistry",
     "core",
@@ -54,6 +55,7 @@ _REEXPORTS = {
 
 if TYPE_CHECKING:
     from . import (
+        algorithms,
         bindings,
         chemistry,
         core,
