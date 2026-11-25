@@ -1,5 +1,10 @@
 # Tutorials
 
+```{include} tutorials/README.md
+:start-after: <!-- tutorials-intro-start -->
+:end-before: <!-- tutorials-intro-end -->
+```
+
 ```{toctree}
 :maxdepth: 1
 

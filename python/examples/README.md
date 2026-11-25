@@ -1,8 +1,12 @@
 # QUICHE tutorials
 
+<!-- tutorials-intro-start -->
+
 Tutorials that walk through QUICHE, from loading a molecular Hamiltonian to
 estimating the fault-tolerant cost of quantum phase estimation (QPE) and simulating it
 with QuEST. Sections build on each other, so we recommend reading them in order.
+
+<!-- tutorials-intro-end -->
 
 ## Tutorials
 
