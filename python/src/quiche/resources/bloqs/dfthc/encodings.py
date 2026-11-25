@@ -12,22 +12,79 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Binary word encodings of rotation angles for QROM data loading."""
+"""Binary word encodings for QROM data loading."""
 
 from collections.abc import Iterable
 from operator import index
-from typing import SupportsIndex
+from typing import NewType, SupportsIndex
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from quiche.core.electronic import DFTHCHamiltonian
 
-type RotationData = tuple[tuple[int, ...], ...]
+InnerData = NewType("InnerData", tuple[tuple[int, ...], ...])
+"""Packed alias words for ``InnerQROM``, indexed ``[outer_index][inner_index]``."""
+
+RotationData = NewType("RotationData", tuple[tuple[int, ...], ...])
 """Packed rotation words loaded by ``RotationQROM``, indexed ``[rank][inner_index]``."""
 
-type TailData = tuple[tuple[int, int], ...]
+TailData = NewType("TailData", tuple[tuple[int, int], ...])
 """``(rotations, G_1)`` pairs for ``InnerQROMTail``, indexed ``[outer_index - RC]``."""
+
+
+def _as_word_table(
+    value: Iterable[Iterable[SupportsIndex]],
+) -> tuple[tuple[int, ...], ...]:
+    """
+    Coerce a nested iterable of integer words to nested tuples of Python integers.
+
+    Parameters
+    ----------
+    value : Iterable[Iterable[SupportsIndex]]
+        Nested iterable of integer words, indexed ``[row][column]``.
+
+    Returns
+    -------
+    tuple[tuple[int, ...], ...]
+        The words as a tuple of tuples of ``int``.
+
+    Raises
+    ------
+    TypeError
+        If any word is not an integer (e.g. a float).
+    """  # ruff: ignore[docstring-extraneous-exception]
+    return tuple(tuple(index(word) for word in row) for row in value)
+
+
+def as_inner_data(
+    value: Iterable[Iterable[SupportsIndex]] | None,
+) -> InnerData | None:
+    """
+    Coerce packed alias sampling words to nested tuples of Python integers.
+
+    Used as the attrs converter for every ``inner_data`` field, so that lists and
+    NumPy arrays are accepted. Shape and bit width are validated by ``InnerQROM``.
+
+    Parameters
+    ----------
+    value : Iterable[Iterable[SupportsIndex]] | None
+        Nested iterable of integer words, indexed ``[outer_index][inner_index]``,
+        or None.
+
+    Returns
+    -------
+    InnerData | None
+        The words as a tuple of tuples of ``int``, or None if ``value`` is None.
+
+    Raises
+    ------
+    TypeError
+        If any word is not an integer (e.g. a float).
+    """  # ruff: ignore[docstring-extraneous-exception]
+    if value is None:
+        return None
+    return InnerData(_as_word_table(value))
 
 
 def as_rotation_data(
@@ -56,7 +113,7 @@ def as_rotation_data(
     """  # ruff: ignore[docstring-extraneous-exception]
     if value is None:
         return None
-    return tuple(tuple(index(word) for word in row) for row in value)
+    return RotationData(_as_word_table(value))
 
 
 def as_tail_data(
@@ -87,7 +144,7 @@ def as_tail_data(
     """  # ruff: ignore[docstring-extraneous-exception]
     if value is None:
         return None
-    return tuple((index(word), index(g_1)) for word, g_1 in value)
+    return TailData(tuple((index(word), index(g_1)) for word, g_1 in value))
 
 
 def givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -347,14 +404,16 @@ def encode_rotation_data(
 
     Returns
     -------
-    tuple[tuple[int, ...], ...]
+    RotationData
         Packed rotation words, indexed ``[rank][inner_index]``. Each word is a Python
         ``int`` of ``(N - 1) * num_bits`` bits, with the first angle in the most
         significant bits.
     """
     integers = quantise_angles(radian_angles, num_bits, rng=rng)
-    return tuple(
-        tuple(pack_integers(angles, num_bits) for angles in row) for row in integers
+    return RotationData(
+        tuple(
+            tuple(pack_integers(angles, num_bits) for angles in row) for row in integers
+        )
     )
 
 
@@ -386,13 +445,15 @@ def encode_tail_data(
 
     Returns
     -------
-    tuple[tuple[int, int], ...]
+    TailData
         ``(rotations, G_1)`` pairs, indexed ``[outer_index - RC]``. Each rotation word
         is a Python ``int`` of ``(N - 1) * num_bits`` bits, with the first angle in
         the most significant bits.
     """
     integers = quantise_angles(radian_angles, num_bits, rng=rng)
-    return tuple(
-        (pack_integers(angles, num_bits), int(flag))
-        for angles, flag in zip(integers, np.asarray(negative), strict=True)
+    return TailData(
+        tuple(
+            (pack_integers(angles, num_bits), int(flag))
+            for angles, flag in zip(integers, np.asarray(negative), strict=True)
+        )
     )
