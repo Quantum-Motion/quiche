@@ -19,19 +19,15 @@ from typing import TYPE_CHECKING
 
 __all__ = [
     "DFTHCHamiltonian",
-    "ElectronicHamiltonian",
-    "Errors",
-    "HartreeFockState",
     "Mapping",
     "Pauli",
     "PauliSum",
     "PauliWord",
-    "PhaseEstimation",
     "QPESpec",
     "QuESTBackend",
     "QualtranBackend",
     "SecondQuantisedHamiltonian",
-    "Simulation",
+    "algorithms",
     "bindings",
     "chemistry",
     "core",
@@ -43,23 +39,19 @@ __all__ = [
 
 _REEXPORTS = {
     "DFTHCHamiltonian": ".core.electronic",
-    "ElectronicHamiltonian": ".core.electronic",
-    "Errors": ".core.errors",
-    "HartreeFockState": ".chemistry",
-    "Mapping": ".core.algorithms",
+    "Mapping": ".chemistry",
     "Pauli": ".core.paulis",
     "PauliSum": ".core.paulis",
     "PauliWord": ".core.paulis",
-    "PhaseEstimation": ".core.algorithms",
     "QPESpec": ".dispatch.qpespec",
     "QuESTBackend": ".dispatch.backends.quest",
     "QualtranBackend": ".dispatch.backends.qualtran",
     "SecondQuantisedHamiltonian": ".core.electronic",
-    "Simulation": ".core.algorithms",
 }
 
 if TYPE_CHECKING:
     from . import (
+        algorithms,
         bindings,
         chemistry,
         core,
@@ -68,14 +60,11 @@ if TYPE_CHECKING:
         resources,
         simulation,
     )
-    from .chemistry import HartreeFockState
-    from .core.algorithms import Mapping, PhaseEstimation, Simulation
+    from .chemistry import Mapping
     from .core.electronic import (
         DFTHCHamiltonian,
-        ElectronicHamiltonian,
         SecondQuantisedHamiltonian,
     )
-    from .core.errors import Errors
     from .core.paulis import Pauli, PauliSum, PauliWord
     from .dispatch import QPESpec
     from .dispatch.backends.qualtran import QualtranBackend

@@ -70,7 +70,7 @@ from qualtran.resource_counting import (
 
 from quiche.core import Pauli, PauliWord
 
-from .state_prep import PrepareFromStatePrep
+from .stateprep import PrepareFromStatePrep
 
 
 @attrs.frozen

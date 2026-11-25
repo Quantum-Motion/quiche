@@ -29,7 +29,7 @@ from .simulation import (
     SelectPauliLCUWrapper,
     Trotterisation,
 )
-from .state_prep import BitstringStatePrep, IdentityStatePrep, PrepareFromStatePrep
+from .stateprep import BitstringStatePrep, IdentityStatePrep, PrepareFromStatePrep
 
 __all__ = [
     "QDRIFT",

@@ -14,147 +14,115 @@
 
 """Tests for chemistry module."""
 
-import numpy as np
 import pytest
-from numpy.typing import NDArray
 
 from quiche.chemistry import (
-    HartreeFockState,
+    Mapping,
     get_bk_state,
     get_hf_state,
     get_jw_state,
     get_parity_state,
     get_qubit_state,
 )
-from quiche.core.algorithms import Mapping
 
 
 @pytest.mark.parametrize(
-    ("num_spin_orbitals", "num_electrons", "error_msg"),
+    ("num_electrons", "num_spin_orbitals", "error_msg"),
     [
-        (1, -1, "electrons must be non-negative"),
+        (-1, 1, "electrons must be non-negative"),
         (0, 0, "spin orbitals must be positive"),
-        (3, 4, "electrons must not exceed number of spin orbitals"),
+        (4, 3, "electrons must not exceed number of spin orbitals"),
     ],
 )
 def test_get_hf_state_invalid_cases(
-    num_spin_orbitals: int,
     num_electrons: int,
+    num_spin_orbitals: int,
     error_msg: str,
 ):
     """Test input validation for Hartree-Fock basis state."""
     with pytest.raises(ValueError, match=error_msg):
-        get_hf_state(num_spin_orbitals, num_electrons)
+        get_hf_state(num_electrons, num_spin_orbitals)
 
 
 @pytest.mark.parametrize(
-    ("num_spin_orbitals", "num_electrons", "expected"),
+    ("num_electrons", "num_spin_orbitals", "expected"),
     [
-        (1, 1, np.array([1])),
-        (5, 2, np.array([1, 1, 0, 0, 0])),
-        (3, 0, np.array([0, 0, 0])),
+        (1, 1, (1,)),
+        (2, 5, (1, 1, 0, 0, 0)),
+        (0, 3, (0, 0, 0)),
     ],
 )
 def test_get_hf_state_state(
-    num_spin_orbitals: int,
-    num_electrons: int,
-    expected: NDArray[np.int_],
+    num_electrons: int, num_spin_orbitals: int, expected: tuple
 ):
     """Validate Hartree-Fock basis state."""
-    actual = get_hf_state(num_spin_orbitals, num_electrons)
-    np.testing.assert_array_equal(actual, expected)
+    actual = get_hf_state(num_electrons, num_spin_orbitals)
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
     ("occupation", "expected"),
     [
-        (np.array([0, 0, 0, 0]), np.array([0, 0, 0, 0])),
-        (np.array([1, 0, 1]), np.array([1, 0, 1])),
-        (np.array([1, 1, 1, 1, 1]), np.array([1, 1, 1, 1, 1])),
-        (np.array([1, 1, 0, 1, 1, 0, 0, 1, 0]), np.array([1, 1, 0, 1, 1, 0, 0, 1, 0])),
+        ((0, 0, 0, 0), (0, 0, 0, 0)),
+        ((1, 0, 1), (1, 0, 1)),
+        ((1, 1, 1, 1, 1), (1, 1, 1, 1, 1)),
+        ((1, 1, 0, 1, 1, 0, 0, 1, 0), (1, 1, 0, 1, 1, 0, 0, 1, 0)),
     ],
 )
-def test_get_jw_state(occupation: NDArray[np.int_], expected: NDArray[np.int_]):
+def test_get_jw_state(occupation: tuple, expected: tuple):
     """Validate Jordan-Wigner basis state mapping."""
     actual = get_jw_state(occupation)
-    np.testing.assert_array_equal(actual, expected)
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
     ("occupation", "expected"),
     [
-        (np.array([0, 0, 0, 0]), np.array([0, 0, 0, 0])),
-        (np.array([1, 0, 1]), np.array([1, 1, 0])),
-        (np.array([1, 1, 1, 1, 1]), np.array([1, 0, 1, 0, 1])),
-        (np.array([1, 1, 0, 1, 1, 0, 0, 1, 0]), np.array([1, 0, 0, 1, 0, 0, 0, 1, 1])),
+        ((0, 0, 0, 0), (0, 0, 0, 0)),
+        ((1, 0, 1), (1, 1, 0)),
+        ((1, 1, 1, 1, 1), (1, 0, 1, 0, 1)),
+        ((1, 1, 0, 1, 1, 0, 0, 1, 0), (1, 0, 0, 1, 0, 0, 0, 1, 1)),
     ],
 )
-def test_get_parity_state(occupation: NDArray[np.int_], expected: NDArray[np.int_]):
+def test_get_parity_state(occupation: tuple, expected: tuple):
     """Validate Parity basis state mapping."""
     actual = get_parity_state(occupation)
-    np.testing.assert_array_equal(actual, expected)
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
     ("occupation", "expected"),
     [
-        (np.array([0, 0, 0, 0]), np.array([0, 0, 0, 0])),
-        (np.array([1, 0, 1]), np.array([1, 1, 1])),
-        (np.array([1, 1, 1, 1, 1]), np.array([1, 0, 1, 0, 1])),
-        (np.array([1, 1, 0, 1, 1, 0, 0, 1, 0]), np.array([1, 0, 0, 1, 1, 1, 0, 1, 0])),
+        ((0, 0, 0, 0), (0, 0, 0, 0)),
+        ((1, 0, 1), (1, 1, 1)),
+        ((1, 1, 1, 1, 1), (1, 0, 1, 0, 1)),
+        ((1, 1, 0, 1, 1, 0, 0, 1, 0), (1, 0, 0, 1, 1, 1, 0, 1, 0)),
     ],
 )
-def test_get_bk_state(occupation: NDArray[np.int_], expected: NDArray[np.int_]):
+def test_get_bk_state(occupation: tuple, expected: tuple):
     """Validate Bravyi-Kitaev basis state mapping."""
     actual = get_bk_state(occupation)
-    np.testing.assert_array_equal(actual, expected)
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
     ("mapping", "expected"),
     [
-        (Mapping.BravyiKitaev, np.array([1, 1, 1])),
-        (Mapping.JordanWigner, np.array([1, 0, 1])),
-        (Mapping.Parity, np.array([1, 1, 0])),
+        (Mapping.BravyiKitaev, (1, 1, 1)),
+        (Mapping.JordanWigner, (1, 0, 1)),
+        (Mapping.Parity, (1, 1, 0)),
     ],
 )
 def test_get_qubit_state(
     mapping: Mapping,
-    expected: NDArray[np.int_],
+    expected: tuple,
 ):
     """Validate the generic fermion to qubit basis state mapping."""
-    actual = get_qubit_state(np.array([1, 0, 1]), mapping)
-    np.testing.assert_array_equal(actual, expected)
+    actual = get_qubit_state((1, 0, 1), mapping)
+    assert actual == expected
 
 
 def test_get_qubit_state_invalid():
     """Validate invalid inputs for the generic fermion to qubit basis state mapping."""
     with pytest.raises(AssertionError):
         get_qubit_state([0, 1, 0], "not_a_mapping")  # ty: ignore[invalid-argument-type]
-
-
-class TestHartreeFockState:
-    """Test HartreeFockState class."""
-
-    @pytest.mark.parametrize(
-        ("num_electrons", "num_spin_orbitals", "error_msg"),
-        [
-            (2, 1, "electrons must not exceed number of spin orbitals"),
-            (3, 5, "must have even number of electrons"),
-            (-2, 3, "Number of electrons must be non-negative"),
-            (2, 0, "Number of spin orbitals must be positive"),
-        ],
-    )
-    def test_invalid_closed_shell(
-        self,
-        num_electrons: int,
-        num_spin_orbitals: int,
-        error_msg: str,
-    ):
-        with pytest.raises(ValueError, match=error_msg):
-            HartreeFockState.closed_shell(num_electrons, num_spin_orbitals)
-
-    @pytest.mark.parametrize("occupation", [(1, 2, 1, 1), (1, -1, 0), (1, "a", 0)])
-    def test_invalid(self, occupation: tuple):
-        with pytest.raises(ValueError, match="occupation must contain binary entries"):
-            HartreeFockState(occupation)

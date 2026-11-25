@@ -12,19 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Methods for determining phase estimation parameters from error budgets."""
+"""Quantum phase estimation algorithms."""
 
-from math import ceil, log2
+from pydantic.dataclasses import dataclass
 
-from quiche.core.errors import Errors
-
-
-def get_textbook_qpe_ancillas(e: Errors) -> int:
-    """Get the number of ancillas required for Textbook QPE."""
-    # TODO(Annina): add the one-norm of the Hamiltonian.
-    return ceil(log2(1 / e.estimation)) + ceil(log2(1 / e.overlap)) + 4
+type EstimationAlgorithm = TextbookQPE | IterativeQPE | KitaevQPE | NaiveQPE
 
 
-def get_kitaev_qpe_rounds(e: Errors) -> int:
-    """Get the number of rounds for Kitaev single-ancilla QPE."""
-    return get_textbook_qpe_ancillas(e)
+@dataclass(frozen=True)
+class TextbookQPE:
+    pass
+
+
+@dataclass(frozen=True)
+class IterativeQPE:
+    pass
+
+
+@dataclass(frozen=True)
+class KitaevQPE:
+    pass
+
+
+@dataclass(frozen=True)
+class NaiveQPE:
+    pass

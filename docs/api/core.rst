@@ -13,13 +13,3 @@ Electronic systems
 ------------------
 
 .. automodule:: quiche.core.electronic
-
-Algorithms
-----------
-
-.. automodule:: quiche.core.algorithms
-
-Errors
-------
-
-.. automodule:: quiche.core.errors

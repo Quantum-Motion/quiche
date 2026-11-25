@@ -12,8 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Methods to determine routine parameters according to error budgets."""
+"""Hamiltonian simulation algorithms."""
 
-from . import estimation, simulation
+from pydantic.dataclasses import dataclass
 
-__all__ = ["estimation", "simulation"]
+type SimulationAlgorithm = Trotter | QDRIFT | Qubitisation
+
+
+@dataclass(frozen=True)
+class Trotter:
+    pass
+
+
+@dataclass(frozen=True)
+class QDRIFT:
+    pass
+
+
+@dataclass(frozen=True)
+class Qubitisation:
+    pass

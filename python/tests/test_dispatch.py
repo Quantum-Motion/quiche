@@ -17,11 +17,10 @@
 import pytest
 from qualtran import CompositeBloq
 
-from quiche.chemistry import HartreeFockState
+from quiche.chemistry import HartreeFockState, Mapping
 from quiche.core import (
     ElectronicHamiltonian,
     Errors,
-    Mapping,
     PauliSum,
     PhaseEstimation,
     Simulation,

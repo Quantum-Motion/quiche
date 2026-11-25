@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for circuits module."""
+"""Tests for the Qualtran implementation of stateprep algorithms."""
 
 import pytest
 from qualtran.resource_counting import QubitCount
@@ -22,7 +22,7 @@ from qualtran.testing import (
 )
 
 from quiche.resources import logical_qubit_resources
-from quiche.resources.bloqs import (
+from quiche.resources.bloqs.stateprep import (
     BitstringStatePrep,
     IdentityStatePrep,
 )
