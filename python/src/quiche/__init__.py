@@ -19,8 +19,6 @@ from typing import TYPE_CHECKING
 
 __all__ = [
     "DFTHCHamiltonian",
-    "ElectronicHamiltonian",
-    "HartreeFockState",
     "Mapping",
     "Pauli",
     "PauliSum",
@@ -41,8 +39,6 @@ __all__ = [
 
 _REEXPORTS = {
     "DFTHCHamiltonian": ".core.electronic",
-    "ElectronicHamiltonian": ".core.electronic",
-    "HartreeFockState": ".chemistry",
     "Mapping": ".chemistry",
     "Pauli": ".core.paulis",
     "PauliSum": ".core.paulis",
@@ -64,10 +60,9 @@ if TYPE_CHECKING:
         resources,
         simulation,
     )
-    from .chemistry import HartreeFockState, Mapping
+    from .chemistry import Mapping
     from .core.electronic import (
         DFTHCHamiltonian,
-        ElectronicHamiltonian,
         SecondQuantisedHamiltonian,
     )
     from .core.paulis import Pauli, PauliSum, PauliWord

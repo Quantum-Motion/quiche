@@ -27,20 +27,9 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from pydantic.dataclasses import dataclass
 
 from quiche.chemistry import Mapping
-
-from .paulis import PauliSum
-
-
-@dataclass(frozen=True)
-class ElectronicHamiltonian:
-    """Class encompassing a physical electronic Hamiltonian."""
-
-    num_electrons: int
-    mapping: Mapping
-    paulis: PauliSum
+from quiche.core.paulis import PauliSum
 
 
 class SecondQuantisedHamiltonian(BaseModel):
@@ -160,14 +149,14 @@ class SecondQuantisedHamiltonian(BaseModel):
             )
         )
 
-    def to_qubit_hamiltonian(self, mapping: Mapping) -> ElectronicHamiltonian:
+    def to_qubit_hamiltonian(self, mapping: Mapping) -> PauliSum:
         """Get the qubit Hamiltonian after applying fermion-to-qubit mapping."""
         # Lazily import openfermion wrappers, only used here
         from quiche.io._openfermion import (  # noqa: PLC0415
-            _second_quantised_to_electronic_hamiltonian,
+            _second_quantised_to_pauli_sum,
         )
 
-        return _second_quantised_to_electronic_hamiltonian(self, mapping)
+        return _second_quantised_to_pauli_sum(self, mapping)
 
 
 class DFTHCHamiltonian(BaseModel):

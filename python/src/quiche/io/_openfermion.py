@@ -27,7 +27,6 @@ from openfermion.transforms import (
 
 from quiche.chemistry import Mapping
 from quiche.core import (
-    ElectronicHamiltonian,
     Pauli,
     PauliSum,
     PauliWord,
@@ -99,21 +98,15 @@ def _interaction_to_qubit_operator(
             )
 
 
-def _second_quantised_to_electronic_hamiltonian(
+def _second_quantised_to_pauli_sum(
     hamiltonian: SecondQuantisedHamiltonian,
     mapping: Mapping,
-) -> ElectronicHamiltonian:
-    """Convert a SecondQuantisedHamiltonian into an ElectronicHamiltonian."""
+) -> PauliSum:
+    """Convert a SecondQuantisedHamiltonian into a PauliSum."""
     interaction_operator = _second_quantised_to_interaction_operator(hamiltonian)
     qubit_operator = _interaction_to_qubit_operator(
         interaction_operator,
         mapping,
         hamiltonian.num_spin_orbitals,
     )
-    paulis = _qubit_operator_to_pauli_sum(qubit_operator)
-
-    return ElectronicHamiltonian(
-        num_electrons=hamiltonian.num_electrons,
-        mapping=mapping,
-        paulis=paulis,
-    )
+    return _qubit_operator_to_pauli_sum(qubit_operator)
