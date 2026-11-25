@@ -14,10 +14,35 @@
 
 """Data structures for defining quantum routines and algorithms."""
 
+from .estimation import (
+    EstimationAlgorithm,
+    IterativeQPE,
+    KitaevQPE,
+    NaiveQPE,
+    TextbookQPE,
+)
+from .simulation import (
+    QDRIFT,
+    Qubitisation,
+    SimulationAlgorithm,
+    Trotter,
+)
 from .stateprep import BitstringStateprep, IdentityStateprep, StateprepAlgorithm
 
+type Algorithm = EstimationAlgorithm | SimulationAlgorithm | StateprepAlgorithm
+
 __all__ = [
+    "QDRIFT",
+    "Algorithm",
     "BitstringStateprep",
+    "EstimationAlgorithm",
     "IdentityStateprep",
+    "IterativeQPE",
+    "KitaevQPE",
+    "NaiveQPE",
+    "Qubitisation",
+    "SimulationAlgorithm",
     "StateprepAlgorithm",
+    "TextbookQPE",
+    "Trotter",
 ]
