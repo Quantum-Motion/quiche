@@ -14,117 +14,25 @@
 
 """Structures to define and dispatch phase estimation calculations."""
 
-from __future__ import annotations
+from pydantic.dataclasses import dataclass
+from qualtran import CompositeBloq
 
-from typing import TYPE_CHECKING, assert_never
-
-from pydantic.dataclasses import Field, dataclass
-
-from quiche.chemistry import (
-    HartreeFockState,
+from quiche.algorithms import (
+    EstimationAlgorithm,
+    SimulationAlgorithm,
+    StateprepAlgorithm,
 )
-from quiche.core import (
-    ElectronicHamiltonian,
-    Errors,
-    PhaseEstimation,
-    Simulation,
-)
-from quiche.dispatch.budget.estimation import (
-    get_kitaev_qpe_rounds,
-    get_textbook_qpe_ancillas,
-)
-from quiche.dispatch.budget.simulation import (
-    get_qdrift_params,
-    get_qubitisation_ancillas,
-    get_trotter_params,
-)
-
-if TYPE_CHECKING:
-    from qualtran import CompositeBloq
-
-    from quiche.dispatch.backends import QPESpecBackend
-    from quiche.simulation import QuESTRoutine
+from quiche.dispatch.backends import QPESpecBackend
+from quiche.simulation import QuESTRoutine
 
 
-# TODO(Vasco): refactor the algorithm -> parameter calculation out of here
 @dataclass()
 class QPESpec:
     """QPE calculation specification for simulation and resource estimates."""
 
-    hamiltonian: ElectronicHamiltonian
-    state_prep: HartreeFockState | None
-    algorithm: PhaseEstimation
-    simulation: Simulation
-    error_budget: Errors
-    seed: int | None = None
-    extras: dict = Field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        """Calculate the circuit properties for the given QPE routine."""
-        if isinstance(self.state_prep, HartreeFockState) and (
-            (self.state_prep.num_spin_orbitals != self.hamiltonian.paulis.num_qubits)
-            or (self.state_prep.num_electrons != self.hamiltonian.num_electrons)
-        ):
-            error_msg = (
-                "Provided HartreeFockState is inconsistent with ElectronicHamiltonian."
-            )
-            raise ValueError(error_msg)
-
-        self.num_data = self.hamiltonian.paulis.num_qubits
-        self.num_phase_ancillas: int = 0
-        self.num_qpe_ancillas: int = 0
-        self.num_index_ancillas: int = 0
-        self.num_rounds: int | None = None
-        self.time: float | None = None
-        self.order: int | None = None
-        self.reps: int | None = None
-
-        match self.algorithm:
-            case PhaseEstimation.Textbook:
-                self.num_qpe_ancillas = get_textbook_qpe_ancillas(self.error_budget)
-
-            case (
-                PhaseEstimation.Iterative
-                | PhaseEstimation.Kitaev
-                | PhaseEstimation.Naive
-            ):
-                self.num_qpe_ancillas = 1
-                self.num_rounds = get_kitaev_qpe_rounds(self.error_budget)
-
-            case _:
-                assert_never(self.algorithm)
-
-        match self.simulation:
-            case Simulation.QDRIFT:
-                if self.seed is None:
-                    error_msg = "QDRIFT requires a seed."
-                    raise ValueError(error_msg)
-
-                self.time, self.reps = get_qdrift_params(
-                    self.hamiltonian.paulis,
-                    self.error_budget,
-                )
-
-            case Simulation.Qubitised:
-                self.num_index_ancillas, self.num_phase_ancillas = (
-                    get_qubitisation_ancillas(
-                        self.hamiltonian.paulis, self.error_budget
-                    )
-                )
-
-            case Simulation.Trotter:
-                self.time, self.order, self.reps = get_trotter_params(
-                    self.hamiltonian.paulis,
-                    self.error_budget,
-                )
-
-            case _:
-                assert_never(self.simulation)
-
-        self.num_simulation_ancillas = self.num_index_ancillas + self.num_phase_ancillas
-        self.num_qubits = (
-            self.num_data + self.num_qpe_ancillas + self.num_simulation_ancillas
-        )
+    stateprep: StateprepAlgorithm
+    simulation: SimulationAlgorithm
+    estimation: EstimationAlgorithm
 
     def generate[T](self, backend: QPESpecBackend[T]) -> T:
         """Generate the implementation of this QPESpec for the given backend."""
