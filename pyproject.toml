@@ -141,6 +141,7 @@ lint.pydoclint.ignore-one-line-docstrings = true
     "INP001", # Example scripts are not a package
     "D100",   # The first markdown cell is the module description
     "E402",   # Imports are introduced in the cell that first needs them
+    "ERA001", # Markdown cells are comments, and LaTeX looks like code
 ]
 
 [tool.numpydoc_validation]
@@ -162,6 +163,7 @@ testpaths = ["python/tests"]
 
 [tool.jupytext]
 notebook_metadata_filter="-all"
+formats = "py:percent"
 
 [tool.cibuildwheel]
 # Transitive dependency on llvmlite, which doesn't publish wheels for musl.
