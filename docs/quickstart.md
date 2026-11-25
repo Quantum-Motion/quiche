@@ -131,7 +131,7 @@ show_bloq(bloq.flatten_once())
 ## 5. Simulate
 
 Similarly, {py:class}`~quiche.dispatch.backends.quest.QuESTBackend` generates a
-{py:class}`~quiche.simulation.routine.SimulationRoutine` from a QPE specification, for QuEST to execute.
+{py:class}`~quiche.simulation.routine.QuESTRoutine` from a QPE specification, for QuEST to execute.
 
 ```python
 from math import pi
@@ -149,10 +149,8 @@ spec = QPESpec(
 routine = spec.to_quest()
 
 with QuESTEnv():
-    qureg = Qureg(spec.num_qubits)
-    results = routine.evaluate(qureg)
+    phase = routine.run()
 
-phase = results[-1]
 energy = phase * (2 * pi / spec.time)
 
 print(f"Phase: {phase:.5f}")
