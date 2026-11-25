@@ -28,4 +28,4 @@ Hamiltonian simulation
 State preparation
 ~~~~~~~~~~~~~~~~~
 
-.. automodule:: quiche.resources.bloqs.state_prep
+.. automodule:: quiche.resources.bloqs.stateprep

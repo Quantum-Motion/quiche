@@ -9,15 +9,16 @@ The ``quiche`` package is organised into a small set of subpackages:
 
    * - Subpackage
      - Purpose
+   * - :doc:`algorithms <algorithms>`
+     - Data structures defining state preparation, Hamiltonian simulation and phase estimation algorithms.
    * - :doc:`bindings <bindings>`
      - Python bindings to the compiled QuEST simulator and QUICHE backend.
    * - :doc:`chemistry <chemistry>`
      - Chemistry helpers including Hartree-Fock states and fermion-to-qubit state mappings.
    * - :doc:`core <core>`
-     - Data structures for Hamiltonians, Pauli operators, algorithm choices and error budgets.
+     - Data structures for Hamiltonians, Pauli operators.
    * - :doc:`dispatch <dispatch>`
-     - Specifying a calculation and dispatching it to a backend, plus the error-budget
-       logic that fixes routine parameters.
+     - Specifying a calculation and dispatching it to a backend.
    * - :doc:`io <io>`
      - File parsers for Hamlib electronic Hamiltonians and FCIDUMP electronic integral files.
    * - :doc:`resources <resources>`
@@ -29,6 +30,7 @@ The ``quiche`` package is organised into a small set of subpackages:
    :hidden:
    :maxdepth: 2
 
+   algorithms
    bindings
    chemistry
    core
