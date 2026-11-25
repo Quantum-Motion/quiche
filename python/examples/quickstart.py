@@ -65,9 +65,10 @@ ham = ElectronicHamiltonian(
 # %% [markdown]
 # ## 2. Set an error budget
 #
-# Every approximate method in the calculation draws on an {py:class}`~quiche.Errors`
-# budget. Using it, QUICHE derives all relevant parameters, such as ancilla counts,
-# number of Trotter steps, QDRIFT repetitions, and so on.
+# Every approximate method in the calculation draws on an
+# {py:class}`~quiche.core.errors.Errors` budget. Using it, QUICHE derives all relevant
+# parameters, such as ancilla counts, number of Trotter steps, QDRIFT repetitions, and
+# so on.
 
 # %%
 from quiche.core import Errors

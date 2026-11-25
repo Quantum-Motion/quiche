@@ -37,9 +37,12 @@ The repository doesn't ship any data files. The tutorials get their data as foll
 
 ## Running the tutorials
 
+The tutorials are [jupytext](https://jupytext.readthedocs.io/) percent-format `.py` files,
+so they can be opened as notebooks or run as plain scripts.
+
 1. Install QUICHE (see the [top-level README](../../README.md#installation)).
 
-2. Start Jupyter **from this directory**. The notebooks download data into
+2. Start Jupyter **from this directory**. The tutorials download data into
    `python/examples`, and import `random_hamiltonian` from it:
 
    ```bash

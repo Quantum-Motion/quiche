@@ -690,7 +690,7 @@ print(f"Data block       {data_block}")
 print(f"Factory          {factory}")
 
 # %% [markdown]
-# With a physical error rate of $10^{-3}$ and a 1 $mu$s cycle time, the calculation
+# With a physical error rate of $10^{-3}$ and a 1 $\mu$s cycle time, the calculation
 # needs about 3.4 million physical qubits and runs in about 17 hours. This model distils
 # one CCZ state at a time with a single factory, so the runtime is set by the Toffoli
 # count. These numbers depend strongly on the hardware assumptions and on the layout,
