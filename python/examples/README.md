@@ -13,6 +13,7 @@ with QuEST. Sections build on each other, so we recommend reading them in order.
 | [03_fermion_to_qubit.py](03_fermion_to_qubit.py) | Fermion-to-qubit mappings | The Jordan-Wigner, Bravyi-Kitaev and Parity mappings in `quiche.chemistry`, Hartree-Fock states, and mapping a second-quantised Hamiltonian to a qubit Hamiltonian with `to_qubit_hamiltonian`. |
 | [04_resource_estimation.py](04_resource_estimation.py) | Resource estimation | The full `QPESpec` → Qualtran pipeline. Compares Trotterisation, QDRIFT and qubitisation on logical metrics (qubits, Toffoli and T counts) and physical surface code metrics, as the system size and the error budget change. |
 | [05_simulation.py](05_simulation.py) | QuEST simulation | Runs the same `QPESpec` calculations as state-vector simulations in QuEST. Compares textbook and Kitaev QPE with each simulation method on H<sub>2</sub> for energy error, number of simulated qubits, memory and runtime. |
+| [06_resource_estimation_using_dfthc.py](06_resource_estimation_using_dfthc.py) | DFTHC resource estimation | The DFTHC block encoding with spectral amplification of [Low et al. (2025)](https://doi.org/10.1103/pb2g-j9cw) for FeMoco-54: building a `DFTHCWalkOperator` from a `DFTHCHamiltonian`, the Toffoli cost of each subroutine, tuning the QROAM block sizes, and the total Toffoli count and surface code cost of phase estimation. |
 
 ## Supporting files
 
@@ -46,4 +47,5 @@ The repository doesn't ship any data files. The tutorials get their data as foll
    jupyter lab
    ```
 
-Notebook 05 runs full state-vector simulations and takes a few minutes.
+Tutorial 05 runs full state-vector simulations and takes a few minutes. Tutorial 06 takes
+about two minutes, mostly for the QROAM block size scan.

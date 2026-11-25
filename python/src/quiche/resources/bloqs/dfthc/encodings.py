@@ -26,6 +26,9 @@ from quiche.core.electronic import DFTHCHamiltonian
 type RotationData = tuple[tuple[int, ...], ...]
 """Packed rotation words loaded by ``RotationQROM``, indexed ``[rank][inner_index]``."""
 
+type TailData = tuple[tuple[int, int], ...]
+"""``(rotations, G_1)`` pairs for ``InnerQROMTail``, indexed ``[outer_index - RC]``."""
+
 
 def as_rotation_data(
     value: Iterable[Iterable[SupportsIndex]] | None,
@@ -54,6 +57,37 @@ def as_rotation_data(
     if value is None:
         return None
     return tuple(tuple(index(word) for word in row) for row in value)
+
+
+def as_tail_data(
+    value: Iterable[tuple[SupportsIndex, SupportsIndex]] | None,
+) -> TailData | None:
+    """
+    Coerce tail words and `G_1` bits to tuples of Python integers.
+
+    Used as the attrs converter for every ``tail_data`` field, so that lists and
+    NumPy arrays are accepted. Length and bit widths are validated by
+    ``InnerQROMTail``.
+
+    Parameters
+    ----------
+    value : Iterable[tuple[SupportsIndex, SupportsIndex]] | None
+        Iterable of ``(rotations, G_1)`` pairs, indexed ``[outer_index - RC]``,
+        or None.
+
+    Returns
+    -------
+    TailData | None
+        The pairs as a tuple of tuples of ``int``, or None if ``value`` is None.
+
+    Raises
+    ------
+    TypeError
+        If any entry is not an integer (e.g. a float).
+    """  # ruff: ignore[docstring-extraneous-exception]
+    if value is None:
+        return None
+    return tuple((index(word), index(g_1)) for word, g_1 in value)
 
 
 def givens_angles(vectors: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -124,6 +158,51 @@ def rotation_qrom_angles(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.floa
         Oct. 2025.
     """
     return givens_angles(dfthc_hamiltonian.unit_vectors)
+
+
+def tail_qrom_angles(
+    dfthc_hamiltonian: DFTHCHamiltonian,
+) -> tuple[NDArray[np.float64], NDArray[np.bool_]]:
+    """
+    Compute the Givens rotation angles and `G_1` bits loaded by ``InnerQROMTail``.
+
+    Applies :func:`givens_angles` to the eigenvectors of the sum-of-squares one body
+    matrix (eq. (26) of [Low2025]_). Non-negative eigenvalues give the :math:`D_1`
+    terms and negative ones the :math:`Q_1` terms, which are flagged by
+    `G_1` = 1 ([Low2025]_, appendix B). As in eq. (B4), the :math:`D_1` terms
+    come first.
+
+    Parameters
+    ----------
+    dfthc_hamiltonian : DFTHCHamiltonian
+        A QUICHE DFTHCHamiltonian object containing the one body term that
+        needs to be encoded into angles.
+
+    Returns
+    -------
+    radian_angles : NDArray[np.float64]
+        An array of rotation (Givens) angles in radians of shape ``(N, N-1)``.
+    negative : NDArray[np.bool_]
+        The `G_1` bit of each term, of shape ``(N,)``.
+
+    References
+    ----------
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+        by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
+        Oct. 2025.
+    """
+    eigenvalues, eigenvectors = np.linalg.eigh(dfthc_hamiltonian.sos_one_body())
+
+    # `np.eigh` sorts in ascending order, so reversing puts the D_1 terms
+    # first (eq. (B4)).
+    eigenvalues = eigenvalues[::-1]
+
+    # Reverse eigenvectors to match. Transpose because `givens_angles` takes
+    # one vector per row.
+    eigenvectors = eigenvectors[:, ::-1].T
+
+    # `G_1` = 1 flags Q_1 terms, which have negative eigenvalues.
+    return givens_angles(eigenvectors), eigenvalues < 0
 
 
 def quantise_angles(
@@ -276,4 +355,44 @@ def encode_rotation_data(
     integers = quantise_angles(radian_angles, num_bits, rng=rng)
     return tuple(
         tuple(pack_integers(angles, num_bits) for angles in row) for row in integers
+    )
+
+
+def encode_tail_data(
+    radian_angles: ArrayLike,
+    negative: ArrayLike,
+    num_bits: int,
+    *,
+    rng: np.random.Generator | None = None,
+) -> TailData:
+    """
+    Encode the Givens rotation angles and `G_1` bits as words loaded by the tail QROM.
+
+    Quantises and packs the angles of each :math:`D_1/Q_1` term as
+    :func:`encode_rotation_data` does, and pairs each word with its `G_1` bit,
+    as expected by ``InnerQROMTail``.
+
+    Parameters
+    ----------
+    radian_angles : ArrayLike
+        An array-like object of shape ``(N, N-1)`` containing radian angles, as floats.
+    negative : ArrayLike
+        An array-like object of shape ``(N,)`` containing the `G_1` bits.
+    num_bits : int
+        Number of bits used to encode each angle.
+    rng : np.random.Generator, optional
+        Random number generator for unbiased rounding ([Low2025]_, appendix D).
+        If None (default), angles are rounded to the nearest integer.
+
+    Returns
+    -------
+    tuple[tuple[int, int], ...]
+        ``(rotations, G_1)`` pairs, indexed ``[outer_index - RC]``. Each rotation word
+        is a Python ``int`` of ``(N - 1) * num_bits`` bits, with the first angle in
+        the most significant bits.
+    """
+    integers = quantise_angles(radian_angles, num_bits, rng=rng)
+    return tuple(
+        (pack_integers(angles, num_bits), int(flag))
+        for angles, flag in zip(integers, np.asarray(negative), strict=True)
     )
