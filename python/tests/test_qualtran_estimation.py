@@ -15,6 +15,7 @@
 """Tests for the Qualtran implementation of phase estimation algorithms."""
 
 from math import ceil, log2, pi
+from typing import Literal
 
 import pytest
 from qualtran.bloqs.qubitization.qubitization_walk_operator import (
@@ -25,7 +26,7 @@ from qualtran.testing import (
     assert_equivalent_bloq_counts,
 )
 
-from quiche.core import Errors, PauliSum
+from quiche.core import PauliSum
 from quiche.resources import logical_qubit_resources
 from quiche.resources.bloqs import (
     QDRIFT,
@@ -39,85 +40,99 @@ from quiche.resources.bloqs import (
     TrotterLadder,
 )
 
-
-def _make_qdrift(h: PauliSum, budget: Errors, seed: int = 20148) -> QDRIFT:
-    t = 2 * pi / h.lam
-    num_samples = ceil(2 * h.lam**2 * t**2 / budget.simulation)
-    return QDRIFT(h, t, num_samples, seed)
+PHASE_BITSIZE = 5
 
 
-def _make_trotter(h: PauliSum, order: int, num_steps: int = 100) -> Trotterisation:
-    return Trotterisation(h, 2 * pi / h.lam, num_steps, order)
+@pytest.fixture
+def qdrift(h2: PauliSum) -> QDRIFT:
+    """QDRIFT product formula for H2."""
+    return QDRIFT(h2, time=2 * pi / h2.lam, num_samples=100, seed=6498)
 
 
-def _make_qubitisation_walk(
-    h: PauliSum, budget: Errors
-) -> tuple[QubitizationWalkOperator, int, int]:
-    num_select_qubits = ceil(log2(h.num_words_with_identity))
-    phase_bitsize = max(ceil(log2(2.0 * num_select_qubits / budget.simulation)), 2)
-    blockencoding = LCUBlockEncodingWrapper.from_hamiltonian(h, phase_bitsize)
-    return QubitizationWalkOperator(blockencoding), num_select_qubits, phase_bitsize
+@pytest.fixture
+def trotter2(h2: PauliSum) -> Trotterisation:
+    """2nd order Trotterisation of H2."""
+    return Trotterisation(h2, time=2 * pi / h2.lam, num_steps=100, order=2)
 
 
-def _make_textbookqpe_trotter(
-    simulation: QDRIFT | Trotterisation,
-    data_qubits: int,
-    estimation_qubits: int,
+@pytest.fixture
+def trotter4(h2: PauliSum) -> Trotterisation:
+    """4th order Trotterisation of H2."""
+    return Trotterisation(h2, time=2 * pi / h2.lam, num_steps=100, order=4)
+
+
+@pytest.fixture(params=["qdrift", "trotter2", "trotter4"])
+def product_formula(request: pytest.FixtureRequest) -> QDRIFT | Trotterisation:
+    """QDRIFT and Trotter product formulas for H2."""
+    return request.getfixturevalue(request.param)
+
+
+@pytest.fixture
+def walk(h2: PauliSum) -> QubitizationWalkOperator:
+    """Qubitisation walk operator for H2."""
+    blockencoding = LCUBlockEncodingWrapper.from_hamiltonian(
+        h2, phase_bitsize=PHASE_BITSIZE
+    )
+    return QubitizationWalkOperator(blockencoding)
+
+
+@pytest.fixture
+def textbook_product_formula(
+    product_formula: QDRIFT | Trotterisation,
+    h2: PauliSum,
 ) -> TextbookQPE:
+    """TextbookQPE over a QDRIFT or Trotter ladder for H2."""
+    num_data = h2.num_qubits
+    num_estimation_qubits = 5
+
     def ladder(index: int) -> TrotterLadder:
-        return TrotterLadder(index, simulation, data_qubits, estimation_qubits)
+        return TrotterLadder(index, product_formula, num_data, num_estimation_qubits)
 
-    return TextbookQPE(ladder, data_qubits, estimation_qubits, 0)
+    return TextbookQPE(ladder, num_data, num_estimation_qubits, 0)
 
 
-def _make_textbookqpe_qubitised(
-    walk: QubitizationWalkOperator,
-    data_qubits: int,
-    estimation_qubits: int,
-    selection_ancillas: int,
-) -> TextbookQPE:
+@pytest.fixture
+def textbook_qubitised(walk: QubitizationWalkOperator, h2: PauliSum) -> TextbookQPE:
+    """TextbookQPE over a qubitisation ladder for H2."""
+    num_data = h2.num_qubits
+    num_select_qubits = ceil(log2(h2.num_words_with_identity))
+    num_ancillas = num_select_qubits + PHASE_BITSIZE
+    num_estimation_qubits = 5
 
     def ladder(index: int) -> QubitisationLadder:
         return QubitisationLadder(
-            index, walk, data_qubits, estimation_qubits, selection_ancillas
+            index,
+            walk,
+            num_data,
+            num_estimation_qubits,
+            num_ancillas,
         )
 
-    return TextbookQPE(ladder, data_qubits, estimation_qubits, selection_ancillas)
-
-
-def _get_num_estimation_qubits(budget: Errors) -> int:
-    return ceil(log2(1 / budget.estimation)) + ceil(log2(1 / budget.overlap)) + 4
-
-
-@pytest.fixture(
-    params=[
-        _make_qdrift,
-        lambda h, _budget: _make_trotter(h, 2),
-        lambda h, _budget: _make_trotter(h, 4),
-    ],
-    ids=["qdrift", "trotter_order2", "trotter_order4"],
-)
-def simulation(
-    request: pytest.FixtureRequest, h2: PauliSum, budget: Errors
-) -> QDRIFT | Trotterisation:
-    """Test fixture generating Trotter and QDRIFT simulations."""
-    return request.param(h2, budget)
+    return TextbookQPE(ladder, num_data, num_estimation_qubits, num_ancillas)
 
 
 class TestNaiveQPE:
     """Test NaiveQPE class."""
 
     @pytest.mark.parametrize("mode", ["re", "im"])
-    def test_bloq_counts(self, simulation: QDRIFT | Trotterisation, mode: str):
-        bloq = NaiveQPE(simulation, mode)
+    def test_bloq_counts(
+        self,
+        product_formula: QDRIFT | Trotterisation,
+        mode: Literal["re", "im"],
+    ):
+        bloq = NaiveQPE(product_formula, mode)
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
     @pytest.mark.parametrize("mode", ["re", "im"])
-    def test_qubit_counts(self, simulation: QDRIFT | Trotterisation, mode: str):
-        bloq = NaiveQPE(simulation, mode)
-        manual_counts = logical_qubit_resources(bloq)
-        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
-        assert manual_counts == decomp_counts
+    def test_qubit_counts(
+        self,
+        product_formula: QDRIFT | Trotterisation,
+        mode: Literal["re", "im"],
+    ):
+        bloq = NaiveQPE(product_formula, mode)
+        actual = logical_qubit_resources(bloq)
+        expected = logical_qubit_resources(bloq.decompose_bloq())
+        assert actual == expected
 
 
 class TestKitaevQPE:
@@ -125,17 +140,27 @@ class TestKitaevQPE:
 
     @pytest.mark.parametrize("k", range(4))
     @pytest.mark.parametrize("mode", ["re", "im"])
-    def test_bloq_counts(self, simulation: QDRIFT | Trotterisation, k: int, mode: str):
-        bloq = KitaevQPE(simulation, k, mode)
+    def test_bloq_counts(
+        self,
+        product_formula: QDRIFT | Trotterisation,
+        k: int,
+        mode: Literal["re", "im"],
+    ):
+        bloq = KitaevQPE(product_formula, k=k, mode=mode)
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
     @pytest.mark.parametrize("k", range(4))
     @pytest.mark.parametrize("mode", ["re", "im"])
-    def test_qubit_counts(self, simulation: QDRIFT | Trotterisation, k: int, mode: str):
-        bloq = KitaevQPE(simulation, k, mode)
-        manual_counts = logical_qubit_resources(bloq)
-        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
-        assert manual_counts == decomp_counts
+    def test_qubit_counts(
+        self,
+        product_formula: QDRIFT | Trotterisation,
+        k: int,
+        mode: Literal["re", "im"],
+    ):
+        bloq = KitaevQPE(product_formula, k=k, mode=mode)
+        actual = logical_qubit_resources(bloq)
+        expected = logical_qubit_resources(bloq.decompose_bloq())
+        assert actual == expected
 
 
 class TestIterativeQPE:
@@ -149,65 +174,61 @@ class TestIterativeQPE:
         ],
     )
     def test_invalid_inputs(
-        self, h2: PauliSum, budget: Errors, k: int, mode: str, error_msg: str
+        self,
+        qdrift: QDRIFT,
+        k: int,
+        mode: Literal["re", "im"],
+        error_msg: str,
     ):
-        simulation = _make_qdrift(h2, budget)
         with pytest.raises(ValueError, match=error_msg):
-            IterativeQPE(simulation, k, mode)
+            IterativeQPE(qdrift, k=k, mode=mode)
 
     @pytest.mark.parametrize("k", range(4))
     @pytest.mark.parametrize("mode", ["re", "im"])
-    def test_bloq_counts(self, simulation: QDRIFT | Trotterisation, k: int, mode: str):
-        bloq = IterativeQPE(simulation, k, mode)
+    def test_bloq_counts(
+        self,
+        product_formula: QDRIFT | Trotterisation,
+        k: int,
+        mode: Literal["re", "im"],
+    ):
+        bloq = IterativeQPE(product_formula, k=k, mode=mode)
         assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
 
     @pytest.mark.parametrize("k", range(4))
     @pytest.mark.parametrize("mode", ["re", "im"])
-    def test_qubit_counts(self, simulation: QDRIFT | Trotterisation, k: int, mode: str):
-        bloq = IterativeQPE(simulation, k, mode)
-        manual_counts = logical_qubit_resources(bloq)
-        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
-        assert manual_counts == decomp_counts
+    def test_qubit_counts(
+        self,
+        product_formula: QDRIFT | Trotterisation,
+        k: int,
+        mode: Literal["re", "im"],
+    ):
+        bloq = IterativeQPE(product_formula, k=k, mode=mode)
+        actual = logical_qubit_resources(bloq)
+        expected = logical_qubit_resources(bloq.decompose_bloq())
+        assert actual == expected
 
 
 class TestTextbookQPE:
     """Test TextbookQPE class."""
 
-    def test_bloq_counts_trotter_ladder(
-        self, simulation: QDRIFT | Trotterisation, h2: PauliSum, budget: Errors
-    ):
-        num_data = h2.num_qubits
-        num_estimation = _get_num_estimation_qubits(budget)
+    def test_bloq_counts_product_formula(self, textbook_product_formula: TextbookQPE):
+        assert_equivalent_bloq_counts(
+            textbook_product_formula,
+            generalizer=[ignore_split_join],
+        )
 
-        bloq = _make_textbookqpe_trotter(simulation, num_data, num_estimation)
-        assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
+    def test_bloq_counts_qubitised(self, textbook_qubitised: TextbookQPE):
+        assert_equivalent_bloq_counts(
+            textbook_qubitised,
+            generalizer=[ignore_split_join],
+        )
 
-    def test_bloq_count_qubitisation_ladder(self, h2: PauliSum, budget: Errors):
-        walk, num_select_qubits, phase_bitsize = _make_qubitisation_walk(h2, budget)
-        num_data = h2.num_qubits
-        num_estimation = _get_num_estimation_qubits(budget)
-        num_ancillas = num_select_qubits + phase_bitsize
+    def test_qubit_counts_product_formula(self, textbook_product_formula: TextbookQPE):
+        actual = logical_qubit_resources(textbook_product_formula)
+        expected = logical_qubit_resources(textbook_product_formula.decompose_bloq())
+        assert actual == expected
 
-        bloq = _make_textbookqpe_qubitised(walk, num_data, num_estimation, num_ancillas)
-        assert_equivalent_bloq_counts(bloq, generalizer=[ignore_split_join])
-
-    def test_qubit_counts_trotter_ladder(
-        self, simulation: QDRIFT | Trotterisation, h2: PauliSum, budget: Errors
-    ):
-        num_data = h2.num_qubits
-        num_estimation = _get_num_estimation_qubits(budget)
-        bloq = _make_textbookqpe_trotter(simulation, num_data, num_estimation)
-        manual_counts = logical_qubit_resources(bloq)
-        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
-        assert manual_counts == decomp_counts
-
-    def test_qubit_counts_qubitisation_ladder(self, h2: PauliSum, budget: Errors):
-        walk, num_select_qubits, phase_bitsize = _make_qubitisation_walk(h2, budget)
-        num_data = h2.num_qubits
-        num_estimation = _get_num_estimation_qubits(budget)
-        num_ancillas = num_select_qubits + phase_bitsize
-
-        bloq = _make_textbookqpe_qubitised(walk, num_data, num_estimation, num_ancillas)
-        manual_counts = logical_qubit_resources(bloq)
-        decomp_counts = logical_qubit_resources(bloq.decompose_bloq())
-        assert manual_counts == decomp_counts
+    def test_qubit_counts_qubitised(self, textbook_qubitised: TextbookQPE):
+        actual = logical_qubit_resources(textbook_qubitised)
+        expected = logical_qubit_resources(textbook_qubitised.decompose_bloq())
+        assert actual == expected

@@ -27,7 +27,7 @@ from qualtran.testing import (
 )
 from scipy.linalg import block_diag, expm
 
-from quiche.core import Errors, Pauli, PauliSum, PauliWord
+from quiche.core import Pauli, PauliSum, PauliWord
 from quiche.resources import logical_qubit_resources
 from quiche.resources.bloqs import (
     QDRIFT,
@@ -37,6 +37,8 @@ from quiche.resources.bloqs import (
     Trotterisation,
 )
 from quiche.resources.bloqs.simulation import _PauliWordRotationSequence
+
+PHASE_BITSIZE = 5
 
 
 @pytest.fixture
@@ -58,13 +60,12 @@ class TestSelectPauliLCUWrapper:
     """Tests for SelectPauliLCUWrapper."""
 
     @pytest.fixture
-    def select(self, h2: PauliSum, budget: Errors) -> SelectPauliLCUWrapper:
+    def select(self, h2: PauliSum) -> SelectPauliLCUWrapper:
         num_select_qubits = ceil(log2(h2.num_words))
-        phase_bitsize = max(ceil(log2(2.0 * num_select_qubits / budget.state_prep)), 2)
         words = (word.to_cirq(h2.num_qubits) for word in h2.words)
 
         return SelectPauliLCUWrapper(
-            selection_bitsize=num_select_qubits + phase_bitsize,
+            selection_bitsize=num_select_qubits + PHASE_BITSIZE,
             target_bitsize=h2.num_qubits,
             select_unitaries=tuple(words),
         )
@@ -86,17 +87,12 @@ class TestLCUBlockEncodingWrapper:
     """Tests for LCUBlockEncodingWrapper."""
 
     @pytest.fixture
-    def blockencoding(self, h2: PauliSum, budget: Errors) -> LCUBlockEncodingWrapper:
-        num_select_qubits = ceil(log2(h2.num_words_with_identity))
-        phase_bitsize = max(ceil(log2(2.0 * num_select_qubits / budget.state_prep)), 2)
-        return LCUBlockEncodingWrapper.from_hamiltonian(h2, phase_bitsize)
+    def blockencoding(self, h2: PauliSum) -> LCUBlockEncodingWrapper:
+        return LCUBlockEncodingWrapper.from_hamiltonian(h2, PHASE_BITSIZE)
 
-    def test_signature(
-        self, blockencoding: LCUBlockEncodingWrapper, h2: PauliSum, budget: Errors
-    ):
+    def test_signature(self, blockencoding: LCUBlockEncodingWrapper, h2: PauliSum):
         """Check bloq signature."""
         num_select_qubits = ceil(log2(h2.num_words_with_identity))
-        phase_bitsize = max(ceil(log2(2.0 * num_select_qubits / budget.state_prep)), 2)
         sig = blockencoding.signature
         assert len(sig) == 3
 
@@ -107,7 +103,7 @@ class TestLCUBlockEncodingWrapper:
 
         reg = sig[1]
         assert reg.name == "phase_gradient"
-        assert reg.dtype == QAny(phase_bitsize)
+        assert reg.dtype == QAny(PHASE_BITSIZE)
         assert reg.side == Side.THRU
 
         reg = sig[2]

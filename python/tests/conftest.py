@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from quiche.core import Errors, PauliSum, PauliWord
+from quiche.core import PauliSum, PauliWord
 
 if TYPE_CHECKING:
     from quiche.bindings.quest_bindings import QuESTEnv
@@ -66,19 +66,6 @@ def h2() -> PauliSum:
     id_coeff = -0.098864
 
     return PauliSum(coefficients=coeffs, words=words, identity_coefficient=id_coeff)
-
-
-@pytest.fixture
-def budget() -> Errors:
-    """Default error budget for test cases."""
-    tot_error = 0.16
-    return Errors(
-        estimation=tot_error / 3,
-        simulation=1.0,
-        rotations=tot_error / 3,
-        state_prep=tot_error / 3,
-        overlap=1,
-    )
 
 
 @pytest.fixture(scope="session")
