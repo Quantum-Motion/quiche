@@ -75,3 +75,28 @@ def test_dfthc_db_parsing(path_to_dfthc_input_data: str):
     np.testing.assert_allclose(dfthc_hamiltonian.const, 1.250005222563424, rtol=1e-8)
     np.testing.assert_array_equal(dfthc_hamiltonian.unit_vectors.shape, (1, 40, 15))
     np.testing.assert_array_equal(dfthc_hamiltonian.weight_vectors.shape, (1, 40, 40))
+    np.testing.assert_array_equal(dfthc_hamiltonian.identity_weights.shape, (1, 40))
+    np.testing.assert_allclose(
+        dfthc_hamiltonian.bliss_constant, 0.39502787590026855, rtol=1e-8
+    )
+
+
+@pytest.mark.parametrize(
+    ("job_id", "normalisation"),
+    [(1, 31.27035140991211), (2, 40.79718780517578)],
+)
+def test_sos_normalisation(
+    path_to_dfthc_input_data: str, job_id: int, normalisation: float
+):
+    """Test the sum-of-squares terms reproduce the normalisation in the database."""
+    dfthc_hamiltonian = dfthc_db.read(path_to_dfthc_input_data, job_id)
+
+    # Lambda = ||h^(1)'||_1 + 1/4 sum_rc (|w_B| + sum_b |w_b|)^2, eq. (33) in [Low2025].
+    weights = dfthc_hamiltonian.weight_vectors
+    identity_terms = dfthc_hamiltonian.identity_weights + weights.sum(axis=1)
+    sf_norms = np.abs(identity_terms) + np.abs(weights).sum(axis=1)
+    one_body_norm = np.abs(np.linalg.eigvalsh(dfthc_hamiltonian.sos_one_body())).sum()
+
+    np.testing.assert_allclose(
+        one_body_norm + 0.25 * np.sum(sf_norms**2), normalisation, rtol=1e-6
+    )

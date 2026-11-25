@@ -11,7 +11,7 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 ## Unreleased
 
 ### Added
-- Added top-level re-exports of `DFTHCHamiltonian`, `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `SecondQuantisedHamiltonian` and `Simulation`.
+- Added top-level re-exports of `DFTHCHamiltonian`, `ElectronicHamiltonian`, `Errors`, `HartreeFockState`, `Mapping`, `Pauli`, `PauliSum`, `PauliWord`, `PhaseEstimation`, `QPESpec`, `QualtranBackend`, `QuESTBackend`, `SecondQuantisedHamiltonian` and `Simulation`.
 - Added QUICHE documentation site.
 - Added DFTHC block encoding and walk operator bloqs.
 - Added `DFTHCHamiltonian` class for DFTHC factorisation results, with `reconstruct` to rebuild the second quantised integrals.
@@ -22,6 +22,11 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `Trotterisation.trotter_coeffs`, `Trotterisation.trotter_indices` and `Trotterisation.rotation_sequence`.
 - Added `bloqs.dfthc.encodings` to encode rotation angles as integers and pack them into binary words.
 - Added a `rotation_data` field to the DFTHC bloqs to load these angles into `RotationQROM`, set by `from_dfthc_hamiltonian`.
+- Added `quiche.chemistry.get_qubit_state` to map an occupation state to the qubit basis for a given `Mapping`.
+- Added `QPESpecBackend` protocol usable via the `QPESpec.generate()` method (along with `QualtranBackend` and `QuESTBackend` implementations for existing backends).
+- Added `identity_weights` and `bliss_constant` fields to `DFTHCHamiltonian`, read by `quiche.io.dfthc_db.read`, and `sos_one_body` to build the one body matrix of its sum-of-squares representation. Also tightened validation of `num_electrons` to greater than zero.
+- Added `tail_qrom_angles` and `encode_tail_data` to `bloqs.dfthc.encodings` to encode the one body eigenvectors and their `G_1` bits as tail QROM data.
+- Added a `tail_data` field to the DFTHC bloqs to load this data into `InnerQROMTail`, set by `from_dfthc_hamiltonian`.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
@@ -45,6 +50,10 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Changed `QDRIFT.sampled_indices` to return a NumPy array rather than a tuple.
 - Changed `QDRIFT` to sample term counts directly, speeding up the call graph for large `num_samples` (sampled terms will differ for a given seed from previous sampling).
 - Changed QuEST bindings' validation errors to raise `QuESTError` (a `RuntimeError` subclass).
+- Updated QuEST bindings to raise `QuESTError` when attempting to use a destroyed QuEST resource, or after the `QuESTEnv` has been finalised.
+- Replaced `__del__` with `destroy()` on `PauliStrSum`, `Qureg`, `KrausMap`, `SuperOp`, `CompMatr`, `DiagMatr` and `FullStateDiagMatr`.
+- Renamed `QPESpec.get_composite_bloq()` to `QPESpec.to_qualtran()`.
+- Updated `QuESTEnv` to destroy all live QuEST resources when its context exits.
 
 ### Deprecated
 

@@ -40,7 +40,12 @@ from qualtran.bloqs.multiplexers.unary_iteration_bloq import UnaryIterationGate
 from qualtran.bloqs.swap_network import SwapWithZero
 from qualtran.symbolics import bit_length
 
-from quiche.resources.bloqs.dfthc.encodings import RotationData, as_rotation_data
+from quiche.resources.bloqs.dfthc.encodings import (
+    RotationData,
+    TailData,
+    as_rotation_data,
+    as_tail_data,
+)
 from quiche.resources.bloqs.dfthc.utils import extract_soqs
 
 if TYPE_CHECKING:
@@ -336,7 +341,7 @@ class InnerQROM(UnaryIterationGate):
 @attrs.frozen
 class InnerQROMTail(UnaryIterationGate):
     """
-    Inner QROM continuation loading rotations, G and rank for the :math:`D_1/Q_1` terms.
+    Inner QROM continuation loading rotations and G for the :math:`D_1/Q_1` terms.
 
     Parameters
     ----------
@@ -350,9 +355,14 @@ class InnerQROMTail(UnaryIterationGate):
     num_bits_phase_grad : int
         Total number of bits for persistent phase gradient register, :math:`b_{rot}` in
         [Low2025]_.
-
     num_controls : int, optional
         Number of control qubits (default = 0).
+
+    tail_data : tuple[tuple[int, int], ...] | None, optional
+        ``(rotations, G_1)`` pairs loaded for the :math:`D_1/Q_1` terms, indexed
+        ``[outer_index - RC]``, with each rotation word :math:`(N - 1) b_{rot}` bits
+        wide and `G_1` = 1 for the :math:`Q_1` terms. If None (default),
+        placeholder data is used, which is sufficient for Toffoli resource estimation.
 
     Registers
     ---------
@@ -367,7 +377,8 @@ class InnerQROMTail(UnaryIterationGate):
     G_1 : QBit
         Qubit selecting between :math:`D_1` and :math:`Q_1`.
     rank : QAny
-        Register representing the rank, :math:`r`.
+        Register representing the rank, :math:`r`. Not written here, as it is only
+        used for SF terms.
 
     ctrl : QAny, optional
         Control qubits.
@@ -385,6 +396,30 @@ class InnerQROMTail(UnaryIterationGate):
     num_bits_phase_grad: int
 
     num_controls: int = 0
+
+    tail_data: TailData | None = attrs.field(
+        default=None, repr=False, converter=as_tail_data
+    )
+
+    def __attrs_post_init__(self) -> None:
+        """Validate the length and bit widths of the tail data."""
+        if self.tail_data is None:
+            return
+
+        if len(self.tail_data) != self.num_orbitals:
+            err_msg = (
+                f"`tail_data` must have {self.num_orbitals} entries indexed "
+                "[outer_index - RC]."
+            )
+            raise ValueError(err_msg)
+
+        if any(not 0 <= word < 2**self.rotations_size for word, _ in self.tail_data):
+            err_msg = f"`tail_data` words must fit in {self.rotations_size} bits."
+            raise ValueError(err_msg)
+
+        if any(g_1 not in (0, 1) for _, g_1 in self.tail_data):
+            err_msg = "`tail_data` G_1 bits must be 0 or 1."
+            raise ValueError(err_msg)
 
     @property
     def num_rc(self) -> int:
@@ -443,18 +478,22 @@ class InnerQROMTail(UnaryIterationGate):
         G_1: QidArray,
         rank: QidArray,
     ) -> Iterator[OP_TREE]:  # ty: ignore[invalid-method-override]
-        # Placeholder data
-        data = 0
-
         if outer_index < self.num_rc:
             return
 
-        yield XorK(QBit(), data).on(*G_0).controlled_by(control)
-        yield XorK(QBit(), data).on(*G_1).controlled_by(control)
-        yield XorK(QAny(self.num_bits_rank), data).on(*rank).controlled_by(control)
+        rotation_word, g_1 = (
+            (0, 0)
+            if self.tail_data is None
+            else self.tail_data[outer_index - self.num_rc]
+        )
 
+        # G_0 = 1 marks a D_1/Q_1 term, which holds for every index here.
+        yield XGate().on(*G_0).controlled_by(control)
+        yield XorK(QBit(), g_1).on(*G_1).controlled_by(control)
         yield (
-            XorK(QAny(self.rotations_size), data).on(*rotations).controlled_by(control)
+            XorK(QAny(self.rotations_size), rotation_word)
+            .on(*rotations)
+            .controlled_by(control)
         )
 
     @override
@@ -467,9 +506,22 @@ class InnerQROMTail(UnaryIterationGate):
         # Skip terms belonging to `InnerQROM`.
         return r <= self.num_rc
 
-    def nth_operation_callgraph(self, **_: int) -> set[BloqCountT]:
+    def nth_operation_callgraph(self, outer_index: int) -> set[BloqCountT]:
         """Get the data loading cost for each index."""
-        return {(CNOT(), 0)}
+        if outer_index < self.num_rc:
+            return set()
+
+        # Same data as `nth_operation`, so counts match the decomposition.
+        rotation_word, g_1 = (
+            (0, 0)
+            if self.tail_data is None
+            else self.tail_data[outer_index - self.num_rc]
+        )
+        return {
+            (CNOT(), 1),
+            (XorK(QBit(), g_1).controlled(), 1),
+            (XorK(QAny(self.rotations_size), rotation_word).controlled(), 1),
+        }
 
     def adjoint(self) -> Bloq:
         """Get the measurement-based erasure of this QROM."""

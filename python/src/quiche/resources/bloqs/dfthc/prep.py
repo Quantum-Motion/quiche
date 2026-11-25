@@ -37,7 +37,12 @@ from qualtran.resource_counting import (
 )
 from qualtran.symbolics import bit_length
 
-from quiche.resources.bloqs.dfthc.encodings import RotationData, as_rotation_data
+from quiche.resources.bloqs.dfthc.encodings import (
+    RotationData,
+    TailData,
+    as_rotation_data,
+    as_tail_data,
+)
 from quiche.resources.bloqs.dfthc.qrom import (
     InnerQROAM,
     InnerQROMTail,
@@ -397,6 +402,12 @@ class InnerPrepareDFTHC(Bloq):
     log_block_size_adjoint : int
         Log of the block size for QROAM adjoint, :math:`k_4` in [Low2025]_.
 
+    tail_data : tuple[tuple[int, int], ...] | None, optional
+        ``(rotations, G_1)`` pairs loaded by the tail QROM for the :math:`D_1/Q_1`
+        terms, indexed ``[outer_index - RC]``, with each rotation word
+        :math:`(N - 1) b_{rot}` bits wide. If None (default), placeholder data is
+        used, which is sufficient for Toffoli resource estimation.
+
     Registers
     ---------
     outer_index : QAny
@@ -451,6 +462,10 @@ class InnerPrepareDFTHC(Bloq):
 
     log_block_size: int
     log_block_size_adjoint: int
+
+    tail_data: TailData | None = attrs.field(
+        default=None, repr=False, converter=as_tail_data
+    )
 
     def __attrs_post_init__(self) -> None:
         """Validate inputs."""
@@ -566,6 +581,7 @@ class InnerPrepareDFTHC(Bloq):
             num_ranks=self.num_ranks,
             num_copies=self.num_copies,
             num_bits_phase_grad=self.num_bits_phase_grad,
+            tail_data=self.tail_data,
         )
 
     @property
