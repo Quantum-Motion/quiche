@@ -15,13 +15,14 @@
 """Quantum chemistry related methods and transformations."""
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from enum import StrEnum, auto
 from math import ceil, log2
-from typing import Literal, Self, assert_never
+from typing import Literal, assert_never
 
 import numpy as np
 from numpy.typing import NDArray
+
+type BinaryTuple = tuple[Literal[0, 1], ...]
 
 
 class Mapping(StrEnum):
@@ -32,20 +33,20 @@ class Mapping(StrEnum):
     Parity = auto()
 
 
-def get_hf_state(num_spin_orbitals: int, num_electrons: int) -> NDArray[np.int_]:
+def get_hf_state(num_electrons: int, num_spin_orbitals: int) -> BinaryTuple:
     """
     Get the occupation basis state for a given number of electrons and spin orbitals.
 
     Parameters
     ----------
-    num_spin_orbitals : int
-        Number of spin orbitals (and hence length) of the final state.
     num_electrons : int
         Number of electrons, and thus number of orbitals occupied in the final state.
+    num_spin_orbitals : int
+        Number of spin orbitals (and hence length) of the final state.
 
     Returns
     -------
-    ``NDArray[np.int_]``
+    tuple[{0, 1}, ...]
         The HF state with the lowest ``num_electrons`` number of orbitals occupied.
 
     Raises
@@ -69,10 +70,10 @@ def get_hf_state(num_spin_orbitals: int, num_electrons: int) -> NDArray[np.int_]
     occupation = np.zeros(num_spin_orbitals, dtype=int)
     occupation[:num_electrons] = 1
 
-    return occupation
+    return tuple(occupation.tolist())
 
 
-def get_jw_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int_]:
+def get_jw_state(occupation: Sequence[int] | NDArray[np.int_]) -> BinaryTuple:
     """
     Transform an occupation state to qubit basis with the Jordan-Wigner mapping.
 
@@ -83,13 +84,13 @@ def get_jw_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int
 
     Returns
     -------
-    ``NDArray[np.int_]``
+    tuple[{0, 1}, ...]
         The qubit basis state resulting from the fermion-to-qubit mapping.
     """
-    return np.array(occupation, dtype=int)
+    return tuple(np.asarray(occupation, dtype=int).tolist())
 
 
-def get_parity_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int_]:
+def get_parity_state(occupation: Sequence[int] | NDArray[np.int_]) -> BinaryTuple:
     """
     Transform an occupation state to qubit basis with the Parity mapping.
 
@@ -100,11 +101,12 @@ def get_parity_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np
 
     Returns
     -------
-    ``NDArray[np.int_]``
+    tuple[{0, 1}, ...]
         The qubit basis state resulting from the fermion-to-qubit mapping.
     """
     occupation = np.asarray(occupation, dtype=int)
-    return np.cumsum(occupation) % 2
+    parity = np.cumsum(occupation) % 2
+    return tuple(parity.tolist())
 
 
 def _bk_transformation_matrix(size: int) -> NDArray[np.int_]:
@@ -131,7 +133,7 @@ def _bk_transformation_matrix(size: int) -> NDArray[np.int_]:
     return mat[:size, :size]
 
 
-def get_bk_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int_]:
+def get_bk_state(occupation: Sequence[int] | NDArray[np.int_]) -> BinaryTuple:
     """
     Transform an occupation state to qubit basis with the Bravyi-Kitaev mapping.
 
@@ -142,18 +144,19 @@ def get_bk_state(occupation: Sequence[int] | NDArray[np.int_]) -> NDArray[np.int
 
     Returns
     -------
-    ``NDArray[np.int_]``
+    tuple[{0, 1}, ...]
         The qubit basis state resulting from the fermion-to-qubit mapping.
     """
     occupation = np.asarray(occupation, dtype=int)
     mat = _bk_transformation_matrix(len(occupation))
-    return (mat @ occupation) % 2
+    state = (mat @ occupation) % 2
+    return tuple(state.tolist())
 
 
 def get_qubit_state(
     occupation: Sequence[int] | NDArray[np.int_],
     mapping: Mapping,
-) -> NDArray[np.int_]:
+) -> BinaryTuple:
     """
     Transform an occupation state to qubit basis with the given mapping.
 
@@ -166,7 +169,7 @@ def get_qubit_state(
 
     Returns
     -------
-    ``NDArray[np.int_]``
+    tuple[{0, 1}, ...]
         The qubit basis state resulting from the fermion-to-qubit mapping.
     """
     match mapping:
@@ -178,34 +181,3 @@ def get_qubit_state(
             return get_parity_state(occupation)
         case _:
             assert_never(mapping)
-
-
-@dataclass(frozen=True)
-class HartreeFockState:
-    """Dataclass representing a single Hartree-Fock state."""
-
-    occupation: tuple[Literal[0, 1], ...]
-
-    @classmethod
-    def closed_shell(cls, num_electrons: int, num_spin_orbitals: int) -> Self:
-        """Initialise the Hartree-Fock state for a closed-shell system."""
-        if num_electrons % 2 != 0:
-            error_msg = "Closed shell system must have even number of electrons."
-            raise ValueError(error_msg)
-        return cls(occupation=tuple(get_hf_state(num_spin_orbitals, num_electrons)))
-
-    def __post_init__(self) -> None:
-        """Input validation for constructors."""
-        if not all(i in {0, 1} for i in self.occupation):
-            error_msg = "Spin orbital occupation must contain binary entries."
-            raise ValueError(error_msg)
-
-    @property
-    def num_electrons(self) -> int:
-        """Number of electrons of Hartree-Fock state."""
-        return sum(self.occupation)
-
-    @property
-    def num_spin_orbitals(self) -> int:
-        """Number of spin orbitals of Hartree-Fock state."""
-        return len(self.occupation)
