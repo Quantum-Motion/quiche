@@ -48,6 +48,9 @@
 }
 .yue div.cell_output table { margin: 0; }
 
+/* Pad styler tables */
+.yue div.cell_output .output:has(> table) { padding: .5rem 1rem; }
+
 /* Pad and centre images */
 .yue div.cell > div.cell_output:has(> img) { padding: .5rem 1rem; }
 .yue div.cell_output img {
