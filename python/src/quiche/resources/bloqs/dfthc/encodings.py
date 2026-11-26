@@ -20,6 +20,7 @@ from typing import NewType, SupportsIndex
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
+from qualtran.linalg.lcu_util import preprocess_probabilities_for_reversible_sampling
 
 from quiche.core.electronic import DFTHCHamiltonian
 
@@ -262,6 +263,75 @@ def tail_qrom_angles(
     return givens_angles(eigenvectors), eigenvalues < 0
 
 
+def inner_qrom_coefficients(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.float64]:
+    r"""
+    Compute the signed SF coefficients that ``InnerQROM`` alias samples over.
+
+    Each squared factor of the sum-of-squares representation (eq. (23) of
+    [Low2025]_) is a linear combination of :math:`Z` operators on the rotated
+    spin-orbitals and the identity, as applied by ``SelectDFTHC``. The coefficients
+    are calculated as follows.
+
+    1. Write each number operator as :math:`n_{b\sigma} = (I - Z_{b\sigma})/2`, so
+       that the squared factor :math:`(r, c)` becomes
+
+       .. math::
+
+           \alpha_{rc} I + \sum_b w_b^{(rc)} \sum_\sigma n_{b\sigma}
+           = w_B^{(rc)} I - \frac{1}{2} \sum_b w_b^{(rc)} \sum_\sigma Z_{b\sigma}.
+
+    2. Collect the identity coefficient (below eq. (24)):
+
+       .. math::
+
+           w_B^{(rc)} = \alpha_{rc} + \sum_b w_b^{(rc)}.
+
+    3. Order the coefficients of each factor as :math:`Z` terms first, then the
+       identity term at :math:`b = B`:
+
+       .. math::
+
+           \left(-w_0^{(rc)}, \ldots, -w_{B-1}^{(rc)}, w_B^{(rc)}\right).
+
+    4. Label factor :math:`(r, c)` by the outer index :math:`x_o = rC + c`, giving
+        coefficients :math:`c_{x_o, b}` with :math:`x_o \in [0, RC)` and
+        :math:`b \in [0, B]`.
+
+        The spin sum and the factor :math:`1/2` are handled by the spin qubit, not the
+        alias sampling. Here :math:`w_b^{(rc)}` are the `weight_vectors` and
+        :math:`\alpha_{rc}` the `identity_weights`.
+
+    Parameters
+    ----------
+    dfthc_hamiltonian : DFTHCHamiltonian
+        A QUICHE DFTHCHamiltonian object containing the weights that need to be
+        encoded into alias sampling words.
+
+    Returns
+    -------
+    NDArray[np.float64]
+        An array of signed coefficients of shape ``(R * C, B + 1)``, indexed
+        ``[outer_index][inner_index]``, with the identity term last.
+
+    References
+    ----------
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+        by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
+        Oct. 2025.
+    """
+    num_factors = dfthc_hamiltonian.num_ranks * dfthc_hamiltonian.num_copies
+    num_inner = dfthc_hamiltonian.num_bases + 1
+
+    # (R, B, C) -> (R, C, B), so that each row of the result is one factor (r, c).
+    weights = dfthc_hamiltonian.weight_vectors.transpose(0, 2, 1)
+
+    alphas = dfthc_hamiltonian.identity_weights[:, :, np.newaxis]
+    identity = alphas + weights.sum(axis=2, keepdims=True)
+
+    coefficients = np.concatenate([-weights, identity], axis=2)
+    return coefficients.reshape(num_factors, num_inner)
+
+
 def quantise_angles(
     radian_angles: ArrayLike, num_bits: int, *, rng: np.random.Generator | None = None
 ) -> NDArray[np.int64]:
@@ -312,8 +382,7 @@ def quantise_angles(
     .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
         by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
         Oct. 2025.
-    .. [Qualtran] https://qualtran.readthedocs.io/en/latest/bloqs/rotations/
-                    rz_via_phase_gradient.html
+    .. [Qualtran] https://qualtran.readthedocs.io/en/latest/bloqs/rotations/rz_via_phase_gradient.html
     """
     if num_bits < 2:
         error_msg = f"`num_bits` must be at least 2, got {num_bits}."
@@ -379,6 +448,127 @@ def pack_integers(integer_angles: ArrayLike, num_bits: int) -> int:
     for value in values:
         word = (word << num_bits) | value
     return word
+
+
+def encode_inner_data(
+    coefficients: ArrayLike,
+    num_bits_keep: int,
+    *,
+    rng: np.random.Generator | None = None,
+) -> InnerData:
+    r"""
+    Encode signed coefficients as the alias sampling words loaded by the inner QROM.
+
+    Each row of ``coefficients`` holds the :math:`L = B + 1` coefficients
+    :math:`c_i` of one SF term. They are alias sampled over their magnitudes
+    :math:`|c_i|` ([Low2025]_, appendix B, step 4), with a keep register of
+    :math:`b_k` = ``num_bits_keep`` bits.
+
+    1. Spread :math:`M = L 2^{b_k}` bins over the entries. With the cumulative
+       fractions :math:`P_i = \sum_{j < i} |c_j| / \sum_j |c_j|` and an offset
+       :math:`u` shared by the whole row, entry :math:`i` gets
+
+       .. math::
+
+           n_i = \lfloor M P_{i+1} + u \rfloor - \lfloor M P_i + u \rfloor
+
+       bins. Every :math:`n_i \geq 0`, :math:`\sum_i n_i = M`, and each
+       :math:`n_i` is within one bin of :math:`M |c_i| / \sum_j |c_j|`. With
+       :math:`u = 1/2` the cumulative counts are rounded to the nearest bin. With
+       :math:`u` uniform in :math:`[0, 1)` the counts are unbiased,
+       :math:`\mathbb{E}[n_i] = M |c_i| / \sum_j |c_j|` ([Low2025]_, appendix D).
+
+    2. Build the alias table, :math:`\mathrm{alt}_i` and :math:`\mathrm{keep}_i`,
+       from the bin counts with ``preprocess_probabilities_for_reversible_sampling``
+       ([Qualtran]_). The counts are whole numbers adding up to :math:`M`, so
+       entry :math:`i` is sampled with probability exactly :math:`n_i / M`.
+
+    3. Add two sign bits, :math:`s_i = [c_i < 0]` and
+       :math:`d_i = s_i \oplus s_{\mathrm{alt}_i}`. With :math:`f = 1` if the alias
+       is swapped in and :math:`f = 0` otherwise, the phase
+       :math:`(-1)^{s_i \oplus f d_i}` is the sign of the sampled coefficient.
+       :math: `f` is the ``compare`` register of ``InnerPrepareDFTHC``.
+
+    4. Pack each entry into one word, with :math:`\mathrm{alt}_i` in the most
+       significant bits: :math:`(\mathrm{alt}_i, \mathrm{keep}_i, s_i, d_i)`.
+
+    Parameters
+    ----------
+    coefficients : ArrayLike
+        An array-like object of shape ``(R * C, B + 1)`` containing the signed
+        coefficients, as floats.
+    num_bits_keep : int
+        Number of bits for the keep probability, :math:`b_{k2}` in [Low2025]_.
+    rng : np.random.Generator, optional
+        Random number generator for unbiased rounding ([Low2025]_, appendix D).
+        If None (default), the cumulative bin counts are rounded to the nearest
+        integer.
+
+    Returns
+    -------
+    InnerData
+        Packed alias sampling words, indexed ``[outer_index][inner_index]``. Each
+        word is a Python ``int`` of :math:`\lceil \log(B + 1) \rceil + b_{k2} + 2`
+        bits.
+
+    Raises
+    ------
+    ValueError
+        If `num_bits_keep` < 1.
+    ValueError
+        If coefficients are NaN or infinite.
+    ValueError
+        If any row of coefficients is entirely zero.
+
+    References
+    ----------
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure
+        by Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016,
+        Oct. 2025.
+    .. [Qualtran] https://qualtran.readthedocs.io/en/latest/bloqs/state_preparation/state_preparation_alias_sampling.html
+    """
+    if num_bits_keep < 1:
+        error_msg = f"`num_bits_keep` must be at least 1, got {num_bits_keep}."
+        raise ValueError(error_msg)
+
+    coefficients = np.asarray(coefficients, dtype=float)
+    if not np.all(np.isfinite(coefficients)):
+        error_msg = "`coefficients` must be finite, got NaN or infinite values."
+        raise ValueError(error_msg)
+
+    if not np.all(np.any(coefficients, axis=-1)):
+        error_msg = "Each row of `coefficients` must have a non-zero entry."
+        raise ValueError(error_msg)
+
+    num_rows, num_inner = coefficients.shape
+    num_bins = num_inner * 2**num_bits_keep
+
+    # Step 1, cumulative distribution of shape (R * C, B + 2).
+    cumulative = np.cumsum(np.abs(coefficients), axis=1)
+    cumulative = np.concatenate(
+        [np.zeros((num_rows, 1)), cumulative / cumulative[:, -1:]], axis=1
+    )
+    offsets = np.full((num_rows, 1), 0.5) if rng is None else rng.random((num_rows, 1))
+    bin_counts = np.diff(np.floor(cumulative * num_bins + offsets), axis=1)
+
+    words = []
+    for row, row_counts in zip(coefficients, bin_counts, strict=True):
+        # Step 2. The counts are whole bins, so qualtran's own rounding keeps them.
+        alternates, keep_numers, _ = preprocess_probabilities_for_reversible_sampling(
+            row_counts.tolist(), sub_bit_precision=num_bits_keep
+        )
+        alt = np.array(alternates, dtype=np.int64)
+        keep = np.array(keep_numers, dtype=np.int64)
+
+        # Step 3.
+        sign = (row < 0).astype(np.int64)
+        swap_sign = sign ^ sign[alt]
+
+        # Step 4.
+        row_words = (alt << (num_bits_keep + 2)) | (keep << 2) | (sign << 1) | swap_sign
+        words.append(tuple(row_words.tolist()))
+
+    return InnerData(tuple(words))
 
 
 def encode_rotation_data(
