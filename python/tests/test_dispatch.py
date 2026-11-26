@@ -29,7 +29,7 @@ from quiche.core import (
 from quiche.dispatch import QPESpec
 from quiche.dispatch.backends.qualtran import QualtranBackend
 from quiche.dispatch.backends.quest import QuESTBackend
-from quiche.simulation import SimulationRoutine
+from quiche.simulation import QuESTRoutine
 
 
 @pytest.fixture
@@ -73,8 +73,8 @@ class TestQuESTBackend:
 
     def test_generate(self, spec: QPESpec):
         routine = QuESTBackend().generate(spec)
-        assert isinstance(routine, SimulationRoutine)
+        assert isinstance(routine, QuESTRoutine)
 
     def test_to_quest(self, spec: QPESpec):
         routine = spec.to_quest()
-        assert isinstance(routine, SimulationRoutine)
+        assert isinstance(routine, QuESTRoutine)

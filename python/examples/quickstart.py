@@ -159,13 +159,13 @@ show_bloq(bloq.flatten_once())
 # ## 5. Simulate
 #
 # Similarly, {py:class}`~quiche.dispatch.backends.quest.QuESTBackend` generates a
-# {py:class}`~quiche.simulation.routine.SimulationRoutine` from a QPE specification, for
+# {py:class}`~quiche.simulation.routine.QuESTRoutine` from a QPE specification, for
 # QuEST to execute.
 
 # %%
 from math import pi
 
-from quiche.bindings.quest_bindings import QuESTEnv, Qureg
+from quiche.bindings.quest_bindings import QuESTEnv
 
 spec = QPESpec(
     hamiltonian=ham,
@@ -178,19 +178,17 @@ spec = QPESpec(
 routine = spec.to_quest()
 
 with QuESTEnv():
-    qureg = Qureg(spec.num_qubits)
-    results = routine.evaluate(qureg)
+    phase = routine.run()
 
-phase = results[-1]
 energy = phase * (2 * pi / spec.time)
 
 print(f"Phase: {phase:.5f}")
 print(f"Energy: {energy:.5f} Ha")
 
 # %% [markdown]
-# The routine returns one result per appended operation; the phase is the last one.
-# Because the propagator is simulated for a time `spec.time`, the phase is rescaled by
-# `2 * pi / spec.time` to recover an energy.
+# `run()` allocates a fresh `Qureg` sized to the routine's register layout, executes it,
+# and returns the estimated phase. Because the propagator is simulated for a time
+# `spec.time`, the phase is rescaled by `2 * pi / spec.time` to recover an energy.
 
 # %% [markdown]
 # ## Next steps

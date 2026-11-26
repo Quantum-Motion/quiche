@@ -74,7 +74,7 @@ from matplotlib.figure import Figure
 from random_hamiltonian import generate_random_sq_hamiltonian
 
 from quiche import QPESpec
-from quiche.bindings.quest_bindings import QuESTEnv, Qureg
+from quiche.bindings.quest_bindings import QuESTEnv
 from quiche.chemistry import HartreeFockState, get_jw_state
 from quiche.core import (
     ElectronicHamiltonian,
@@ -186,12 +186,6 @@ print(f"HF overlap with the ground state: {h2_overlaps[0]:.4f}")
 # - **Simulated qubits** and **state-vector memory**: QuEST stores $2^n$
 # double-precision complex amplitudes, i.e. $16 \times 2^n$ bytes.
 # - **Wall-clock time**: The time taken by the simulation.
-#
-# The QuEST routines act on the data qubits, the QPE ancillas and, for qubitisation, the
-# index ancillas. `spec.num_qubits` also counts the phase-gradient ancillas that the
-# Qualtran circuit needs for its PREPARE oracle, which the state-vector simulation never
-# touches. We allocate only the qubits that QuEST uses: for $\mathrm{H}_2$ with
-# qubitisation, this avoids a state vector $2^{13}$ times larger than necessary.
 
 
 # %%
@@ -213,15 +207,10 @@ def run_qpe(
     )
     routine = spec.to_quest()
 
-    # Data qubits, QPE ancillas and qubitisation index ancillas only.
-    num_qubits = spec.num_data + spec.num_qpe_ancillas + spec.num_index_ancillas
+    num_qubits = routine.num_qubits
     start = time.perf_counter()
-    qureg = Qureg(num_qubits)
-    results = routine.evaluate(qureg)
-
-    phase = results[-1]
+    phase = routine.run()
     runtime = time.perf_counter() - start
-    qureg.destroy()  # clean up the Qureg
 
     if simulation == Simulation.Qubitised:
         energy = cos(2 * pi * phase) * ham.paulis.lam
