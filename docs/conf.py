@@ -75,7 +75,7 @@ myst_heading_anchors = 3
 # -- MyST-NB -------------------------------------------------------------------
 
 nb_custom_formats = {".py": ["jupytext.reads", {"fmt": "py:percent"}]}
-nb_execution_mode = "cache"
+nb_execution_mode = "force"
 nb_execution_timeout = 600  # TODO(Vasco): update tutorials to be smaller
 nb_execution_show_tb = True
 
