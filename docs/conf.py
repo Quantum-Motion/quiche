@@ -20,6 +20,8 @@ from pathlib import Path
 DOCS_DIR = Path(__file__).parent.resolve()
 REPO_ROOT = DOCS_DIR.parent
 
+os.environ["MATPLOTLIBRC"] = str(DOCS_DIR / "matplotlibrc")
+
 # IPython profile for the notebook kernels for docs
 os.environ["IPYTHONDIR"] = str(DOCS_DIR / "_ipython")
 

@@ -1,0 +1,7 @@
+font.family:      Inter
+
+mathtext.fontset: custom
+mathtext.cal:     Inter
+mathtext.rm:      Inter
+mathtext.it:      Inter:italic
+mathtext.bf:      Inter:bold
