@@ -1,0 +1,60 @@
+/* Smaller code blocks to sit better against body text */
+.yue .highlight > pre { font-size: .875rem; }
+
+/* Card around each cell: input on top, outputs below a divider */
+.yue div.cell {
+  border: 1px solid var(--sy-c-border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+
+/* Remove MyST-NB's input formatting */
+.yue div.cell > div.cell_input {
+  border: 0;
+  background: none;
+}
+
+/* Remove radius on code block corners against the output divider */
+.yue div.cell_input .highlight > pre {
+  border-radius: 0;
+}
+
+/* Remove margins from output cell, add thin border on top */
+.yue div.cell > div.cell_output {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--sy-c-border);
+}
+
+/* Remove MyST-NB's output margin, enable scrolling */
+.yue div.cell_output .output {
+  margin: 0;
+  overflow-x: auto;
+}
+
+/* Remove output code-block cell background, tighten padding */
+.yue div.cell_output .output .highlight > pre {
+  background: none;
+  padding: .75rem 1rem;
+}
+
+/* Pad table wrapper */
+.yue div.cell_output .output > div:has(> table) {
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 100%;
+  padding: .5rem 1rem;
+}
+.yue div.cell_output table { margin: 0; }
+
+/* Pad and centre images */
+.yue div.cell > div.cell_output:has(> img) { padding: .5rem 1rem; }
+.yue div.cell_output img {
+  display: block;
+  margin: 0 auto;
+}
+
+/* Dark mode: invert figures; tag a cell "keep-colours" to opt out */
+html.dark .yue div.cell:not(.tag_keep-colours) div.cell_output img { filter: invert(.9) hue-rotate(180deg); }
+html.dark .yue div.cell:not(.tag_keep-colours) div.cell_output:has(> img) { background: #1a1a1a; }

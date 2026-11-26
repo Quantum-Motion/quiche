@@ -32,8 +32,6 @@ The main entry point to QUICHE is a `QPESpec` object, which describes the target
 
 ## Usage
 
-<!-- readme-usage-start -->
-
 Going from a Hamiltonian to a logical resource estimate:
 ```python
 from quiche.io import hamlib
@@ -72,7 +70,6 @@ bloq = spec.to_qualtran()
 print(logical_qubit_resources(bloq), logical_gate_resources(bloq))
 ```
 
-<!-- readme-usage-end -->
 ---
 
 ## Installation
