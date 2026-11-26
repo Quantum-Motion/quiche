@@ -498,7 +498,6 @@ def scan_block_size(param: str, values: range) -> list[dict[str, Any]]:
                 "param": param,
                 "k": k,
                 "toffolis": toffoli_count(bloq),
-                "qubits": get_cost_value(bloq, QubitCount()),
             }
         )
     return rows
@@ -512,12 +511,7 @@ df_scan = pd.DataFrame(
     ]
 )
 
-# One row per block size, with "Toffolis (qubits)" for each parameter.
-df_scan["cell"] = [
-    f"{t:,} ({q:,})"
-    for t, q in zip(df_scan["toffolis"], df_scan["qubits"], strict=True)
-]
-df_scan.pivot_table(index="k", columns="param", values="cell", aggfunc="first")[
+df_scan.pivot_table(index="k", columns="param", values="toffolis")[
     list(BLOCK_SIZES)
 ].rename(
     columns={
