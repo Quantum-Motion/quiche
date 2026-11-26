@@ -37,9 +37,6 @@ jobs:
       - name: Install with doc dependencies
         run: uv sync --locked --no-default-groups --group docs
 
-      - name: Download documentation data
-        run: uv run --locked --no-default-groups --group docs make -C docs data
-
       - name: Build sphinx documentation
         run: uv run --locked --no-default-groups --group docs make -C docs html
 
