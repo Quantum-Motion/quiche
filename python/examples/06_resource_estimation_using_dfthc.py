@@ -623,7 +623,7 @@ METHODS = [
     ("THC (Lee et al. 2021)", 306.30, 11_016, 2142),
     ("Symmetry-compressed DF (Rocca et al. 2024)", 78.00, 19_589, 3722),
     ("DFTHC + BLISS, without SA", LAMBDA, toffolis_per_walk, num_qubits),
-    ("DFTHC + BLISS + SA (this notebook)", lambda_eff, toffolis_per_walk, num_qubits),
+    ("DFTHC + BLISS + SA (this tutorial)", lambda_eff, toffolis_per_walk, num_qubits),
 ]
 
 df_methods = pd.DataFrame(
