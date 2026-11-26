@@ -15,7 +15,8 @@
 """Objects to construct and lazily evaluate QuEST simulations."""
 
 from collections.abc import Callable
-from dataclasses import dataclass
+
+from pydantic.dataclasses import dataclass
 
 from quiche.bindings.quest_bindings import Qureg
 from quiche.simulation.layout import QuregLayout
