@@ -143,6 +143,10 @@ lint.pydoclint.ignore-one-line-docstrings = true
     "E402",   # Imports are introduced in the cell that first needs them
     "ERA001", # Markdown cells are comments, and LaTeX looks like code
 ]
+"docs/_ipython/**" = [
+    "INP001", # IPython config file
+    "F821",   # IPython defines `c`
+]
 
 [tool.numpydoc_validation]
 checks = [

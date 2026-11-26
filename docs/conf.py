@@ -14,10 +14,14 @@
 
 """Sphinx configuration for the QUICHE documentation."""
 
+import os
 from pathlib import Path
 
 DOCS_DIR = Path(__file__).parent.resolve()
 REPO_ROOT = DOCS_DIR.parent
+
+# IPython profile for the notebook kernels for docs
+os.environ["IPYTHONDIR"] = str(DOCS_DIR / "_ipython")
 
 # -- Project information -----------------------------------------------------
 
@@ -41,6 +45,7 @@ extensions = [
 
 exclude_patterns = [
     "_build",
+    "_ipython",
     ".DS_Store",
     "conf.py",
     "tutorials/random_hamiltonian.py",
