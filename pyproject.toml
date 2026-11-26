@@ -62,7 +62,11 @@ lint = [
     "numpydoc>=1.11",
 ]
 docs = [
+    "jupytext>=1.19.6",
+    "matplotlib>=3.11.2",
+    "myst-nb>=1.4.0",
     "myst-parser>=5.1",
+    "pandas>=3.0.5",
     "shibuya>=2026.7.12",
     "sphinx>=8.2",
     "sphinx-copybutton>=0.5",
@@ -126,14 +130,18 @@ lint.pydoclint.ignore-one-line-docstrings = true
 
 [tool.ruff.lint.per-file-ignores]
 "docs/conf.py" = ["INP001"] # not applicable
-"python/examples/*.py" = ["INP001"] # Example scripts are not a package
-"python/*.ipynb" = ["CPY001"] # Don't require copyright in notebooks
 "python/tests/*" =[
     "S101",   # asserts are used throughout testing
     "D101",   # decide not to require test class documentation
     "D102",   # decide not to require test method documentation
     "ANN201", # Adding "-> None" is overkill in tests
     "SLF001"  # Tests may access private members
+]
+"python/examples/*.py" = [
+    "INP001", # Example scripts are not a package
+    "D100",   # The first markdown cell is the module description
+    "E402",   # Imports are introduced in the cell that first needs them
+    "ERA001", # Markdown cells are comments, and LaTeX looks like code
 ]
 
 [tool.numpydoc_validation]
@@ -152,6 +160,10 @@ override_GL06 = ['(?m)^\s*Registers\n\s*-+$']  # disable GL06 for docstrings wit
 
 [tool.pytest]
 testpaths = ["python/tests"]
+
+[tool.jupytext]
+notebook_metadata_filter="-all"
+formats = "py:percent"
 
 [tool.cibuildwheel]
 # Transitive dependency on llvmlite, which doesn't publish wheels for musl.
