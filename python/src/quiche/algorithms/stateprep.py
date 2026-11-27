@@ -33,7 +33,6 @@ class IdentityStateprep:
     ----------
     num_qubits : int
         Number of qubits to initialise. Must be positive.
-
     """
 
     num_qubits: PositiveInt
@@ -48,7 +47,6 @@ class BitstringStateprep:
     ----------
     bitstring : tuple[{0, 1}, ...]
         Bitstring specifying the basis state to prepare.
-
     """
 
     bitstring: BinaryTuple

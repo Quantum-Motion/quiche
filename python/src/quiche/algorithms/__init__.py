@@ -14,6 +14,11 @@
 
 """Data structures for defining quantum routines and algorithms."""
 
+from .block_encoding_prep import (
+    AliasSampling,
+    ExactRotationTree,
+    QROMRotationTree,
+)
 from .estimation import (
     EstimationAlgorithm,
     IterativeQPE,
@@ -34,12 +39,15 @@ type Algorithm = EstimationAlgorithm | SimulationAlgorithm | StateprepAlgorithm
 __all__ = [
     "QDRIFT",
     "Algorithm",
+    "AliasSampling",
     "BitstringStateprep",
     "EstimationAlgorithm",
+    "ExactRotationTree",
     "IdentityStateprep",
     "IterativeQPE",
     "KitaevQPE",
     "NaiveQPE",
+    "QROMRotationTree",
     "Qubitisation",
     "SimulationAlgorithm",
     "StateprepAlgorithm",
