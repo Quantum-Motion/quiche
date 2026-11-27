@@ -17,104 +17,96 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, assert_never
+from typing import Any, assert_never
 
-from quiche.bindings.quiche_bindings import (
-    getPhaseKitaevQDRIFT,
-    getPhaseKitaevTrotter,
-    getPhaseTextbookQDRIFT,
-    getPhaseTextbookQubitised,
-    getPhaseTextbookTrotter,
-    initClassicalState,
-)
-from quiche.chemistry import (
-    HartreeFockState,
-    get_qubit_state,
-)
-from quiche.core import (
-    PhaseEstimation,
-    Simulation,
-)
+from quiche import QPESpec, algorithms
+from quiche.bindings import quiche_bindings as bindings
+from quiche.dispatch.backends import UnsupportedAlgorithmError
 from quiche.simulation import QuESTRoutine, QuregLayout, QuregOp
 from quiche.simulation.utils import _with_quest_hamiltonian
-
-if TYPE_CHECKING:
-    from quiche import QPESpec
 
 
 def get_stateprep_op(spec: QPESpec) -> QuregOp:
     """Pattern matching and construction for QuEST state preparation."""
-    match spec.state_prep:
-        case None:
+    match spec.stateprep:
+        case algorithms.IdentityStateprep():
             return lambda _qureg: None
-        case HartreeFockState():
-            occupation = spec.state_prep.occupation
-            mapping = spec.hamiltonian.mapping
-            bitstring = get_qubit_state(occupation, mapping)
-            return partial(initClassicalState, state=bitstring)
+        case algorithms.BitstringStateprep(bitstring=bitstring):
+            return partial(bindings.initClassicalState, state=bitstring)
         case _:
-            assert_never(spec.state_prep)
+            assert_never(spec.stateprep)
+
+
+def _get_simulation_kwargs(
+    spec: QPESpec,
+    layout: QuregLayout,
+) -> dict[str, Any]:
+    match spec.simulation:
+        case algorithms.QDRIFT(num_samples=num_samples, seed=seed, time=time):
+            return {"reps": num_samples, "time": time, "seed": seed}
+        case algorithms.Trotter(time=time, order=order, num_steps=num_steps):
+            return {"order": order, "reps": num_steps, "time": time}
+        case algorithms.Qubitisation(prep=prep):
+            match prep:
+                case algorithms.ExactRotationTree():
+                    return {"qubitisation_ancillas": layout.simulation}
+                case algorithms.QROMRotationTree() | algorithms.AliasSampling():
+                    raise UnsupportedAlgorithmError(spec, QuESTBackend)
+                case _:
+                    assert_never(prep)
+        case _:
+            assert_never(spec.simulation)
+
+
+def _get_estimation_kwargs(
+    spec: QPESpec,
+    layout: QuregLayout,
+) -> dict[str, Any]:
+    match spec.estimation:
+        case algorithms.KitaevQPE(num_rounds=num_rounds):
+            return {"num_bits": num_rounds, "ancilla_index": layout.qpe[0]}
+        case algorithms.NaiveQPE():
+            return {"ancilla_index": layout.qpe[0]}
+        case algorithms.TextbookQPE():
+            # TODO(Vasco): standardise C++ naming and remove this match
+            match spec.simulation:
+                case algorithms.Qubitisation():
+                    return {"qpe_ancillas": layout.qpe}
+                case algorithms.Trotter() | algorithms.QDRIFT():
+                    return {"ancillas": layout.qpe}
+                case _:
+                    assert_never(spec.simulation)
+        case _:
+            raise UnsupportedAlgorithmError(spec, QuESTBackend)
+
+
+# fmt: off
+_BINDING_MAP = {
+    (algorithms.KitaevQPE, algorithms.QDRIFT): bindings.getPhaseKitaevQDRIFT,
+    (algorithms.KitaevQPE, algorithms.Trotter): bindings.getPhaseKitaevTrotter,
+    (algorithms.NaiveQPE, algorithms.QDRIFT): bindings.getPhaseNaiveQDRIFT,
+    (algorithms.NaiveQPE, algorithms.Trotter): bindings.getPhaseNaiveTrotter,
+    (algorithms.TextbookQPE, algorithms.QDRIFT): bindings.getPhaseTextbookQDRIFT,
+    (algorithms.TextbookQPE, algorithms.Qubitisation): bindings.getPhaseTextbookQubitised,  # ruff: ignore[line-too-long]
+    (algorithms.TextbookQPE, algorithms.Trotter): bindings.getPhaseTextbookTrotter,
+}
+# fmt: on
 
 
 def get_estimation_op(spec: QPESpec, layout: QuregLayout) -> QuregOp:
     """Pattern matching and construction for QuEST phase estimation."""
-    match spec.algorithm, spec.simulation:
-        case PhaseEstimation.Kitaev, Simulation.QDRIFT:
-            return _with_quest_hamiltonian(
-                getPhaseKitaevQDRIFT,
-                hamiltonian=spec.hamiltonian.paulis,
-                reps=spec.reps,
-                time=spec.time,
-                num_bits=spec.num_rounds,
-                seed=spec.seed,
-                ancilla_index=layout.qpe[0],
-            )
+    key = (type(spec.estimation), type(spec.simulation))
 
-        case PhaseEstimation.Kitaev, Simulation.Trotter:
-            return _with_quest_hamiltonian(
-                getPhaseKitaevTrotter,
-                hamiltonian=spec.hamiltonian.paulis,
-                order=spec.order,
-                reps=spec.reps,
-                time=spec.time,
-                num_bits=spec.num_rounds,
-                ancilla_index=layout.qpe[0],
-            )
+    binding = _BINDING_MAP.get(key)
+    if binding is None:
+        raise UnsupportedAlgorithmError(spec, QuESTBackend)
 
-        case PhaseEstimation.Textbook, Simulation.QDRIFT:
-            return _with_quest_hamiltonian(
-                getPhaseTextbookQDRIFT,
-                hamiltonian=spec.hamiltonian.paulis,
-                reps=spec.reps,
-                time=spec.time,
-                seed=spec.seed,
-                ancillas=layout.qpe,
-            )
-
-        case PhaseEstimation.Textbook, Simulation.Qubitised:
-            return _with_quest_hamiltonian(
-                getPhaseTextbookQubitised,
-                hamiltonian=spec.hamiltonian.paulis,
-                qpe_ancillas=layout.qpe,
-                qubitisation_ancillas=layout.index,
-            )
-
-        case PhaseEstimation.Textbook, Simulation.Trotter:
-            return _with_quest_hamiltonian(
-                getPhaseTextbookTrotter,
-                hamiltonian=spec.hamiltonian.paulis,
-                order=spec.order,
-                reps=spec.reps,
-                time=spec.time,
-                ancillas=layout.qpe,
-            )
-
-        case algorithm, simulation:
-            error_msg = (
-                f"{algorithm.name} QPE with {simulation.name} not available in QuEST"
-                " backend."
-            )
-            raise NotImplementedError(error_msg)
+    return _with_quest_hamiltonian(
+        binding,
+        hamiltonian=spec.simulation.hamiltonian,
+        **_get_simulation_kwargs(spec, layout),
+        **_get_estimation_kwargs(spec, layout),
+    )
 
 
 class QuESTBackend:
@@ -123,9 +115,9 @@ class QuESTBackend:
     def generate(self, spec: QPESpec) -> QuESTRoutine:
         """Build the QuEST routine implementing the given QPESpec."""
         layout = QuregLayout(
-            num_data=spec.num_data,
-            num_qpe=spec.num_qpe_ancillas,
-            num_index=spec.num_index_ancillas,
+            num_data=spec.simulation.hamiltonian.num_qubits,
+            num_qpe=spec.estimation.num_ancillas,
+            num_simulation=spec.simulation.num_ancillas,
         )
 
         return QuESTRoutine(
