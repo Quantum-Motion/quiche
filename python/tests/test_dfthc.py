@@ -21,7 +21,12 @@ import numpy as np
 import pytest
 from numpy.typing import ArrayLike
 from qualtran import BloqBuilder
-from qualtran.resource_counting import QECGatesCost, get_cost_value
+from qualtran.bloqs.basic_gates import CZ
+from qualtran.resource_counting import (
+    QECGatesCost,
+    get_bloq_callee_counts,
+    get_cost_value,
+)
 from qualtran.resource_counting.generalizers import ignore_alloc_free, ignore_split_join
 from qualtran.simulation.classical_sim import ClassicalValT
 from qualtran.testing import (
@@ -42,12 +47,18 @@ from quiche.resources.bloqs.dfthc import (
 )
 from quiche.resources.bloqs.dfthc.encodings import (
     givens_angles,
+    inner_qrom_coefficients,
     pack_integers,
     quantise_angles,
     rotation_qrom_angles,
     tail_qrom_angles,
 )
-from quiche.resources.bloqs.dfthc.qrom import InnerQROM, InnerQROMTail, RotationQROM
+from quiche.resources.bloqs.dfthc.qrom import (
+    InnerQROAM,
+    InnerQROM,
+    InnerQROMTail,
+    RotationQROM,
+)
 from quiche.resources.bloqs.dfthc.select import GivensLadder
 
 # FeMoco-54 parameters, from G. H. Low et al., "Fast Quantum Simulation of Electronic
@@ -116,6 +127,25 @@ def decode_rotation_data(rotation_data: tuple[tuple[int, ...], ...]) -> np.ndarr
     return np.array(values, dtype=float) * 4 * np.pi / 2**B_ROT
 
 
+def sampled_coefficients(qroam: InnerQROAM) -> np.ndarray:
+    """Get the signed coefficients that alias sampling with the QROAM's data gives."""
+    qrom = qroam.qrom
+    assert qrom.inner_data is not None
+    assert qrom.sign_data is not None
+    num_inner, num_keep = qrom.num_inner, 2**qrom.num_bits_keep
+    sampled = np.zeros((qrom.num_rc, num_inner))
+    for x, (words, signs) in enumerate(
+        zip(qrom.inner_data, qrom.sign_data, strict=True)
+    ):
+        for i, (word, s) in enumerate(zip(words, signs, strict=True)):
+            alt, keep, d = map(int, qroam.alias_word_partition.call_classically(x=word))
+            # Entry i is kept for `keep` of the values of sigma, and its alias is
+            # swapped in for the rest, with the sign flipped by d.
+            sampled[x, i] += keep * (-1) ** s
+            sampled[x, alt] += (num_keep - keep) * (-1) ** (s ^ d)
+    return sampled / (num_inner * num_keep)
+
+
 class TestOuterPrepareDFTHC:
     """Tests for the outer index state preparation."""
 
@@ -161,6 +191,12 @@ class TestInnerPrepareDFTHC:
         assert_equivalent_bloq_counts(
             self.prep, generalizer=[ignore_split_join, ignore_alloc_free]
         )
+
+    def test_adjoint_omits_cz(self):
+        # The CZ applies the sign factor (-1)^(f d) once, in the forward preparation,
+        # so the unpreparation must not undo it.
+        assert dict(get_bloq_callee_counts(self.prep))[CZ()] == 1
+        assert CZ() not in dict(get_bloq_callee_counts(self.prep.adjoint()))
 
 
 class TestRotationPrepareDFTHC:
@@ -612,6 +648,18 @@ class TestDFTHCBlockEncoding:
             block_encoding_from_fh, **no_data
         )
 
+        # Alias sampling with the words and their signs gives the SF coefficients.
+        qroam = block_encoding_from_fh.inner.inner_prep.qroam
+        coefficients = inner_qrom_coefficients(dummy_dfthc_hamiltonian)
+        np.testing.assert_allclose(
+            sampled_coefficients(qroam),
+            coefficients / np.abs(coefficients).sum(axis=1, keepdims=True),
+            rtol=0,
+            atol=1 / ((B + 1) * 2**B_K2),
+        )
+        assert qroam.qrom.inner_data == block_encoding_from_fh.inner_data
+        assert qroam.qrom.sign_data == block_encoding_from_fh.sign_data
+
         assert block_encoding_from_fh.rotation_data is not None
         # The angles the ladder reads from the words are those of the Hamiltonian.
         np.testing.assert_allclose(
@@ -688,6 +736,18 @@ class TestDFTHCWalkOperator:
         assert attrs.evolve(self.walk, **no_data) == attrs.evolve(
             walk_from_fh, **no_data
         )
+
+        # Alias sampling with the words and their signs gives the SF coefficients.
+        qroam = walk_from_fh.block_encoding.inner.inner_prep.qroam
+        coefficients = inner_qrom_coefficients(dummy_dfthc_hamiltonian)
+        np.testing.assert_allclose(
+            sampled_coefficients(qroam),
+            coefficients / np.abs(coefficients).sum(axis=1, keepdims=True),
+            rtol=0,
+            atol=1 / ((B + 1) * 2**B_K2),
+        )
+        assert qroam.qrom.inner_data == walk_from_fh.inner_data
+        assert qroam.qrom.sign_data == walk_from_fh.sign_data
 
         assert walk_from_fh.rotation_data is not None
         # The angles the ladder reads from the words are those of the Hamiltonian.
