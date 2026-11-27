@@ -17,13 +17,10 @@
 import pytest
 from qualtran import CompositeBloq
 
-from quiche.chemistry import HartreeFockState, Mapping
+from quiche import algorithms
+from quiche.chemistry import Mapping
 from quiche.core import (
-    ElectronicHamiltonian,
-    Errors,
     PauliSum,
-    PhaseEstimation,
-    Simulation,
 )
 from quiche.dispatch import QPESpec
 from quiche.dispatch.backends.qualtran import QualtranBackend
@@ -32,27 +29,17 @@ from quiche.simulation import QuESTRoutine
 
 
 @pytest.fixture
-def spec(h2: PauliSum, budget: Errors) -> QPESpec:
+def spec(h2: PauliSum) -> QPESpec:
     """Construct an example H2 QPESpec fixture."""
-    ham = ElectronicHamiltonian(
-        paulis=h2,
-        mapping=Mapping.JordanWigner,
+    stateprep = algorithms.BitstringStateprep.hartree_fock(
         num_electrons=2,
+        num_spin_orbitals=h2.num_qubits,
+        mapping=Mapping.JordanWigner,
     )
+    estimation = algorithms.TextbookQPE(num_bits=5)
+    simulation = algorithms.Trotter(h2, time=0.1, order=2, num_steps=25)
 
-    hf = HartreeFockState.closed_shell(
-        num_electrons=ham.num_electrons,
-        num_spin_orbitals=ham.paulis.num_qubits,
-    )
-
-    return QPESpec(
-        hamiltonian=ham,
-        state_prep=hf,
-        algorithm=PhaseEstimation.Textbook,
-        simulation=Simulation.Trotter,
-        error_budget=budget,
-        seed=3,
-    )
+    return QPESpec(stateprep, simulation, estimation)
 
 
 class TestQualtranBackend:
