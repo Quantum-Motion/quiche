@@ -38,6 +38,7 @@ from qualtran.bloqs.bookkeeping import Partition
 from qualtran.bloqs.multiplexers.apply_gate_to_lth_target import ApplyGateToLthQubit
 from qualtran.bloqs.multiplexers.unary_iteration_bloq import UnaryIterationGate
 from qualtran.bloqs.swap_network import SwapWithZero
+from qualtran.resource_counting import CostKey, QubitCount, get_cost_value
 from qualtran.symbolics import bit_length
 
 from quiche.resources.bloqs.dfthc.encodings import (
@@ -523,6 +524,15 @@ class InnerQROMTail(UnaryIterationGate):
             (XorK(QAny(self.rotations_size), rotation_word).controlled(), 1),
         }
 
+    def my_static_costs(self, cost_key: CostKey) -> int:
+        """Return qubit counts."""
+        # Qualtran decomposes each data word to count qubits, but the data only sets
+        # which bits are flipped, not the qubit width. Counting the QROM without data
+        # skips these decompositions, so it is much faster and gives the same result.
+        if isinstance(cost_key, QubitCount) and self.tail_data is not None:
+            return get_cost_value(attrs.evolve(self, tail_data=None), cost_key)
+        return NotImplemented
+
     def adjoint(self) -> Bloq:
         """Get the measurement-based erasure of this QROM."""
         return QROMAdjoint(self, unary_size=1, iteration_size=self.num_orbitals)
@@ -954,6 +964,15 @@ class RotationQROM(UnaryIterationGate):
             0 if self.rotation_data is None else self.rotation_data[rank][inner_index]
         )
         return {(XorK(QAny(self.rotations_size), data).controlled(), 1)}
+
+    def my_static_costs(self, cost_key: CostKey) -> int:
+        """Return qubit counts."""
+        # Qualtran decomposes each data word to count qubits, but the data only sets
+        # which bits are flipped, not the qubit width. Counting the QROM without data
+        # skips these decompositions, so it is much faster and gives the same result.
+        if isinstance(cost_key, QubitCount) and self.rotation_data is not None:
+            return get_cost_value(attrs.evolve(self, rotation_data=None), cost_key)
+        return NotImplemented
 
     def adjoint(self) -> Bloq:
         """Get the measurement-based erasure of this QROM."""
