@@ -608,6 +608,10 @@ class InnerPrepareDFTHC(Bloq):
             CZ(): 1,
         }
 
+    def adjoint(self) -> Bloq:
+        """Get the unpreparation that undoes this state preparation, without the CZ."""
+        return InnerPrepareDFTHCAdjoint(self)
+
     def build_composite_bloq(
         self,
         bb: BloqBuilder,
