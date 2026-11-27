@@ -27,6 +27,9 @@ from quiche.core.electronic import DFTHCHamiltonian
 InnerData = NewType("InnerData", tuple[tuple[int, ...], ...])
 """Packed alias words for ``InnerQROM``, indexed ``[outer_index][inner_index]``."""
 
+InnerSignData = NewType("InnerSignData", tuple[tuple[int, ...], ...])
+"""Sign bits of the SF coefficients, indexed ``[outer_index][inner_index]``."""
+
 RotationData = NewType("RotationData", tuple[tuple[int, ...], ...])
 """Packed rotation words loaded by ``RotationQROM``, indexed ``[rank][inner_index]``."""
 
@@ -86,6 +89,37 @@ def as_inner_data(
     if value is None:
         return None
     return InnerData(_as_word_table(value))
+
+
+def as_inner_sign_data(
+    value: Iterable[Iterable[SupportsIndex]] | None,
+) -> InnerSignData | None:
+    """
+    Coerce sign bits of the SF coefficients to nested tuples of Python integers.
+
+    Used as the attrs converter for every ``sign_data`` field, so that lists and
+    NumPy arrays are accepted. Shape and bit values are validated by ``InnerQROM``,
+    which carries the bits for the phase fixup of its erasure.
+
+    Parameters
+    ----------
+    value : Iterable[Iterable[SupportsIndex]] | None
+        Nested iterable of sign bits, indexed ``[outer_index][inner_index]``, or
+        None.
+
+    Returns
+    -------
+    InnerSignData | None
+        The bits as a tuple of tuples of ``int``, or None if ``value`` is None.
+
+    Raises
+    ------
+    TypeError
+        If any bit is not an integer (e.g. a float).
+    """  # ruff: ignore[docstring-extraneous-exception]
+    if value is None:
+        return None
+    return InnerSignData(_as_word_table(value))
 
 
 def as_rotation_data(
@@ -294,12 +328,12 @@ def inner_qrom_coefficients(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.f
            \left(-w_0^{(rc)}, \ldots, -w_{B-1}^{(rc)}, w_B^{(rc)}\right).
 
     4. Label factor :math:`(r, c)` by the outer index :math:`x_o = rC + c`, giving
-        coefficients :math:`c_{x_o, b}` with :math:`x_o \in [0, RC)` and
-        :math:`b \in [0, B]`.
+       coefficients :math:`c_{x_o, b}` with :math:`x_o \in [0, RC)` and
+       :math:`b \in [0, B]`.
 
-        The spin sum and the factor :math:`1/2` are handled by the spin qubit, not the
-        alias sampling. Here :math:`w_b^{(rc)}` are the `weight_vectors` and
-        :math:`\alpha_{rc}` the `identity_weights`.
+       The spin sum and the factor :math:`1/2` are handled by the spin qubit, not the
+       alias sampling. Here :math:`w_b^{(rc)}` are the `weight_vectors` and
+       :math:`\alpha_{rc}` the `identity_weights`.
 
     Parameters
     ----------
@@ -330,6 +364,33 @@ def inner_qrom_coefficients(dfthc_hamiltonian: DFTHCHamiltonian) -> NDArray[np.f
 
     coefficients = np.concatenate([-weights, identity], axis=2)
     return coefficients.reshape(num_factors, num_inner)
+
+
+def inner_qrom_signs(dfthc_hamiltonian: DFTHCHamiltonian) -> InnerSignData:
+    r"""
+    Compute the sign bits of the SF coefficients for the phase fixup of the inner QROM.
+
+    The sign bit of entry :math:`i` of factor :math:`x_o` is
+    :math:`s_i = [c_{x_o, i} < 0]`, with the coefficients of
+    ``inner_qrom_coefficients``. The bits are not loaded into qubits. They are
+    classical data for compiling the phase fixup of the measurement-based erasure
+    of the inner QROM, which applies :math:`(-1)^{s_i}` as described in step 3 of
+    ``encode_inner_data``.
+
+    Parameters
+    ----------
+    dfthc_hamiltonian : DFTHCHamiltonian
+        A QUICHE DFTHCHamiltonian object containing the weights whose signs are
+        needed.
+
+    Returns
+    -------
+    InnerSignData
+        Sign bits, indexed ``[outer_index][inner_index]``, with 1 for a negative
+        coefficient.
+    """
+    signs = inner_qrom_coefficients(dfthc_hamiltonian) < 0
+    return InnerSignData(tuple(tuple(row) for row in signs.astype(int).tolist()))
 
 
 def quantise_angles(
@@ -483,14 +544,24 @@ def encode_inner_data(
        ([Qualtran]_). The counts are whole numbers adding up to :math:`M`, so
        entry :math:`i` is sampled with probability exactly :math:`n_i / M`.
 
-    3. Add two sign bits, :math:`s_i = [c_i < 0]` and
-       :math:`d_i = s_i \oplus s_{\mathrm{alt}_i}`. With :math:`f = 1` if the alias
-       is swapped in and :math:`f = 0` otherwise, the phase
-       :math:`(-1)^{s_i \oplus f d_i}` is the sign of the sampled coefficient.
-       :math: `f` is the ``compare`` register of ``InnerPrepareDFTHC``.
+    3. Add one sign bit, :math:`d_i = s_i \oplus s_{\mathrm{alt}_i}`, where
+       :math:`s_i = [c_i < 0]`. It records whether entry :math:`i` and its alias
+       have opposite signs. The sign of the sampled coefficient is then
+
+       .. math::
+
+           (-1)^{s_i} \, (-1)^{f d_i},
+
+       with :math:`f = 1` if the alias is swapped in and :math:`f = 0` otherwise.
+       The two factors are applied in different places:
+
+       - :math:`(-1)^{f d_i}` by a CZ on :math:`f` and the loaded bit :math:`d_i`;
+       - :math:`(-1)^{s_i}` by the phase fixup of the measurement-based erasure
+         ([Low2025]_, appendix B, step 8), using the classical bits of
+         ``inner_qrom_signs``, at no extra cost.
 
     4. Pack each entry into one word, with :math:`\mathrm{alt}_i` in the most
-       significant bits: :math:`(\mathrm{alt}_i, \mathrm{keep}_i, s_i, d_i)`.
+       significant bits: :math:`(\mathrm{alt}_i, \mathrm{keep}_i, d_i)`.
 
     Parameters
     ----------
@@ -508,7 +579,7 @@ def encode_inner_data(
     -------
     InnerData
         Packed alias sampling words, indexed ``[outer_index][inner_index]``. Each
-        word is a Python ``int`` of :math:`\lceil \log(B + 1) \rceil + b_{k2} + 2`
+        word is a Python ``int`` of :math:`\lceil \log(B + 1) \rceil + b_{k2} + 1`
         bits.
 
     Raises
@@ -565,7 +636,7 @@ def encode_inner_data(
         swap_sign = sign ^ sign[alt]
 
         # Step 4.
-        row_words = (alt << (num_bits_keep + 2)) | (keep << 2) | (sign << 1) | swap_sign
+        row_words = (alt << (num_bits_keep + 1)) | (keep << 1) | swap_sign
         words.append(tuple(row_words.tolist()))
 
     return InnerData(tuple(words))
