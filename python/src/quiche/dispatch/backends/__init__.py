@@ -14,6 +14,6 @@
 
 """Backends for generating implementations of a QPESpec."""
 
-from .protocol import QPESpecBackend
+from .protocol import QPESpecBackend, UnsupportedAlgorithmError
 
-__all__ = ["QPESpecBackend"]
+__all__ = ["QPESpecBackend", "UnsupportedAlgorithmError"]

@@ -51,7 +51,7 @@ class QPESpec:
 
         Raises
         ------
-        NotImplementedError
+        UnsupportedAlgorithmError
             If the specified algorithm is unsupported by the Qualtran backend.
         """  # ruff: ignore[docstring-extraneous-exception]
         from quiche.dispatch.backends.qualtran import QualtranBackend  # ruff: ignore[import-outside-top-level]
@@ -71,7 +71,7 @@ class QPESpec:
 
         Raises
         ------
-        NotImplementedError
+        UnsupportedAlgorithmError
             If the specified algorithm is unsupported by the QuEST backend.
         """  # ruff: ignore[docstring-extraneous-exception]
         from quiche.dispatch.backends.quest import QuESTBackend  # ruff: ignore[import-outside-top-level]

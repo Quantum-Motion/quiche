@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
-    from quiche import QPESpec
+    from quiche.dispatch import QPESpec
 
 
 class QPESpecBackend[T](Protocol):
@@ -27,3 +27,16 @@ class QPESpecBackend[T](Protocol):
 
     def generate(self, spec: QPESpec) -> T:
         """Generate the backend implementation of the given QPESpec."""
+
+
+class UnsupportedAlgorithmError(NotImplementedError):
+    """Common error for an algorithm combination that isn't supported by a backend."""
+
+    def __init__(self, spec: QPESpec, backend: type[QPESpecBackend]) -> None:
+        self.estimation = type(spec.estimation)
+        self.simulation = type(spec.simulation)
+        self.backend = backend
+        super().__init__(
+            f"{self.estimation.__name__} with {self.simulation.__name__} "
+            f"not available in {self.backend.__name__}."
+        )
