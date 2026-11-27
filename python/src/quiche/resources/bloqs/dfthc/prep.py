@@ -38,8 +38,12 @@ from qualtran.resource_counting import (
 from qualtran.symbolics import bit_length
 
 from quiche.resources.bloqs.dfthc.encodings import (
+    InnerData,
+    InnerSignData,
     RotationData,
     TailData,
+    as_inner_data,
+    as_inner_sign_data,
     as_rotation_data,
     as_tail_data,
 )
@@ -402,6 +406,17 @@ class InnerPrepareDFTHC(Bloq):
     log_block_size_adjoint : int
         Log of the block size for QROAM adjoint, :math:`k_4` in [Low2025]_.
 
+    inner_data : tuple[tuple[int, ...], ...] | None, optional
+        Alias sampling words loaded by the inner QROAM for the SF terms, indexed
+        ``[outer_index][inner_index]``, as packed by ``encode_inner_data``. If None
+        (default), placeholder data is used, which is sufficient for Toffoli resource
+        estimation.
+    sign_data : tuple[tuple[int, ...], ...] | None, optional
+        Sign bits of the SF coefficients, indexed ``[outer_index][inner_index]``, as
+        computed by ``inner_qrom_signs``. They are not loaded, but applied by the
+        phase fixup of the inner QROAM's erasure in `InnerPrepareDFTHCAdjoint`. If
+        None (default), no signs are specified, which is sufficient for Toffoli
+        resource estimation.
     tail_data : tuple[tuple[int, int], ...] | None, optional
         ``(rotations, G_1)`` pairs loaded by the tail QROM for the :math:`D_1/Q_1`
         terms, indexed ``[outer_index - RC]``, with each rotation word
@@ -431,7 +446,9 @@ class InnerPrepareDFTHC(Bloq):
     keep : QAny, RIGHT
         Keep thresholds for coherent alias sampling.
     sign : QBit, RIGHT
-        Flag for the alias term's sign.
+        1 if the alias term and the sampled entry have opposite signs, :math:`d_i` of
+        ``encode_inner_data``. Flips the phase, via a CZ with `compare`, when the
+        alias is swapped in.
     compare : QBit, RIGHT
         Result of the alias sampling inequality test.
 
@@ -463,6 +480,12 @@ class InnerPrepareDFTHC(Bloq):
     log_block_size: int
     log_block_size_adjoint: int
 
+    inner_data: InnerData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_data
+    )
+    sign_data: InnerSignData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_sign_data
+    )
     tail_data: TailData | None = attrs.field(
         default=None, repr=False, converter=as_tail_data
     )
@@ -571,6 +594,8 @@ class InnerPrepareDFTHC(Bloq):
             num_bits_keep=self.num_bits_keep,
             log_block_size=self.log_block_size,
             log_block_size_adjoint=self.log_block_size_adjoint,
+            inner_data=self.inner_data,
+            sign_data=self.sign_data,
         )
 
     @property
@@ -605,6 +630,10 @@ class InnerPrepareDFTHC(Bloq):
             self.hadamards: 1,
             CZ(): 1,
         }
+
+    def adjoint(self) -> Bloq:
+        """Get the unpreparation that undoes this state preparation, without the CZ."""
+        return InnerPrepareDFTHCAdjoint(self)
 
     def build_composite_bloq(
         self,
@@ -665,6 +694,56 @@ class InnerPrepareDFTHC(Bloq):
         )
 
         return soqs
+
+
+@attrs.frozen
+class InnerPrepareDFTHCAdjoint(Bloq):
+    """
+    Adjoint of `InnerPrepareDFTHC`, without its sign CZ.
+
+    The sign of the sampled coefficient has two factors (step 3 of
+    ``encode_inner_data``). `InnerPrepareDFTHC` applies :math:`(-1)^{f d_i}` with a CZ
+    on `compare` and `sign`. This bloq applies :math:`(-1)^{s_i}`, in the phase fixup
+    of the erasure of the inner QROAM (``QROMAdjoint``). The CZ is not repeated here,
+    so that the sign is not cancelled out.
+
+    Parameters
+    ----------
+    prepare : InnerPrepareDFTHC
+        State preparation undone by this bloq.
+
+    Registers
+    ---------
+    `prepare`'s registers, with left- and right-registers swapped.
+
+    References
+    ----------
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    """
+
+    prepare: InnerPrepareDFTHC
+
+    @cached_property
+    def signature(self) -> Signature:
+        """Define input and/or output registers of the bloq."""
+        return self.prepare.signature.adjoint()
+
+    def adjoint(self) -> Bloq:
+        """Get the state preparation undone by this unpreparation."""
+        return self.prepare
+
+    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
+        """Build call graph for InnerPrepareDFTHCAdjoint."""
+        # The adjoints of the parts of `InnerPrepareDFTHC`, without its sign CZ.
+        return {
+            self.prepare.uniform_prep.adjoint(): 1,
+            self.prepare.qroam.adjoint(): 1,
+            self.prepare.tail_qrom.adjoint(): 1,
+            self.prepare.inequality_check.adjoint(): 1,
+            self.prepare.cswap.adjoint(): 1,
+            self.prepare.hadamards: 1,
+        }
 
 
 @attrs.frozen

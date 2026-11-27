@@ -42,12 +42,19 @@ from qualtran.symbolics import bit_length
 
 from quiche.core.electronic import DFTHCHamiltonian
 from quiche.resources.bloqs.dfthc.encodings import (
+    InnerData,
+    InnerSignData,
     RotationData,
     TailData,
+    as_inner_data,
+    as_inner_sign_data,
     as_rotation_data,
     as_tail_data,
+    encode_inner_data,
     encode_rotation_data,
     encode_tail_data,
+    inner_qrom_coefficients,
+    inner_qrom_signs,
     rotation_qrom_angles,
     tail_qrom_angles,
 )
@@ -91,6 +98,16 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
     log_block_size_inner_adjoint : int
         Log of the block size for inner QROAM adjoint, :math:`k_4` in [Low2025]_.
 
+    inner_data : tuple[tuple[int, ...], ...] | None, optional
+        Alias sampling words loaded by the inner QROAM for the SF terms, indexed
+        ``[outer_index][inner_index]``, as packed by ``encode_inner_data``. If None
+        (default), placeholder data is used, which is sufficient for Toffoli resource
+        estimation.
+    sign_data : tuple[tuple[int, ...], ...] | None, optional
+        Sign bits of the SF coefficients, indexed ``[outer_index][inner_index]``, as
+        computed by ``inner_qrom_signs``. They are not loaded, but applied by the
+        phase fixup of the inner QROAM's erasure. If None (default), no signs are
+        specified, which is sufficient for Toffoli resource estimation.
     rotation_data : tuple[tuple[int, ...], ...] | None, optional
         Packed Givens rotation words loaded by the rotation QROM, indexed
         ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
@@ -155,6 +172,12 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
     log_block_size_inner: int
     log_block_size_inner_adjoint: int
 
+    inner_data: InnerData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_data
+    )
+    sign_data: InnerSignData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_sign_data
+    )
     rotation_data: RotationData | None = attrs.field(
         default=None, repr=False, converter=as_rotation_data
     )
@@ -271,6 +294,8 @@ class DFTHCInnerBlockEncoding(BlockEncoding):
             num_bits_amp_rotations=self.num_bits_amp_rotations,
             log_block_size=self.log_block_size_inner,
             log_block_size_adjoint=self.log_block_size_inner_adjoint,
+            inner_data=self.inner_data,
+            sign_data=self.sign_data,
             tail_data=self.tail_data,
         )
 
@@ -375,6 +400,17 @@ class DFTHCBlockEncoding(BlockEncoding):
     num_controls : int, optional
         Number of control qubits (default = 0).
 
+    inner_data : tuple[tuple[int, ...], ...] | None, optional
+        Alias sampling words loaded by the inner QROAM for the SF terms, indexed
+        ``[outer_index][inner_index]``, as packed by ``encode_inner_data``. If None
+        (default), placeholder data is used, which is sufficient for Toffoli resource
+        estimation. :meth:`from_dfthc_hamiltonian` always sets it.
+    sign_data : tuple[tuple[int, ...], ...] | None, optional
+        Sign bits of the SF coefficients, indexed ``[outer_index][inner_index]``, as
+        computed by ``inner_qrom_signs``. They are not loaded, but applied by the
+        phase fixup of the inner QROAM's erasure. If None (default), no signs are
+        specified, which is sufficient for Toffoli resource estimation.
+        :meth:`from_dfthc_hamiltonian` always sets it.
     rotation_data : tuple[tuple[int, ...], ...] | None, optional
         Packed Givens rotation words loaded by the rotation QROM, indexed
         ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
@@ -452,6 +488,12 @@ class DFTHCBlockEncoding(BlockEncoding):
 
     num_controls: int = 0
 
+    inner_data: InnerData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_data
+    )
+    sign_data: InnerSignData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_sign_data
+    )
     rotation_data: RotationData | None = attrs.field(
         default=None, repr=False, converter=as_rotation_data
     )
@@ -518,7 +560,8 @@ class DFTHCBlockEncoding(BlockEncoding):
 
         rng : np.random.Generator, optional
             Random number generator for unbiased rounding ([Low2025]_, appendix D).
-            If None (default), angles are rounded to the nearest integer.
+            If None (default), angles and alias sampling bin counts are rounded to
+            the nearest integer.
 
         Returns
         -------
@@ -529,8 +572,9 @@ class DFTHCBlockEncoding(BlockEncoding):
         -----
         The Givens rotation words computed from `hamiltonian` are always loaded
         into the rotation QROM, and those of the one body eigenvectors with their
-        `G_1` bits into the tail QROM. To use placeholder data instead, call
-        the constructor directly.
+        `G_1` bits into the tail QROM. The alias sampling words of the SF terms are
+        loaded into the inner QROAM, and their sign bits are applied by its
+        erasure. To use placeholder data instead, call the constructor directly.
 
         References
         ----------
@@ -553,6 +597,10 @@ class DFTHCBlockEncoding(BlockEncoding):
             log_block_size_outer=log_block_size_outer,
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
+            inner_data=encode_inner_data(
+                inner_qrom_coefficients(hamiltonian), num_bits_keep_inner, rng=rng
+            ),
+            sign_data=inner_qrom_signs(hamiltonian),
             rotation_data=encode_rotation_data(
                 rotation_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
             ),
@@ -683,6 +731,8 @@ class DFTHCBlockEncoding(BlockEncoding):
             num_bits_amp_rotations=self.num_bits_amp_rotations,
             log_block_size_inner=self.log_block_size_inner,
             log_block_size_inner_adjoint=self.log_block_size_inner_adjoint,
+            inner_data=self.inner_data,
+            sign_data=self.sign_data,
             rotation_data=self.rotation_data,
             tail_data=self.tail_data,
         )
@@ -784,6 +834,17 @@ class DFTHCWalkOperator(Bloq):
     num_controls : int, optional
         Number of control qubits (default = 0).
 
+    inner_data : tuple[tuple[int, ...], ...] | None, optional
+        Alias sampling words loaded by the inner QROAM for the SF terms, indexed
+        ``[outer_index][inner_index]``, as packed by ``encode_inner_data``. If None
+        (default), placeholder data is used, which is sufficient for Toffoli resource
+        estimation. :meth:`from_dfthc_hamiltonian` always sets it.
+    sign_data : tuple[tuple[int, ...], ...] | None, optional
+        Sign bits of the SF coefficients, indexed ``[outer_index][inner_index]``, as
+        computed by ``inner_qrom_signs``. They are not loaded, but applied by the
+        phase fixup of the inner QROAM's erasure. If None (default), no signs are
+        specified, which is sufficient for Toffoli resource estimation.
+        :meth:`from_dfthc_hamiltonian` always sets it.
     rotation_data : tuple[tuple[int, ...], ...] | None, optional
         Packed Givens rotation words loaded by the rotation QROM, indexed
         ``[rank][inner_index]`` with each word :math:`(N - 1) b_{rot}` bits wide.
@@ -842,6 +903,12 @@ class DFTHCWalkOperator(Bloq):
 
     num_controls: int = 0
 
+    inner_data: InnerData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_data
+    )
+    sign_data: InnerSignData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_sign_data
+    )
     rotation_data: RotationData | None = attrs.field(
         default=None, repr=False, converter=as_rotation_data
     )
@@ -900,7 +967,8 @@ class DFTHCWalkOperator(Bloq):
 
         rng : np.random.Generator, optional
             Random number generator for unbiased rounding ([Low2025]_, appendix D).
-            If None (default), angles are rounded to the nearest integer.
+            If None (default), angles and alias sampling bin counts are rounded to
+            the nearest integer.
 
         Returns
         -------
@@ -911,8 +979,9 @@ class DFTHCWalkOperator(Bloq):
         -----
         The Givens rotation words computed from `hamiltonian` are always loaded
         into the rotation QROM, and those of the one body eigenvectors with their
-        `G_1` bits into the tail QROM. To use placeholder data instead, call
-        the constructor directly.
+        `G_1` bits into the tail QROM. The alias sampling words of the SF terms are
+        loaded into the inner QROAM, and their sign bits are applied by its
+        erasure. To use placeholder data instead, call the constructor directly.
 
         References
         ----------
@@ -935,6 +1004,10 @@ class DFTHCWalkOperator(Bloq):
             log_block_size_outer=log_block_size_outer,
             log_block_size_outer_adjoint=log_block_size_outer_adjoint,
             num_controls=num_controls,
+            inner_data=encode_inner_data(
+                inner_qrom_coefficients(hamiltonian), num_bits_keep_inner, rng=rng
+            ),
+            sign_data=inner_qrom_signs(hamiltonian),
             rotation_data=encode_rotation_data(
                 rotation_qrom_angles(hamiltonian), num_bits_phase_grad, rng=rng
             ),
@@ -975,6 +1048,8 @@ class DFTHCWalkOperator(Bloq):
             log_block_size_outer=self.log_block_size_outer,
             log_block_size_outer_adjoint=self.log_block_size_outer_adjoint,
             num_controls=0,
+            inner_data=self.inner_data,
+            sign_data=self.sign_data,
             rotation_data=self.rotation_data,
             tail_data=self.tail_data,
         )
