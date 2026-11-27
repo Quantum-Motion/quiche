@@ -90,8 +90,9 @@ MAPPING = Mapping.JordanWigner
 SEED = 1
 CHEMICAL_ACCURACY = 1.6e-3  # Hartree
 
-# QuEST can only be initialised once per process, so share one environment.
-QUEST_ENV = QuESTEnv()
+# Initialise QuEST environment with multithreading disabled
+# (counterproductive with statevectors this small)
+QUEST_ENV = QuESTEnv(0, 0, 0)
 
 # (QPE, simulation) combinations supported by the QuEST backend.
 METHODS = [

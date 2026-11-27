@@ -38,7 +38,7 @@ jobs:
         run: uv sync --locked --no-default-groups --group docs
 
       - name: Build sphinx documentation
-        run: uv run --locked --no-default-groups --group docs sphinx-build -W -b html docs docs/_build/html
+        run: uv run --locked --no-default-groups --group docs make -C docs html
 
       - name: Upload documentation pages
         uses: actions/upload-pages-artifact@v5

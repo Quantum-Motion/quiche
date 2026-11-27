@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: E501  # markdown table rows can't be wrapped
+
 # %% [markdown]
 # # 6. DFTHC resource estimation for FeMoco
 #
@@ -116,16 +118,11 @@
 # | --- | --- | --- | --- |
 # | `N` | $N$ | 54 | Number of spatial orbitals (108 system qubits) |
 # | `R`, `B`, `C` | $R, B, C$ | 10, 27, 27 | DFTHC rank, bases and copies |
-# | `B_ROT` | $b_{\mathrm{rot}}$ | 15 | Bits per Givens rotation angle, and size of the
-# phase gradient register |
-# | `B_K1`, `B_K2` | $b_{k1}, b_{k2}$ | 15, 15 | Bits of the keep probabilities in the
-# outer and inner alias sampling |
-# | `S` | $s$ | 7 | Bits of the amplitude amplification rotation in uniform state
-# preparation |
-# | `K1`, `K5` | $k_1, k_5$ | 2, 4 | $\log_2$ block size of the outer QROAM and of its
-# uncomputation |
-# | `K2`, `K4` | $k_2, k_4$ | 4, 2 | $\log_2$ block size of the inner QROAM and of its
-# uncomputation |
+# | `B_ROT` | $b_{\mathrm{rot}}$ | 15 | Bits per Givens rotation angle, and size of the phase gradient register |
+# | `B_K1`, `B_K2` | $b_{k1}, b_{k2}$ | 15, 15 | Bits of the keep probabilities in the outer and inner alias sampling |
+# | `S` | $s$ | 7 | Bits of the amplitude amplification rotation in uniform state preparation |
+# | `K1`, `K5` | $k_1, k_5$ | 2, 4 | $\log_2$ block size of the outer QROAM and of its uncomputation |
+# | `K2`, `K4` | $k_2, k_4$ | 4, 2 | $\log_2$ block size of the inner QROAM and of its uncomputation |
 #
 # The QROAM block sizes trade Toffolis against temporary qubits [[Low, Kliuchnikov and
 # Schaeffer (2018)](https://arxiv.org/abs/1812.00954), [Berry et al.
@@ -258,22 +255,12 @@ inner = block_encoding.inner
 #
 # | Bloq | Attribute | What it does |
 # | --- | --- | --- |
-# | `OuterPrepareDFTHC` | `block_encoding.outer_prep` | Coherent alias sampling over the
-# $N + RC$ outer terms $x_o$, with a QROAM that outputs the alias sampling data (alt,
-# keep) for the term normalisations $\lambda_{x_o}$ |
-# | `InnerPrepareDFTHC` | `inner.inner_prep` | Coherent alias sampling over the $B + 1$
-# inner terms $b$ for the selected $x_o$, with a QROAM over $RC(B+1)$ entries that
-# outputs the alias sampling data (alt, keep, sign) for the weights $w^{(rc)}_b$ |
-# | `RotationPrepareDFTHC` | `inner.rotation_prep` | QROM that outputs the
-# $(N-1)\,b_{\mathrm{rot}}$ bits of Givens angles that rotate the basis to $\vec
-# u^{(r)}_b$ |
-# | `SelectDFTHC` | `inner.select` | Applies the Givens rotation ladder with phase
-# gradient additions, the spin-controlled swaps and the Majorana operator to the system
-# register |
-# | Reflection | `block_encoding.t2_reflection` | Reflection on the inner ancillas
-# between the two inner block encodings, giving the Chebyshev polynomial $T_2$ |
-# | Reflection | `walk.reflection` | Reflection on all the block-encoding ancillas,
-# which turns the block encoding into a qubitisation walk operator |
+# | `OuterPrepareDFTHC` | `block_encoding.outer_prep` | Coherent alias sampling over the $N + RC$ outer terms $x_o$, with a QROAM that outputs the alias sampling data (alt, keep) for the term normalisations $\lambda_{x_o}$ |
+# | `InnerPrepareDFTHC` | `inner.inner_prep` | Coherent alias sampling over the $B + 1$ inner terms $b$ for the selected $x_o$, with a QROAM over $RC(B+1)$ entries that outputs the alias sampling data (alt, keep, sign) for the weights $w^{(rc)}_b$ |
+# | `RotationPrepareDFTHC` | `inner.rotation_prep` | QROM that outputs the $(N-1)\,b_{\mathrm{rot}}$ bits of Givens angles that rotate the basis to $\vec u^{(r)}_b$ |
+# | `SelectDFTHC` | `inner.select` | Applies the Givens rotation ladder with phase gradient additions, the spin-controlled swaps and the Majorana operator to the system register |
+# | Reflection | `block_encoding.t2_reflection` | Reflection on the inner ancillas between the two inner block encodings, giving the Chebyshev polynomial $T_2$ |
+# | Reflection | `walk.reflection` | Reflection on all the block-encoding ancillas, which turns the block encoding into a qubitisation walk operator |
 #
 # So the inner prep, the rotation prep and the select are each called **twice** per walk
 # step, and everything else once.
@@ -498,7 +485,6 @@ def scan_block_size(param: str, values: range) -> list[dict[str, Any]]:
                 "param": param,
                 "k": k,
                 "toffolis": toffoli_count(bloq),
-                "qubits": get_cost_value(bloq, QubitCount()),
             }
         )
     return rows
@@ -512,12 +498,7 @@ df_scan = pd.DataFrame(
     ]
 )
 
-# One row per block size, with "Toffolis (qubits)" for each parameter.
-df_scan["cell"] = [
-    f"{t:,} ({q:,})"
-    for t, q in zip(df_scan["toffolis"], df_scan["qubits"], strict=True)
-]
-df_scan.pivot_table(index="k", columns="param", values="cell", aggfunc="first")[
+df_scan.pivot_table(index="k", columns="param", values="toffolis")[
     list(BLOCK_SIZES)
 ].rename(
     columns={

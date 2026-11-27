@@ -21,6 +21,11 @@ build
 
 # Docs
 docs/_build
+docs/_ipython/profile_default/*
+!docs/_ipython/profile_default/ipython_kernel_config.py
+!docs/_ipython/profile_default/startup/
+docs/_ipython/profile_default/startup/*
+!docs/_ipython/profile_default/startup/00-fonts.py
 
 # Other
 .DS_Store
