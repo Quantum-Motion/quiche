@@ -38,8 +38,12 @@ from qualtran.resource_counting import (
 from qualtran.symbolics import bit_length
 
 from quiche.resources.bloqs.dfthc.encodings import (
+    InnerData,
+    InnerSignData,
     RotationData,
     TailData,
+    as_inner_data,
+    as_inner_sign_data,
     as_rotation_data,
     as_tail_data,
 )
@@ -402,6 +406,17 @@ class InnerPrepareDFTHC(Bloq):
     log_block_size_adjoint : int
         Log of the block size for QROAM adjoint, :math:`k_4` in [Low2025]_.
 
+    inner_data : tuple[tuple[int, ...], ...] | None, optional
+        Alias sampling words loaded by the inner QROAM for the SF terms, indexed
+        ``[outer_index][inner_index]``, as packed by ``encode_inner_data``. If None
+        (default), placeholder data is used, which is sufficient for Toffoli resource
+        estimation.
+    sign_data : tuple[tuple[int, ...], ...] | None, optional
+        Sign bits of the SF coefficients, indexed ``[outer_index][inner_index]``, as
+        computed by ``inner_qrom_signs``. They are not loaded, but applied by the
+        phase fixup of the inner QROAM's erasure in `InnerPrepareDFTHCAdjoint`. If
+        None (default), no signs are specified, which is sufficient for Toffoli
+        resource estimation.
     tail_data : tuple[tuple[int, int], ...] | None, optional
         ``(rotations, G_1)`` pairs loaded by the tail QROM for the :math:`D_1/Q_1`
         terms, indexed ``[outer_index - RC]``, with each rotation word
@@ -465,6 +480,12 @@ class InnerPrepareDFTHC(Bloq):
     log_block_size: int
     log_block_size_adjoint: int
 
+    inner_data: InnerData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_data
+    )
+    sign_data: InnerSignData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_sign_data
+    )
     tail_data: TailData | None = attrs.field(
         default=None, repr=False, converter=as_tail_data
     )
@@ -573,6 +594,8 @@ class InnerPrepareDFTHC(Bloq):
             num_bits_keep=self.num_bits_keep,
             log_block_size=self.log_block_size,
             log_block_size_adjoint=self.log_block_size_adjoint,
+            inner_data=self.inner_data,
+            sign_data=self.sign_data,
         )
 
     @property
