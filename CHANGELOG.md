@@ -27,6 +27,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Added `identity_weights` and `bliss_constant` fields to `DFTHCHamiltonian`, read by `quiche.io.dfthc_db.read`, and `sos_one_body` to build the one body matrix of its sum-of-squares representation. Also tightened validation of `num_electrons` to greater than zero.
 - Added `tail_qrom_angles` and `encode_tail_data` to `bloqs.dfthc.encodings` to encode the one body eigenvectors and their `G_1` bits as tail QROM data.
 - Added a `tail_data` field to the DFTHC bloqs to load this data into `InnerQROMTail`, set by `from_dfthc_hamiltonian`.
+- Added `QuregLayout` class describing qubit registers used by a QuEST routine.
+- Added `QuESTRoutine` class for specifying and executing QuEST circuits.
 
 ### Changed
 - Moved the project version to a `VERSION` file at the repository root, read by both `pyproject.toml` and `CMakeLists.txt`.
@@ -59,6 +61,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 
 ### Removed
 - Removed `Trotterisation.get_coeffs_indices()` (use `trotter_coeffs` and `trotter_indices` instead).
+- Removed `SimulationRoutine` (use `QuESTRoutine` instead for building and executing QuEST circuits).
+- Removed the `quiche.simulation.estimation` and `quiche.simulation.state_prep` modules.
 
 ### Fixed
 - Fixed `QDRIFT` and `Trotterisation` call graphs undercounting rotations for repeated `PauliWord`s.

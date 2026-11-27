@@ -9,12 +9,7 @@ Routines
 
 .. automodule:: quiche.simulation.routine
 
-Phase estimation
+Register layout
 ----------------
 
-.. automodule:: quiche.simulation.estimation
-
-State preparation
------------------
-
-.. automodule:: quiche.simulation.state_prep
+.. automodule:: quiche.simulation.layout
