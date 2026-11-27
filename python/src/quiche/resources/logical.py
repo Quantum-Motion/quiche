@@ -14,9 +14,10 @@
 
 """Resource calculations for quantum circuits and routines."""
 
-from math import log2
+from math import ceil, log2
 from typing import Literal
 
+import attrs
 from qualtran import Bloq
 from qualtran.resource_counting import (
     GateCounts,
@@ -26,18 +27,16 @@ from qualtran.resource_counting import (
 )
 from qualtran.resource_counting.generalizers import ignore_split_join
 
-from quiche.core.errors import Errors
-
 
 def logical_gate_resources(circuit: Bloq) -> GateCounts:
-    """Calculate estimated logical gate cost of a bloq provided an error budget."""
+    """Calculate estimated logical gate cost of a bloq."""
     # Ignores soquet joining and splitting operations needed within Qualtran to join
     # bloqs with different signatures.
     return get_cost_value(circuit, QECGatesCost(), generalizer=[ignore_split_join])
 
 
 def logical_qubit_resources(circuit: Bloq) -> int:
-    """Calculate estimated logical gate cost of a bloq provided an error budget."""
+    """Calculate estimated logical qubit cost of a bloq."""
     # Ignores soquet joining and splitting operations needed within Qualtran to join
     # bloqs with different signatures.
     return get_cost_value(circuit, QubitCount(), generalizer=[ignore_split_join])
@@ -49,30 +48,49 @@ def logical_qubit_resources(circuit: Bloq) -> int:
 # need to be accounted for during postprocessing like rotations.
 def logical_rotations_to_tgates(
     gates: GateCounts,
-    errors: Errors,
+    total_error: float,
     rotation_synthesis: Literal["direct"],
 ) -> GateCounts:
-    """Transform rotation gates to T gates according to the error budget."""
-    gc_dict = gates.asdict()
+    """
+    Update gate counts converting rotation gates to T gates.
+
+    Parameters
+    ----------
+    gates : GateCounts
+        Gate count dictionary possibly including rotations to convert.
+    total_error : float
+        Maximum allowable total rotation synthesis error. Subadditivity of error
+        contributions assumed, (naively) splitting errors equally across all rotations.
+        Must be positive.
+    rotation_synthesis : Literal["direct"]
+        Rotation synthesis algorithm to use for costing.
+
+    Returns
+    -------
+    GateCounts
+        Gate count dictionary with any rotations converted to T gates.
+
+    Raises
+    ------
+    ValueError
+        If ``total_error`` isn't positive.
+        If ``rotation_synthesis`` isn't one of the accepted rotation synthesis
+        algorithms.
+    """
+    if total_error <= 0:
+        error_msg = "Total rotation synthesis error must be positive."
+        raise ValueError(error_msg)
+
     num_rotations = int(gates.rotation)
     if num_rotations == 0:
-        # nothing to be done, return original gates
         return gates
 
-    # Depending on the rotation synthesis method, convert the rotations to the number
-    # of T gates.
     if rotation_synthesis == "direct":
-        # Calculate the error allowed per rotation.
-        eps_per_rotation = errors.rotations / num_rotations
-        ts_per_rotation = int(3 * log2(1 / eps_per_rotation))
-        total_ts = num_rotations * ts_per_rotation
+        error_per_rotation = total_error / num_rotations
+        t_per_rotation = max(0, ceil(3 * log2(1 / error_per_rotation)))
+        total_t = num_rotations * t_per_rotation
     else:
         error_msg = f"Rotation synthesis method {rotation_synthesis} not recognised."
         raise ValueError(error_msg)
 
-    # Now that the rotations have been converted, set number of rotations to zero and
-    # add the calculated number of T gates to the total.
-    gc_dict["rotation"] = 0
-    gc_dict["t"] += total_ts
-
-    return GateCounts(**gc_dict)
+    return attrs.evolve(gates, rotation=0, t=gates.t + total_t)
