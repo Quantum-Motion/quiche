@@ -20,30 +20,11 @@ from functools import partial
 from typing import TYPE_CHECKING, assert_never
 
 from qualtran import Bloq, BloqBuilder, CompositeBloq
-from qualtran.bloqs.qubitization.qubitization_walk_operator import (
-    QubitizationWalkOperator,
-)
+from qualtran.bloqs.qubitization import QubitizationWalkOperator
 
-from quiche.chemistry import (
-    HartreeFockState,
-    get_qubit_state,
-)
-from quiche.core import (
-    PhaseEstimation,
-    Simulation,
-)
-from quiche.resources.bloqs import (
-    QDRIFT,
-    BitstringStatePrep,
-    IdentityStatePrep,
-    LCUBlockEncodingWrapper,
-    Trotterisation,
-)
-from quiche.resources.bloqs.estimation import (
-    QubitisationLadder,
-    TextbookQPE,
-    TrotterLadder,
-)
+from quiche import algorithms
+from quiche.dispatch.backends import UnsupportedAlgorithmError
+from quiche.resources import bloqs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -51,94 +32,101 @@ if TYPE_CHECKING:
     from quiche import QPESpec
 
 
-def _get_stateprep_bloq(spec: QPESpec) -> Bloq:
+def get_stateprep_bloq(spec: QPESpec) -> Bloq:
     """Pattern matching and construction for state preparation Bloq."""
-    match spec.state_prep:
-        case None:
-            state_prep_bloq = IdentityStatePrep(spec.num_data)
-        case HartreeFockState():
-            mapping = spec.hamiltonian.mapping
-            occupation = spec.state_prep.occupation
-            bitstring = get_qubit_state(occupation, mapping)
-            state_prep_bloq = BitstringStatePrep(tuple(bitstring))
+    match spec.stateprep:
+        case algorithms.IdentityStateprep(num_qubits=num_qubits):
+            return bloqs.IdentityStatePrep(num_qubits)
+        case algorithms.BitstringStateprep(bitstring=bitstring):
+            return bloqs.BitstringStatePrep(bitstring)
         case _:
-            assert_never(spec.state_prep)
-
-    return state_prep_bloq
+            assert_never(spec.stateprep)
 
 
-def _get_simulation_bloq_factory(spec: QPESpec) -> Callable[[int], Bloq]:
+def get_simulation_bloq_factory(spec: QPESpec) -> Callable[[int], Bloq]:
     """Pattern matching and construction for simulation factories."""
     match spec.simulation:
-        case Simulation.QDRIFT:
-            bloq = QDRIFT(
-                sum=spec.hamiltonian.paulis,
-                time=spec.time,
-                num_samples=spec.reps,
-                seed=spec.seed,
+        case algorithms.QDRIFT(
+            hamiltonian=hamiltonian,
+            time=time,
+            num_samples=num_samples,
+            seed=seed,
+        ):
+            bloq = bloqs.QDRIFT(
+                sum=hamiltonian,
+                time=time,
+                num_samples=num_samples,
+                seed=seed,
             )
 
-            simulation_bloq_factory = partial(
-                TrotterLadder,
+            factory = partial(
+                bloqs.TrotterLadder,
                 simulation=bloq,
-                num_data=spec.num_data,
-                num_qpe_ancillas=spec.num_qpe_ancillas,
+                num_data=spec.simulation.hamiltonian.num_qubits,
+                num_qpe_ancillas=spec.estimation.num_ancillas,
             )
 
-        case Simulation.Qubitised:
-            blockencoding = LCUBlockEncodingWrapper.from_hamiltonian(
-                spec.hamiltonian.paulis, spec.num_phase_ancillas
-            )
-            walk_op = QubitizationWalkOperator(blockencoding)
+        case algorithms.Qubitisation(hamiltonian=hamiltonian, prep=prep):
+            match prep:
+                case algorithms.QROMRotationTree(angle_bits=angle_bits):
+                    blockencoding = bloqs.LCUBlockEncodingWrapper.from_hamiltonian(
+                        hamiltonian,
+                        angle_bits,
+                    )
+                case algorithms.AliasSampling() | algorithms.ExactRotationTree():
+                    raise UnsupportedAlgorithmError(spec, QualtranBackend)
+                case _:
+                    assert_never(prep)
 
-            simulation_bloq_factory = partial(
-                QubitisationLadder,
-                walk=walk_op,
-                num_data=spec.num_data,
-                num_qpe_ancillas=spec.num_qpe_ancillas,
-                num_selection_ancillas=spec.num_simulation_ancillas,
-            )
-
-        case Simulation.Trotter:
-            bloq = Trotterisation(
-                sum=spec.hamiltonian.paulis,
-                time=spec.time,
-                num_steps=spec.reps,
-                order=spec.order,
+            factory = partial(
+                bloqs.QubitisationLadder,
+                walk=QubitizationWalkOperator(blockencoding),
+                num_data=hamiltonian.num_qubits,
+                num_qpe_ancillas=spec.estimation.num_ancillas,
+                num_selection_ancillas=spec.simulation.num_ancillas,
             )
 
-            simulation_bloq_factory = partial(
-                TrotterLadder,
+        case algorithms.Trotter(
+            hamiltonian=hamiltonian,
+            time=time,
+            order=order,
+            num_steps=num_steps,
+        ):
+            bloq = bloqs.Trotterisation(
+                sum=hamiltonian,
+                time=time,
+                order=order,
+                num_steps=num_steps,
+            )
+
+            factory = partial(
+                bloqs.TrotterLadder,
                 simulation=bloq,
-                num_data=spec.num_data,
-                num_qpe_ancillas=spec.num_qpe_ancillas,
+                num_data=spec.simulation.hamiltonian.num_qubits,
+                num_qpe_ancillas=spec.estimation.num_ancillas,
             )
 
         case _:
             assert_never(spec.simulation)
 
-    return simulation_bloq_factory
+    return factory
 
 
-def _get_estimation_bloq(spec: QPESpec) -> Bloq:
+def get_estimation_bloq(spec: QPESpec) -> Bloq:
     """Pattern matching and construction for QPE Bloq."""
-    match spec.algorithm:
-        case PhaseEstimation.Textbook:
-            estimation_bloq = TextbookQPE(
-                simulation_factory=_get_simulation_bloq_factory(spec),
-                num_data=spec.num_data,
-                num_qpe_ancillas=spec.num_qpe_ancillas,
-                num_other_ancillas=spec.num_simulation_ancillas,
+    match spec.estimation:
+        case algorithms.TextbookQPE():
+            return bloqs.TextbookQPE(
+                simulation_factory=get_simulation_bloq_factory(spec),
+                num_data=spec.simulation.hamiltonian.num_qubits,
+                num_qpe_ancillas=spec.estimation.num_ancillas,
+                num_other_ancillas=spec.simulation.num_ancillas,
             )
 
-        case PhaseEstimation.Iterative | PhaseEstimation.Kitaev | PhaseEstimation.Naive:
-            error_msg = f"{spec.algorithm.name} QPE not available in Qualtran backend."
-            raise NotImplementedError(error_msg)
+        # TODO(Vasco): wire in the other single ancilla QPE methods
 
         case _:
-            assert_never(spec.algorithm)
-
-    return estimation_bloq
+            raise UnsupportedAlgorithmError(spec, QualtranBackend)
 
 
 class QualtranBackend:
@@ -147,7 +135,7 @@ class QualtranBackend:
     def generate(self, spec: QPESpec) -> CompositeBloq:
         """Build the Qualtran CompositeBloq implementing the given QPESpec."""
         bb = BloqBuilder()
-        data = bb.add(_get_stateprep_bloq(spec))
-        data = bb.add(_get_estimation_bloq(spec), data=data)
+        data = bb.add(get_stateprep_bloq(spec))
+        data = bb.add(get_estimation_bloq(spec), data=data)
         bb.free(data)
         return bb.finalize()
