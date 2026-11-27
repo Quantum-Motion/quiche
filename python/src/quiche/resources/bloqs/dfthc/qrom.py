@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from functools import cached_property
 from math import ceil
 from typing import TYPE_CHECKING, override
@@ -41,8 +42,12 @@ from qualtran.bloqs.swap_network import SwapWithZero
 from qualtran.symbolics import bit_length
 
 from quiche.resources.bloqs.dfthc.encodings import (
+    InnerData,
+    InnerSignData,
     RotationData,
     TailData,
+    as_inner_data,
+    as_inner_sign_data,
     as_rotation_data,
     as_tail_data,
 )
@@ -71,6 +76,10 @@ class QROMAdjoint(Bloq):
     Measurement-based uncomputation of QROM loads.
 
     Supports non-rectangular as well as non-power-of-2 data shapes.
+
+    For ``InnerQROAM``, the phase fixup also applies the sign :math:`(-1)^{s_i}` of
+    the SF coefficients, from ``qrom.qrom.sign_data``, after the alias swap is undone.
+    This only changes which phases are flipped, so the cost is the same.
 
     Parameters
     ----------
@@ -179,6 +188,17 @@ class InnerQROM(UnaryIterationGate):
     num_controls : int, optional
         Number of control qubits (default = 0).
 
+    inner_data : tuple[tuple[int, ...], ...] | None, optional
+        Alias sampling words loaded for the SF terms, indexed
+        ``[outer_index][inner_index]``, as packed by ``encode_inner_data``. If None
+        (default), placeholder data is used, which is sufficient for Toffoli resource
+        estimation.
+    sign_data : tuple[tuple[int, ...], ...] | None, optional
+        Sign bits of the SF coefficients, indexed ``[outer_index][inner_index]``, as
+        computed by ``inner_qrom_signs``. They are not loaded, but applied by the
+        phase fixup of the erasure (``QROMAdjoint``). If None (default), no signs
+        are specified, which is sufficient for Toffoli resource estimation.
+
     Registers
     ---------
     outer_index : BQUInt
@@ -215,6 +235,43 @@ class InnerQROM(UnaryIterationGate):
     log_block_size: int
 
     num_controls: int = 0
+
+    inner_data: InnerData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_data
+    )
+    sign_data: InnerSignData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_sign_data
+    )
+
+    def __attrs_post_init__(self) -> None:
+        """Validate the shape and bit widths of the alias sampling and sign data."""
+        for name, data in (
+            ("inner_data", self.inner_data),
+            ("sign_data", self.sign_data),
+        ):
+            if data is not None and (
+                len(data) != self.num_rc
+                or any(len(row) != self.num_inner for row in data)
+            ):
+                err_msg = (
+                    f"`{name}` must have shape ({self.num_rc}, {self.num_inner}) "
+                    "indexed [outer_index][inner_index]."
+                )
+                raise ValueError(err_msg)
+
+        if self.inner_data is not None and any(
+            not 0 <= word < 2**self.alias_word_size
+            for row in self.inner_data
+            for word in row
+        ):
+            err_msg = f"`inner_data` words must fit in {self.alias_word_size} bits."
+            raise ValueError(err_msg)
+
+        if self.sign_data is not None and any(
+            bit not in (0, 1) for row in self.sign_data for bit in row
+        ):
+            err_msg = "`sign_data` bits must be 0 or 1."
+            raise ValueError(err_msg)
 
     @property
     def num_rc(self) -> int:
@@ -263,7 +320,12 @@ class InnerQROM(UnaryIterationGate):
 
     @property
     def alias_word_size(self) -> int:
-        """Number of bits in one alias sampling word, :math:`b_2`."""
+        r"""
+        Number of bits in one alias sampling word.
+
+        This is :math:`b_2 = \lceil \log(B + 1) \rceil + b_{k2}` (eq. (B32) of
+        [Low2025]_) plus the sign bit :math:`d_i` of ``encode_inner_data``.
+        """
         return self.num_bits_inner + self.num_bits_keep + 1
 
     @cached_property
@@ -302,18 +364,27 @@ class InnerQROM(UnaryIterationGate):
         G_1: QidArray,
         rank: QidArray,
     ) -> Iterator[OP_TREE]:  # ty: ignore[invalid-method-override]
-        # Placeholder data
-        data = 0
-
         # The D_1/Q_1 tail (x_o >= RC) belongs to `InnerQROMTail`
         if outer_index >= self.num_rc:
             return
 
-        yield XorK(QBit(), data).on(*G_0).controlled_by(control)
-        yield XorK(QBit(), data).on(*G_1).controlled_by(control)
-        yield XorK(QAny(self.num_bits_rank), data).on(*rank).controlled_by(control)
+        # G = (0, 0) marks an SF term, so G_0 and G_1 are left as they are. The rank
+        # follows from the outer index x_o = r * C + c, for every index here.
+        yield (
+            XorK(QAny(self.num_bits_rank), outer_index // self.num_copies)
+            .on(*rank)
+            .controlled_by(control)
+        )
 
+        # Slot i of the block holds entry b = inner_index_high * 2**k_2 + i, and
+        # slots past b = B in the last block are padding
         for i in range(self.block_size):
+            inner_index = inner_index_high * self.block_size + i
+            data = (
+                0
+                if self.inner_data is None or inner_index >= self.num_inner
+                else self.inner_data[outer_index][inner_index]
+            )
             yield (
                 XorK(QAny(self.alias_word_size), data)
                 .on(*alias_words[i])
@@ -333,9 +404,28 @@ class InnerQROM(UnaryIterationGate):
 
         return selection_index_prefix[0] >= self.num_rc
 
-    def nth_operation_callgraph(self, **_: int) -> set[BloqCountT]:
+    def nth_operation_callgraph(
+        self, outer_index: int, inner_index_high: int
+    ) -> set[BloqCountT]:
         """Get the data loading cost for each index."""
-        return {(CNOT(), 0)}
+        if outer_index >= self.num_rc:
+            return set()
+
+        # Same data as `nth_operation`, so counts match the decomposition.
+        # Counter to prevent merging of identical bloqs.
+        counts = Counter[Bloq]()
+        counts[
+            XorK(QAny(self.num_bits_rank), outer_index // self.num_copies).controlled()
+        ] += 1
+        for i in range(self.block_size):
+            inner_index = inner_index_high * self.block_size + i
+            data = (
+                0
+                if self.inner_data is None or inner_index >= self.num_inner
+                else self.inner_data[outer_index][inner_index]
+            )
+            counts[XorK(QAny(self.alias_word_size), data).controlled()] += 1
+        return set(counts.items())
 
 
 @attrs.frozen
@@ -556,6 +646,17 @@ class InnerQROAM(Bloq):
     num_controls : int, optional
         Number of control qubits (default = 0).
 
+    inner_data : tuple[tuple[int, ...], ...] | None, optional
+        Alias sampling words loaded for the SF terms, indexed
+        ``[outer_index][inner_index]``, as packed by ``encode_inner_data``. If None
+        (default), placeholder data is used, which is sufficient for Toffoli resource
+        estimation.
+    sign_data : tuple[tuple[int, ...], ...] | None, optional
+        Sign bits of the SF coefficients, indexed ``[outer_index][inner_index]``, as
+        computed by ``inner_qrom_signs``. They are not loaded, but applied by the
+        phase fixup of the erasure (``QROMAdjoint``). If None (default), no signs
+        are specified, which is sufficient for Toffoli resource estimation.
+
     Registers
     ---------
     outer_index : QAny
@@ -568,7 +669,8 @@ class InnerQROAM(Bloq):
     keep : QAny, RIGHT
         Keep thresholds for coherent alias sampling.
     sign : QBit, RIGHT
-        Flag for the alias term's sign.
+        1 if the alias term and the sampled entry have opposite signs, :math:`d_i` of
+        ``encode_inner_data``.
 
     G_0 : QBit, RIGHT
         Qubit selecting between SF and :math:`D_1/Q_1`.
@@ -597,6 +699,13 @@ class InnerQROAM(Bloq):
     log_block_size_adjoint: int
 
     num_controls: int = 0
+
+    inner_data: InnerData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_data
+    )
+    sign_data: InnerSignData | None = attrs.field(
+        default=None, repr=False, converter=as_inner_sign_data
+    )
 
     def __attrs_post_init__(self) -> None:
         """Validate inputs."""
@@ -701,6 +810,8 @@ class InnerQROAM(Bloq):
             num_bits_keep=self.num_bits_keep,
             log_block_size=self.log_block_size,
             num_controls=self.num_controls,
+            inner_data=self.inner_data,
+            sign_data=self.sign_data,
         )
 
     @cached_property

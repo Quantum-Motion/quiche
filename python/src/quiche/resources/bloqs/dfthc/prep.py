@@ -431,7 +431,9 @@ class InnerPrepareDFTHC(Bloq):
     keep : QAny, RIGHT
         Keep thresholds for coherent alias sampling.
     sign : QBit, RIGHT
-        Flag for the alias term's sign.
+        1 if the alias term and the sampled entry have opposite signs, :math:`d_i` of
+        ``encode_inner_data``. Flips the phase, via a CZ with `compare`, when the
+        alias is swapped in.
     compare : QBit, RIGHT
         Result of the alias sampling inequality test.
 
