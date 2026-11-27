@@ -56,6 +56,9 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Replaced `__del__` with `destroy()` on `PauliStrSum`, `Qureg`, `KrausMap`, `SuperOp`, `CompMatr`, `DiagMatr` and `FullStateDiagMatr`.
 - Renamed `QPESpec.get_composite_bloq()` to `QPESpec.to_qualtran()`.
 - Updated `QuESTEnv` to destroy all live QuEST resources when its context exits.
+- Changed `NaiveQPE`, `KitaevQPE`, `IterativeQPE` and `TextbookQPE` bloqs to measure and return the results of their estimation ancillas rather than freeing them.
+- Updated `TextbookQPE` to return any additional ancillas in an `other_ancillas` output register instead of freeing them.
+- Updated `QPESpec.to_qualtran()` to return the system qubits, measured phase bits and any other ancillas as output registers instead of freeing them.
 
 ### Deprecated
 
