@@ -465,12 +465,6 @@ void init_quest_bindings(nb::module_ &m) {
         .def("applyTrotterizedImaginaryTimeEvolution", checked(&applyTrotterizedImaginaryTimeEvolution))
         // .def("applyTrotterizedNoisyTimeEvolution", checked(&applyTrotterizedNoisyTimeEvolution))
 
-        // Syncing
-        .def("syncQuregToGpu", checked(&syncQuregToGpu))
-        .def("syncQuregFromGpu", checked(&syncQuregFromGpu))
-        .def("syncSubQuregToGpu", checked(&syncSubQuregToGpu))
-        .def("syncSubQuregFromGpu", checked(&syncSubQuregFromGpu))
-
         // Reporters
         .def("reportQuregParams", checked(&reportQuregParams))
         .def("report", checked(&reportQureg));
@@ -481,7 +475,6 @@ void init_quest_bindings(nb::module_ &m) {
         .def(nb::new_(checked(&createInlineKrausMap)))
         .def("destroy", &CheckedResource<KrausMap>::destroy)
         .def("set", checked(nb::overload_cast<KrausMap, vector<vector<vector<qcomp>>>>(&setKrausMap)))
-        .def("sync", checked(&syncKrausMap))
         .def("report", checked(&reportKrausMap));
 
     // SuperOp
@@ -490,7 +483,6 @@ void init_quest_bindings(nb::module_ &m) {
         .def(nb::new_(checked(&createInlineSuperOp)))
         .def("destroy", &CheckedResource<SuperOp>::destroy)
         .def("set", checked(nb::overload_cast<SuperOp, vector<vector<qcomp>>>(&setSuperOp)))
-        .def("sync", checked(&syncSuperOp))
         .def("report", checked(&reportSuperOp));
 
     // CompMatr1
@@ -508,7 +500,6 @@ void init_quest_bindings(nb::module_ &m) {
         .def(nb::new_(checked(&createCompMatr)))
         .def("destroy", &CheckedResource<CompMatr>::destroy)
         .def("set", checked(nb::overload_cast<CompMatr, vector<vector<qcomp>>>(&setCompMatr)))
-        .def("sync", checked(&syncCompMatr))
         .def("report", checked(&reportCompMatr));
 
     // DiagMatr1
@@ -526,7 +517,6 @@ void init_quest_bindings(nb::module_ &m) {
         .def(nb::new_(checked(&createDiagMatr)))
         .def("destroy", &CheckedResource<DiagMatr>::destroy)
         .def("set", checked(nb::overload_cast<DiagMatr, vector<qcomp>>(&setDiagMatr)))
-        .def("sync", checked(&syncDiagMatr))
         .def("report", checked(&reportDiagMatr));
 
     // FullStateDiagMatr
@@ -534,6 +524,5 @@ void init_quest_bindings(nb::module_ &m) {
         .def(nb::new_(checked(&createFullStateDiagMatr)))
         .def("destroy", &CheckedResource<FullStateDiagMatr>::destroy)
         .def("set", checked(nb::overload_cast<FullStateDiagMatr, qindex, vector<qcomp>>(&setFullStateDiagMatr)))
-        .def("sync", checked(&syncFullStateDiagMatr))
         .def("report", checked(&reportFullStateDiagMatr));
 }
