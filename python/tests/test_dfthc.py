@@ -47,7 +47,7 @@ from quiche.resources.bloqs.dfthc.encodings import (
     rotation_qrom_angles,
     tail_qrom_angles,
 )
-from quiche.resources.bloqs.dfthc.qrom import InnerQROMTail, RotationQROM
+from quiche.resources.bloqs.dfthc.qrom import InnerQROM, InnerQROMTail, RotationQROM
 from quiche.resources.bloqs.dfthc.select import GivensLadder
 
 # FeMoco-54 parameters, from G. H. Low et al., "Fast Quantum Simulation of Electronic
@@ -59,6 +59,7 @@ K_1 = K_4 = 2
 K_2 = K_5 = 4
 S = 7
 N_SMALL, R_SMALL, B_SMALL, C_SMALL, B_ROT_SMALL = 4, 3, 2, 2, 6
+B_K2_SMALL, K_2_SMALL = 3, 1
 
 RESOLUTION = 4 * np.pi / 2**N_SMALL  # The angle of the least significant bit.
 
@@ -266,6 +267,98 @@ class TestRotationQROM:
         # zeros with a controlled XorK rather than the `(CNOT(), 0)` placeholder.
         assert_equivalent_bloq_counts(
             attrs.evolve(self.qrom, rotation_data=None),
+            generalizer=[ignore_split_join, ignore_alloc_free],
+        )
+
+
+class TestInnerQROM:
+    """Tests for the QROM that loads the alias sampling words of the SF terms."""
+
+    # Distinct non-zero words, indexed [outer_index][inner_index], so that padding
+    # and misplaced words are detected.
+    inner_data = tuple(
+        tuple(x * (B_SMALL + 1) + b + 1 for b in range(B_SMALL + 1))
+        for x in range(R_SMALL * C_SMALL)
+    )
+    qrom = InnerQROM(
+        num_orbitals=N_SMALL,
+        num_ranks=R_SMALL,
+        num_bases=B_SMALL,
+        num_copies=C_SMALL,
+        num_bits_keep=B_K2_SMALL,
+        log_block_size=K_2_SMALL,
+        num_controls=1,
+        inner_data=inner_data,
+    )
+
+    def test_decomposition(self):
+        assert_valid_bloq_decomposition(self.qrom)
+
+    def test_bloq_counts(self):
+        assert_equivalent_bloq_counts(
+            self.qrom, generalizer=[ignore_split_join, ignore_alloc_free]
+        )
+
+    def test_loads_inner_data(self):
+        cbloq = self.qrom.decompose_bloq()
+        names = [reg.name for reg in self.qrom.signature.rights()]
+        block_size, num_rc = self.qrom.block_size, R_SMALL * C_SMALL
+
+        def lookup(**registers: int) -> dict[str, ClassicalValT]:
+            empty = {"alias_words": np.zeros(block_size, dtype=int)}
+            empty |= {"G_0": 0, "G_1": 0, "rank": 0}
+            return dict(
+                zip(names, cbloq.call_classically(**registers, **empty), strict=True)
+            )
+
+        for outer_index in range(num_rc + N_SMALL):
+            for high in range(self.qrom.num_blocks):
+                loaded = lookup(ctrl=1, outer_index=outer_index, inner_index_high=high)
+                # Slot i holds entry high * block_size + i. Padding past B, and the
+                # D_1/Q_1 terms loaded by `InnerQROMTail`, get nothing.
+                expected = [
+                    self.inner_data[outer_index][b]
+                    if outer_index < num_rc and b <= B_SMALL
+                    else 0
+                    for b in range(high * block_size, (high + 1) * block_size)
+                ]
+                np.testing.assert_array_equal(loaded["alias_words"], expected)
+                assert loaded["rank"] == (
+                    outer_index // C_SMALL if outer_index < num_rc else 0
+                )
+                assert loaded["G_0"] == loaded["G_1"] == 0
+
+                idle = lookup(ctrl=0, outer_index=outer_index, inner_index_high=high)
+                np.testing.assert_array_equal(idle["alias_words"], 0)
+                assert idle["rank"] == 0
+
+    @pytest.mark.parametrize(
+        ("field", "data", "error_msg"),
+        [
+            ("inner_data", ((0,) * (B_SMALL + 1),) * 5, "must have shape"),
+            # Words are ceil(log(B + 1)) + b_k2 + 1 = 2 + 3 + 1 bits wide.
+            ("inner_data", ((2**6,) * (B_SMALL + 1),) * 6, "must fit in"),
+            ("inner_data", ((-1,) * (B_SMALL + 1),) * 6, "must fit in"),
+            ("sign_data", ((0,) * B_SMALL,) * 6, "must have shape"),
+            ("sign_data", ((2,) * (B_SMALL + 1),) * 6, "must be 0 or 1"),
+        ],
+        ids=[
+            "too_few_rows",
+            "word_too_wide",
+            "negative_word",
+            "sign_row_too_short",
+            "sign_not_a_bit",
+        ],
+    )
+    def test_invalid_inner_data(self, field: str, data: tuple, error_msg: str):
+        with pytest.raises(ValueError, match=error_msg):
+            attrs.evolve(self.qrom, **{field: data})
+
+    def test_bloq_counts_without_data(self):
+        # Without data the call graph must still match the decomposition, which
+        # loads the rank and zero words with controlled XorKs.
+        assert_equivalent_bloq_counts(
+            attrs.evolve(self.qrom, inner_data=None),
             generalizer=[ignore_split_join, ignore_alloc_free],
         )
 
@@ -509,9 +602,15 @@ class TestDFTHCBlockEncoding:
         )
 
         # Apart from the data, it is the bloq built from the parameters.
-        assert attrs.evolve(
-            self.block_encoding, rotation_data=None, tail_data=None
-        ) == attrs.evolve(block_encoding_from_fh, rotation_data=None, tail_data=None)
+        no_data = {
+            "rotation_data": None,
+            "tail_data": None,
+            "inner_data": None,
+            "sign_data": None,
+        }
+        assert attrs.evolve(self.block_encoding, **no_data) == attrs.evolve(
+            block_encoding_from_fh, **no_data
+        )
 
         assert block_encoding_from_fh.rotation_data is not None
         # The angles the ladder reads from the words are those of the Hamiltonian.
@@ -580,9 +679,15 @@ class TestDFTHCWalkOperator:
         )
 
         # Apart from the data, it is the bloq built from the parameters.
-        assert attrs.evolve(
-            self.walk, rotation_data=None, tail_data=None
-        ) == attrs.evolve(walk_from_fh, rotation_data=None, tail_data=None)
+        no_data = {
+            "rotation_data": None,
+            "tail_data": None,
+            "inner_data": None,
+            "sign_data": None,
+        }
+        assert attrs.evolve(self.walk, **no_data) == attrs.evolve(
+            walk_from_fh, **no_data
+        )
 
         assert walk_from_fh.rotation_data is not None
         # The angles the ladder reads from the words are those of the Hamiltonian.
