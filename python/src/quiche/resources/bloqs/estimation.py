@@ -24,15 +24,16 @@ import sympy
 from qualtran import (
     Bloq,
     BloqBuilder,
+    CBit,
     CtrlSpec,
     QAny,
-    QBit,
     QUInt,
     Register,
+    Side,
     Signature,
     SoquetT,
 )
-from qualtran.bloqs.basic_gates import Hadamard, Power, Rz, SGate
+from qualtran.bloqs.basic_gates import Hadamard, MeasureZ, Power, Rz, SGate
 from qualtran.bloqs.bookkeeping import Allocate, Free, Partition
 from qualtran.bloqs.phase_estimation import RectangularWindowState
 from qualtran.bloqs.qft import QFTTextBook
@@ -82,6 +83,8 @@ class _SingleAncillaQPE(Bloq):
     ---------
     system : QAny
         Qubits used for Hamiltonian simulation.
+    estimation_bit : CBit, Side.RIGHT
+        Measurement result of the phase estimation ancilla.
 
     Raises
     ------
@@ -136,7 +139,12 @@ class _SingleAncillaQPE(Bloq):
     @property
     def signature(self) -> Signature:
         """Define input and/or output registers of the bloq."""
-        return Signature([Register("system", dtype=QAny(self.num_simulation_qubits))])
+        return Signature(
+            [
+                Register("system", dtype=QAny(self.num_simulation_qubits)),
+                Register("estimation_bit", dtype=CBit(), side=Side.RIGHT),
+            ]
+        )
 
     def my_static_costs(self, cost_key: CostKey) -> int:
         """Return qubit counts (not including any rotation-synthesis ancillas)."""
@@ -170,9 +178,9 @@ class _SingleAncillaQPE(Bloq):
             estimation = bb.add(Rz(theta), q=estimation)
 
         estimation = bb.add(Hadamard(), q=estimation)
+        estimation_bit = bb.add(MeasureZ(), q=estimation)
 
-        bb.free(estimation)
-        return {"system": system}
+        return {"system": system, "estimation_bit": estimation_bit}
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for single-ancilla QPE."""
@@ -180,7 +188,7 @@ class _SingleAncillaQPE(Bloq):
             RectangularWindowState(self.num_estimation_bits): 1,
             self.controlled_propagator: 1,
             Hadamard(): 1,
-            Free(QBit()): 1,
+            MeasureZ(): 1,
         }
 
         if self.mode == "im":
@@ -229,6 +237,8 @@ class NaiveQPE(_SingleAncillaQPE):
     ---------
     system : QAny
         Qubits used for Hamiltonian simulation.
+    estimation_bit : CBit, Side.RIGHT
+        Measurement result of the phase estimation ancilla.
 
     Raises
     ------
@@ -294,6 +304,8 @@ class KitaevQPE(_SingleAncillaQPE):
     ---------
     system : QAny
         Qubits used for Hamiltonian simulation.
+    estimation_bit : CBit, Side.RIGHT
+        Measurement result of the phase estimation ancilla.
 
     Raises
     ------
@@ -363,6 +375,8 @@ class IterativeQPE(_SingleAncillaQPE):
     ---------
     system : QAny
         Qubits used for Hamiltonian simulation.
+    estimation_bit : CBit, Side.RIGHT
+        Measurement result of the phase estimation ancilla.
 
     Raises
     ------
