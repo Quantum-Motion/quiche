@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 from numpy.typing import ArrayLike
 from qualtran import BloqBuilder
-from qualtran.resource_counting import QECGatesCost, get_cost_value
+from qualtran.resource_counting import QECGatesCost, QubitCount, get_cost_value
 from qualtran.resource_counting.generalizers import ignore_alloc_free, ignore_split_join
 from qualtran.simulation.classical_sim import ClassicalValT
 from qualtran.testing import (
@@ -203,6 +203,11 @@ class TestRotationQROM:
             self.qrom, generalizer=[ignore_split_join, ignore_alloc_free]
         )
 
+    def test_qubit_counts(self):
+        actual = get_cost_value(self.qrom, QubitCount())
+        expected = get_cost_value(self.qrom.decompose_bloq(), QubitCount())
+        assert actual == expected
+
     def test_loads_rotation_data(self):
         data = tuple(
             tuple(1000 * (r + 1) + b for b in range(B_SMALL)) for r in range(R_SMALL)
@@ -289,6 +294,11 @@ class TestInnerQROMTail:
         assert_equivalent_bloq_counts(
             self.qrom, generalizer=[ignore_split_join, ignore_alloc_free]
         )
+
+    def test_qubit_counts(self):
+        actual = get_cost_value(self.qrom, QubitCount())
+        expected = get_cost_value(self.qrom.decompose_bloq(), QubitCount())
+        assert actual == expected
 
     def test_loads_tail_data(self):
         data = tuple((1000 * (j + 1), j % 2) for j in range(N_SMALL))
