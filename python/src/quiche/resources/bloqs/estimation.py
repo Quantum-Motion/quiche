@@ -20,6 +20,7 @@ from collections.abc import Callable
 from typing import Literal
 
 import attrs
+import numpy as np
 import sympy
 from qualtran import (
     Bloq,
@@ -34,7 +35,7 @@ from qualtran import (
     SoquetT,
 )
 from qualtran.bloqs.basic_gates import Hadamard, MeasureZ, Power, Rz, SGate
-from qualtran.bloqs.bookkeeping import Allocate, Free, Partition
+from qualtran.bloqs.bookkeeping import Allocate, Partition, Split
 from qualtran.bloqs.phase_estimation import RectangularWindowState
 from qualtran.bloqs.qft import QFTTextBook
 from qualtran.bloqs.qubitization.qubitization_walk_operator import (
@@ -417,13 +418,19 @@ class TextbookQPE(Bloq):
     num_qpe_ancillas : int
         Number of qubits used to represent the phase for phase estimation.
     num_other_ancillas : int
-        Number of additional ancillas (e.g. for block encoding), to be allocated and
-        freed within this bloq.
+        Number of additional ancillas (e.g. for block encoding), allocated within the
+        bloq and returned via the ``other_ancillas`` register.
 
     Registers
     ---------
     data : QAny
         Qubits representing the target system.
+    other_ancillas : QAny, Side.RIGHT
+        Additional ancillas entangled with the system. Only present if
+        ``num_other_ancillas > 0``.
+    estimation_bits : CBit, Side.RIGHT
+        Measurement results of the phase estimation ancillas, with shape
+        ``(num_qpe_ancillas,)``.
     """
 
     simulation_factory: Callable[[int], Bloq]
@@ -506,7 +513,25 @@ class TextbookQPE(Bloq):
     @property
     def signature(self) -> Signature:
         """Define input and/or output registers of the bloq."""
-        return Signature.build(data=self.num_data)
+        registers = [Register("data", QAny(self.num_data))]
+
+        if self.num_other_ancillas > 0:
+            registers.append(
+                Register(
+                    "other_ancillas", QAny(self.num_other_ancillas), side=Side.RIGHT
+                )
+            )
+
+        registers.append(
+            Register(
+                "estimation_bits",
+                CBit(),
+                shape=(self.num_qpe_ancillas,),
+                side=Side.RIGHT,
+            )
+        )
+
+        return Signature(registers)
 
     def build_composite_bloq(
         self,
@@ -531,8 +556,6 @@ class TextbookQPE(Bloq):
                     other_ancillas=other_ancillas,
                 )
 
-            bb.free(other_ancillas)
-
         else:
             for i in range(self.num_qpe_ancillas):
                 data, qpe_ancillas = bb.add(
@@ -544,25 +567,32 @@ class TextbookQPE(Bloq):
         # Inverse QFT
         iqft = QFTTextBook(self.num_qpe_ancillas).adjoint()
         qpe_ancillas = bb.add(iqft, q=qpe_ancillas)
+        estimation_bits = np.array(
+            [bb.add(MeasureZ(), q=q) for q in bb.split(qpe_ancillas)]
+        )
 
-        bb.free(qpe_ancillas)
-
-        return {"data": data}
+        out_soqs = {"data": data, "estimation_bits": estimation_bits}
+        if self.num_other_ancillas > 0:
+            out_soqs["other_ancillas"] = other_ancillas
+        return out_soqs
 
     def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
         """Build call graph for TextbookQPE."""
         bloq_counts = {RectangularWindowState(self.num_qpe_ancillas): 1}
-        for ii in range(self.num_qpe_ancillas):
-            bloq_counts[self.simulation_factory(index=ii)] = 1
+
+        for i in range(self.num_qpe_ancillas):
+            bloq_counts[self.simulation_factory(index=i)] = 1
+
         bloq_counts[QFTTextBook(self.num_qpe_ancillas).adjoint()] = 1
+
         # Bookkeeping terms.
-        # TODO(Annina): Need to find out why QPE ancilla are QUInt type and other
-        # ancilla are QAny type (otherwise call graphs differ from call graphs obtained
-        # from decomposition). Probably something to do with the allocation.
         if self.num_other_ancillas > 0:
             bloq_counts[Allocate(QAny(self.num_other_ancillas))] = 1
-            bloq_counts[Free(QAny(self.num_other_ancillas))] = 1
-        bloq_counts[Free(QUInt(self.num_qpe_ancillas))] = 1
+
+        # QUInt type since last producer (QFTTextBook) outputs QUInt
+        bloq_counts[Split(QUInt(self.num_qpe_ancillas))] = 1
+        bloq_counts[MeasureZ()] = self.num_qpe_ancillas
+
         return bloq_counts
 
 
