@@ -96,6 +96,24 @@ def dummy_dfthc_hamiltonian() -> DFTHCHamiltonian:
     )
 
 
+def random_inner_data(
+    num_rc: int, num_inner: int, num_bits: int, seed: int = 0
+) -> tuple[tuple[int, ...], ...]:
+    """Get random alias words, indexed ``[outer_index][inner_index]``."""
+    rng = random.Random(seed)  # noqa: S311 (not used for cryptography)
+    return tuple(
+        tuple(rng.getrandbits(num_bits) for _ in range(num_inner))
+        for _ in range(num_rc)
+    )
+
+
+def random_sign_data(
+    num_rc: int, num_inner: int, seed: int = 0
+) -> tuple[tuple[int, ...], ...]:
+    """Get random sign bits, indexed ``[outer_index][inner_index]``."""
+    return random_inner_data(num_rc, num_inner, 1, seed=seed)
+
+
 def random_rotation_data(
     num_ranks: int, num_bases: int, num_bits: int, seed: int = 0
 ) -> tuple[tuple[int, ...], ...]:
@@ -612,6 +630,8 @@ class TestDFTHCBlockEncoding:
         log_block_size_inner_adjoint=K_4,
         log_block_size_outer=K_1,
         log_block_size_outer_adjoint=K_5,
+        inner_data=random_inner_data(R * C, B + 1, B.bit_length() + B_K2 + 1),
+        sign_data=random_sign_data(R * C, B + 1),
         rotation_data=random_rotation_data(R, B, (N - 1) * B_ROT),
         tail_data=random_tail_data(N, (N - 1) * B_ROT),
     )
@@ -701,6 +721,8 @@ class TestDFTHCWalkOperator:
         log_block_size_inner_adjoint=K_4,
         log_block_size_outer=K_1,
         log_block_size_outer_adjoint=K_5,
+        inner_data=random_inner_data(R * C, B + 1, B.bit_length() + B_K2 + 1),
+        sign_data=random_sign_data(R * C, B + 1),
         rotation_data=random_rotation_data(R, B, (N - 1) * B_ROT),
         tail_data=random_tail_data(N, (N - 1) * B_ROT),
     )
