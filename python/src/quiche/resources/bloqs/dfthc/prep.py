@@ -670,6 +670,56 @@ class InnerPrepareDFTHC(Bloq):
 
 
 @attrs.frozen
+class InnerPrepareDFTHCAdjoint(Bloq):
+    """
+    Adjoint of `InnerPrepareDFTHC`, without its sign CZ.
+
+    The sign of the sampled coefficient has two factors (step 3 of
+    ``encode_inner_data``). `InnerPrepareDFTHC` applies :math:`(-1)^{f d_i}` with a CZ
+    on `compare` and `sign`. This bloq applies :math:`(-1)^{s_i}`, in the phase fixup
+    of the erasure of the inner QROAM (``QROMAdjoint``). The CZ is not repeated here,
+    so that the sign is not cancelled out.
+
+    Parameters
+    ----------
+    prepare : InnerPrepareDFTHC
+        State preparation undone by this bloq.
+
+    Registers
+    ---------
+    `prepare`'s registers, with left- and right-registers swapped.
+
+    References
+    ----------
+    .. [Low2025] G. H. Low et al., "Fast Quantum Simulation of Electronic Structure by
+       Spectral Amplification", Phys. Rev. X, vol. 15, no. 4, p. 041016, Oct. 2025.
+    """
+
+    prepare: InnerPrepareDFTHC
+
+    @cached_property
+    def signature(self) -> Signature:
+        """Define input and/or output registers of the bloq."""
+        return self.prepare.signature.adjoint()
+
+    def adjoint(self) -> Bloq:
+        """Get the state preparation undone by this unpreparation."""
+        return self.prepare
+
+    def build_call_graph(self, ssa: SympySymbolAllocator) -> BloqCountDictT:  # noqa: ARG002
+        """Build call graph for InnerPrepareDFTHCAdjoint."""
+        # The adjoints of the parts of `InnerPrepareDFTHC`, without its sign CZ.
+        return {
+            self.prepare.uniform_prep.adjoint(): 1,
+            self.prepare.qroam.adjoint(): 1,
+            self.prepare.tail_qrom.adjoint(): 1,
+            self.prepare.inequality_check.adjoint(): 1,
+            self.prepare.cswap.adjoint(): 1,
+            self.prepare.hadamards: 1,
+        }
+
+
+@attrs.frozen
 class RotationPrepareDFTHC(Bloq):
     """
     Rotation preparation for the DFTHC block encoding.
