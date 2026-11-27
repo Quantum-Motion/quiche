@@ -24,28 +24,38 @@ class TestQuregLayout:
     """Test QuregLayout class."""
 
     def test_contiguous_registers(self):
-        layout = QuregLayout(num_data=4, num_qpe=3, num_index=2)
+        layout = QuregLayout(num_data=4, num_qpe=3, num_simulation=2)
         assert layout.data == range(4)
         assert layout.qpe == range(4, 7)
-        assert layout.index == range(7, 9)
+        assert layout.simulation == range(7, 9)
         assert layout.num_qubits == 9
 
     def test_optional_registers(self):
         layout = QuregLayout(num_data=4, num_qpe=3)
-        assert layout.index == range(7, 7)
+        assert layout.simulation == range(7, 7)
         assert layout.num_qubits == 7
 
     @pytest.mark.parametrize(
-        ("num_data", "num_qpe", "num_index", "error_msg"),
+        ("num_data", "num_qpe", "num_simulation", "error_msg"),
         [
             (0, 1, 0, "greater than 0"),
             (1, 0, 0, "greater than 0"),
             (1, 1, -1, "greater than or equal to 0"),
         ],
     )
-    def test_invalid(self, num_data: int, num_qpe: int, num_index: int, error_msg: str):
+    def test_invalid(
+        self,
+        num_data: int,
+        num_qpe: int,
+        num_simulation: int,
+        error_msg: str,
+    ):
         with pytest.raises(ValueError, match=error_msg):
-            QuregLayout(num_data=num_data, num_qpe=num_qpe, num_index=num_index)
+            QuregLayout(
+                num_data=num_data,
+                num_qpe=num_qpe,
+                num_simulation=num_simulation,
+            )
 
 
 class TestQuESTRoutine:

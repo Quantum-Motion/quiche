@@ -24,7 +24,7 @@ class QuregLayout:
 
     num_data: PositiveInt
     num_qpe: PositiveInt
-    num_index: NonNegativeInt = 0
+    num_simulation: NonNegativeInt = 0
 
     @property
     def data(self) -> range:
@@ -37,12 +37,12 @@ class QuregLayout:
         return range(self.num_data, self.num_data + self.num_qpe)
 
     @property
-    def index(self) -> range:
-        """Qubit indices of the index ancilla register."""
+    def simulation(self) -> range:
+        """Qubit indices of the Hamiltonian simulation ancilla register."""
         start = self.num_data + self.num_qpe
-        return range(start, start + self.num_index)
+        return range(start, start + self.num_simulation)
 
     @property
     def num_qubits(self) -> int:
         """Total width of the Qureg."""
-        return self.num_data + self.num_qpe + self.num_index
+        return self.num_data + self.num_qpe + self.num_simulation
