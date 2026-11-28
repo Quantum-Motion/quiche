@@ -63,6 +63,8 @@ Versioning based on [Semantic Versioning](https://semver.org/).
 - Removed `Trotterisation.get_coeffs_indices()` (use `trotter_coeffs` and `trotter_indices` instead).
 - Removed `SimulationRoutine` (use `QuESTRoutine` instead for building and executing QuEST circuits).
 - Removed the `quiche.simulation.estimation` and `quiche.simulation.state_prep` modules.
+- Removed the `sync` binding methods from `KrausMap`, `SuperOp`, `CompMatr`, `DiagMatr` and `FullStateDiagMatr`.
+- Removed `syncQuregToGpu`, `syncQuregFromGpu`, `syncSubQuregToGpu` and `syncSubQuregFromGpu` binding methods from `Qureg`.
 
 ### Fixed
 - Fixed `QDRIFT` and `Trotterisation` call graphs undercounting rotations for repeated `PauliWord`s.
