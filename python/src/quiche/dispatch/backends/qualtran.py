@@ -148,6 +148,5 @@ class QualtranBackend:
         """Build the Qualtran CompositeBloq implementing the given QPESpec."""
         bb = BloqBuilder()
         data = bb.add(_get_stateprep_bloq(spec))
-        data = bb.add(_get_estimation_bloq(spec), data=data)
-        bb.free(data)
-        return bb.finalize()
+        out_soqs = bb.add_d(_get_estimation_bloq(spec), data=data)
+        return bb.finalize(**out_soqs)
